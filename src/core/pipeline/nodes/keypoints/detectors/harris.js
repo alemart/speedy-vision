@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNodeMultiscaleKeypointDetector } from './detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWithImage } from '../../../pipeline-message';
 import { InputPort, OutputPort } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
@@ -31,13 +31,13 @@ import { IllegalOperationError, IllegalArgumentError } from '../../../../../util
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
-// Constants
-const HARRIS = {
+/** Window size helper */
+const HARRIS = Object.freeze({
     1: 'harris1',
     3: 'harris3',
     5: 'harris5',
     7: 'harris7',
-};
+});
 
 /**
  * Harris corner detector
@@ -52,7 +52,8 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
     {
         super(name, 6, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -113,7 +114,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const image = this.input().read().image;
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const capacity = this._capacity;
         const quality = this._quality;

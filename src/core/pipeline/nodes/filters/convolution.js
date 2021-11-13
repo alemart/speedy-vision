@@ -88,7 +88,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const outputTexture = this._tex[0];
         const ksize = this._kernel.rows;

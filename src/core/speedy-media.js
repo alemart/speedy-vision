@@ -22,14 +22,18 @@
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
 import { MediaType, ImageFormat } from '../utils/types'
-import { IllegalOperationError } from '../utils/errors';
+import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 
 /**
  * @typedef {object} SpeedyMediaOptions
+ * @property {ImageFormat} [format] default is RGBA
  */
+
+/** A helper used to keep the constructor of SpeedyMedia private */
+const PRIVATE_TOKEN = Symbol();
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -38,24 +42,35 @@ import { SpeedyPromise } from '../utils/speedy-promise';
 export class SpeedyMedia
 {
     /**
-     * Constructor. It receives a VALID media source that is ALREADY LOADED.
-     * @private
+     * @private Constructor. It receives a VALID media source that is ALREADY LOADED.
+     * @param {symbol} token
      * @param {SpeedyMediaSource} source
      * @param {SpeedyMediaOptions} [options] options object
-     * @param {ImageFormat} [format]
      */
-    constructor(source, options = {}, format = ImageFormat.RGBA)
+    constructor(token, source, options = {})
     {
-        Utils.assert(source.isLoaded());
+        // private constructor
+        if(token !== PRIVATE_TOKEN)
+            throw new IllegalOperationError();
 
-        /** @type {SpeedyMediaSource|null} media source */
+
+
+        /** @type {SpeedyMediaSource} media source */
         this._source = source;
 
-        /** @type {SpeedyMediaOptions} options */
-        this._options = Object.freeze(options);
-
         /** @type {ImageFormat} format */
-        this._format = format;
+        this._format = options.format !== undefined ? options.format : ImageFormat.RGBA;
+
+        /** @type {SpeedyMediaOptions} options */
+        this._options = Object.freeze({ ...options, format: this._format });
+
+
+
+        // validate
+        if(!source.isLoaded())
+            throw new IllegalOperationError(`Source not loaded: ${source}`);
+        else if(this._format !== ImageFormat.RGBA && this._format !== ImageFormat.GREY)
+            throw new IllegalArgumentError(`Invalid format: ${this._format}`);
     }
 
     /**
@@ -70,7 +85,8 @@ export class SpeedyMedia
         return SpeedyMediaSource.load(mediaSource).then(source => {
             Utils.assert(source.width !== 0 && source.height !== 0);
 
-            const media = new SpeedyMedia(source, options);
+            // FIXME user could pass an invalid format in options if ImageFormat is made public
+            const media = new SpeedyMedia(PRIVATE_TOKEN, source, options);
             Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
             return media;
@@ -175,7 +191,7 @@ export class SpeedyMedia
             throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this._options, this._format);
+        const clone = new SpeedyMedia(PRIVATE_TOKEN, this._source, this._options);
 
         // done!
         return SpeedyPromise.resolve(clone);

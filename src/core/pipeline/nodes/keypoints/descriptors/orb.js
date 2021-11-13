@@ -46,10 +46,14 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
     {
         super(name, 3, [
             InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY && msg.image.hasMipmaps()
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY &&
+                    msg.image.hasMipmaps()
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints).satisfying(
-                msg => msg.descriptorSize == 0 && msg.extraSize == 0
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize == 0 &&
+                    msg.extraSize == 0
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -62,8 +66,8 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('keypoints').read();
-        const pyramid = this.input('image').read().image;
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
+        const pyramid = ( /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('image').read() ) ).image;
         const tex = this._tex;
         const outputTexture = this._tex[2];
 

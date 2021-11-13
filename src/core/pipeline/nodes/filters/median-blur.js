@@ -50,7 +50,8 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
     {
         super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -92,7 +93,7 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const ksize = this._kernelSize.width;
         const med = MEDIAN[ksize];

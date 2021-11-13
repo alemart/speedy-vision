@@ -23,11 +23,11 @@ import { SpeedyMatrixExpr } from './speedy-matrix-expr';
 import { SpeedyMatrixWASM } from './speedy-matrix-wasm';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { Utils } from '../utils/utils';
-import { IllegalArgumentError, AbstractMethodError } from '../utils/errors';
 
-/**
- * @typedef {"float32"} SpeedyMatrixType Matrix data type
- */
+/** @typedef {"float32"} SpeedyMatrixDtype Matrix data type */
+/** @typedef {Float32Array} SpeedyMatrixBufferType Buffer type */
+/** @typedef {Float32ArrayConstructor} SpeedyMatrixBufferTypeConstructor Buffer class */
+/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
 
 /**
  * Matrix class
@@ -42,7 +42,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      * @param {number} columns number of columns
      * @param {number} step0 step size between two consecutive elements (e.g., 1)
      * @param {number} step1 step size between two consecutive columns (e.g., rows)
-     * @param {ArrayBufferView} data entries in column-major format
+     * @param {SpeedyMatrixBufferType} data entries in column-major format
      */
     constructor(rows, columns, step0, step1, data)
     {
@@ -61,7 +61,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
         /** @type {number} step size between two consecutive columns */
         this._step1 = step1 | 0;
 
-        /** @type {ArrayBufferView} buffer containing the entries of the matrix in column-major order */
+        /** @type {SpeedyMatrixBufferType} buffer containing the entries of the matrix in column-major order */
         this._data = data;
     }
 
@@ -70,7 +70,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      * @param {number} rows number of rows
      * @param {number} columns number of columns
      * @param {number[]} entries in column-major format
-     * @param {SpeedyMatrixType} [dtype] data type
+     * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
     static Create(rows, columns, entries, dtype = SpeedyMatrixExpr.DEFAULT_DTYPE)
@@ -86,7 +86,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      * Create a new matrix filled with zeros with the specified size
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns
-     * @param {SpeedyMatrixType} [dtype] data type
+     * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
     static Zeros(rows, columns = rows, dtype = SpeedyMatrixExpr.DEFAULT_DTYPE)
@@ -101,7 +101,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      * Create a new matrix filled with ones with the specified size
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns
-     * @param {SpeedyMatrixType} [dtype] data type
+     * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
     static Ones(rows, columns = rows, dtype = SpeedyMatrixExpr.DEFAULT_DTYPE)
@@ -116,7 +116,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      * Create a new identity matrix with the specified size
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns
-     * @param {SpeedyMatrixType} [dtype] data type
+     * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
     static Eye(rows, columns = rows, dtype = SpeedyMatrixExpr.DEFAULT_DTYPE)
@@ -133,7 +133,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
 
     /**
      * Get the underlying buffer
-     * @returns {ArrayBufferView}
+     * @returns {SpeedyMatrixBufferType}
      */
     get data()
     {
@@ -274,7 +274,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
         const DECIMALS = 5;
         const rows = this.rows, columns = this.columns;
         const entries = this.read();
-        const mat = new Array(rows);
+        const mat = /** @type {number[][]} */ ( new Array(rows) );
 
         for(let i = 0; i < rows; i++) {
             mat[i] = new Array(columns);

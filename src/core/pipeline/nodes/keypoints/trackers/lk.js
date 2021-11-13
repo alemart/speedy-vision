@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode } from '../../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from '../detectors/detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWithImage } from '../../../pipeline-message';
 import { InputPort, OutputPort } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
@@ -55,10 +55,12 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
     {
         super(name, 3, [
             InputPort('previousImage').expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             InputPort('nextImage').expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             InputPort('previousKeypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
@@ -190,9 +192,9 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('previousKeypoints').read();
-        const previousImage = this.input('previousImage').read().image;
-        const nextImage = this.input('nextImage').read().image;
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('previousKeypoints').read() );
+        const previousImage = ( /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('previousImage').read() )).image;
+        const nextImage = ( /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('nextImage').read() )).image;
         const previousKeypoints = encodedKeypoints;
         const levels = this._levels;
         const windowSize = this._windowSize;

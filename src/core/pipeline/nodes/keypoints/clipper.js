@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
@@ -49,7 +49,9 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
     {
         super(name, 4, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
-                msg => msg.descriptorSize == 0 && msg.extraSize == 0
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize == 0 &&
+                    msg.extraSize == 0
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
@@ -83,7 +85,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
         const keypoints = gpu.programs.keypoints;
         const clipValue = this._size;
         const tex = this._tex;

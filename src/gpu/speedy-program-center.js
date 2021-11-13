@@ -113,9 +113,10 @@ export class SpeedyProgramCenter
     release()
     {
         for(const key in this) {
-            if(Object.prototype.hasOwnProperty.call(this, key)) {
-                if(this[key] != null && (this[key] instanceof SpeedyProgramGroup))
-                    this[key].release();
+            if(Object.prototype.hasOwnProperty.call(this, key) && this[key] != null) {
+                const group = this[key];
+                if(group instanceof SpeedyProgramGroup)
+                    group.release();
             }
         }
 

@@ -109,7 +109,7 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const tex = this._tex[0];
 
         // can't store pyramids

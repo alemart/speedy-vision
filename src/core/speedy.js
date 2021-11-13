@@ -47,7 +47,7 @@ export class Speedy
      * Loads a SpeedyMedia object based on the provided source element
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} sourceElement The source media
      * @param {object} [options] Additional options for advanced configuration
-     * @returns {Promise<SpeedyMedia>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
     static load(sourceElement, options = { })
     {
@@ -188,4 +188,4 @@ export class Speedy
 
 // Big-endian machine? Currently untested.
 if(!LITTLE_ENDIAN)
-    Utils.warn('Running on a big-endian machine');
+    Utils.warning('Running on a big-endian machine');

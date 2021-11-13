@@ -19,22 +19,16 @@
  * Symbolic matrix expressions
  */
 
-import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyMatrixWASM } from './speedy-matrix-wasm';
 import { Utils } from '../utils/utils';
 import { AbstractMethodError } from '../utils/errors';
 
-/**
- * @typedef {import('./speedy-matrix').SpeedyMatrixType} SpeedyMatrixType
- */
+/** @typedef {import('./speedy-matrix').SpeedyMatrixDtype} SpeedyMatrixDtype */
+/** @typedef {import('./speedy-matrix').SpeedyMatrixBufferType} SpeedyMatrixBufferType */
+/** @typedef {import('./speedy-matrix').SpeedyMatrixBufferTypeConstructor} SpeedyMatrixBufferTypeConstructor */
+/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
 
-/**
- * @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory
- */
-
-/**
- * @typedef {Object.<SpeedyMatrixType,Function>} Dtype2BufferType
- */
+/** @typedef {Object<SpeedyMatrixDtype,SpeedyMatrixBufferTypeConstructor>} Dtype2BufferType */
 
 /** @const {Dtype2BufferType} */
 const DTYPE_TO_BUFFER_TYPE = Object.freeze({
@@ -53,7 +47,7 @@ export class SpeedyMatrixExpr
      * Constructor
      * @param {number} rows
      * @param {number} columns
-     * @param {SpeedyMatrixType} dtype
+     * @param {SpeedyMatrixDtype} dtype
      */
     constructor(rows, columns, dtype)
     {
@@ -66,7 +60,7 @@ export class SpeedyMatrixExpr
         /** @type {number} number of columns */
         this._columns = columns | 0;
 
-        /** @type {SpeedyMatrixType} data type */
+        /** @type {SpeedyMatrixDtype} data type */
         this._dtype = dtype;
     }
 
@@ -90,7 +84,7 @@ export class SpeedyMatrixExpr
 
     /**
      * Data type
-     * @returns {SpeedyMatrixType}
+     * @returns {SpeedyMatrixDtype}
      */
     get dtype()
     {
@@ -99,7 +93,7 @@ export class SpeedyMatrixExpr
 
     /**
      * Default data type
-     * @returns {SpeedyMatrixType}
+     * @returns {SpeedyMatrixDtype}
      */
     static get DEFAULT_DTYPE()
     {
@@ -209,7 +203,7 @@ class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
      * Constructor
      * @param {number} rows
      * @param {number} columns
-     * @param {SpeedyMatrixType} dtype
+     * @param {SpeedyMatrixDtype} dtype
      */
     constructor(rows, columns, dtype)
     {

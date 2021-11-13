@@ -31,6 +31,8 @@ import { SpeedySize } from '../../../speedy-size';
 import { SpeedyVector2 } from '../../../speedy-vector';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
+/** @typedef {"bilinear"|"nearest"} SpeedyPipelineNodeResizeMethod */
+
 /**
  * Resize image
  */
@@ -53,7 +55,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
         /** @type {SpeedyVector2} size of the output relative to the size of the input */
         this._scale = new SpeedyVector2(1, 1);
 
-        /** @type {string} interpolation method */
+        /** @type {SpeedyPipelineNodeResizeMethod} interpolation method */
         this._method = 'bilinear';
     }
 
@@ -95,7 +97,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 
     /**
      * Interpolation method
-     * @returns {string}
+     * @returns {SpeedyPipelineNodeResizeMethod}
      */
     get method()
     {
@@ -104,7 +106,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 
     /**
      * Interpolation method
-     * @param {string} method
+     * @param {SpeedyPipelineNodeResizeMethod} method
      */
     set method(method)
     {
@@ -121,7 +123,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const outputTexture = this._tex[0];
         const method = this._method;

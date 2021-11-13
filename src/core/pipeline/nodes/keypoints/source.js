@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../pipeline-message';
 import { OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';

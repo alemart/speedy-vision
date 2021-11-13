@@ -101,7 +101,7 @@ export class SpeedyPipelineNodeKeypointBuffer extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
         const previousDescriptorSize = this._previousDescriptorSize;
         const previousExtraSize = this._previousExtraSize;
         const previousEncoderLength = this._previousEncoderLength;

@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
@@ -30,7 +30,9 @@ import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
-/** @const {Object.<string,string>} method name to program name */
+/** @typedef {"quadratic1d"|"taylor2d"|"bicubic-upsample"|"bilinear-upsample"} SubpixelRefinementMethod */
+
+/** @const {Object<SubpixelRefinementMethod,string>} method name to program name */
 const METHOD2PROGRAM = Object.freeze({
     'quadratic1d': 'subpixelQuadratic1d',
     'taylor2d': 'subpixelTaylor2d',
@@ -51,14 +53,15 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
     {
         super(name, 2, [
             InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort('displacements').expects(SpeedyPipelineMessageType.Vector2),
         ]);
 
-        /** @type {string} subpixel refinement method */
+        /** @type {SubpixelRefinementMethod} subpixel refinement method */
         this._method = 'quadratic1d';
 
         /** @type {number} max iterations for the upsampling methods */
@@ -70,7 +73,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
 
     /**
      * Subpixel refinement method
-     * @returns {string}
+     * @returns {SubpixelRefinementMethod}
      */
     get method()
     {
@@ -79,7 +82,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
 
     /**
      * Subpixel refinement method
-     * @param {string} name
+     * @param {SubpixelRefinementMethod} name
      */
     set method(name)
     {
@@ -132,8 +135,8 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('keypoints').read();
-        const image = this.input('image').read().image;
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('image').read() );
         const tex = this._tex;
         const program = METHOD2PROGRAM[this._method];
         const maxIterations = this._maxIterations;

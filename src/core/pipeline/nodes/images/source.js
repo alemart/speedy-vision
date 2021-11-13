@@ -51,7 +51,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
         /** @type {SpeedyMedia} source media */
         this._media = null;
 
-        /** @type {SpeedyTexture} texture index */
+        /** @type {number} texture index */
         this._textureIndex = 0;
     }
 

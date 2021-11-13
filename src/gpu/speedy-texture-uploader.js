@@ -50,7 +50,8 @@ export class SpeedyTextureUploader
 
         // bugfix: if the media is a video, we can't really
         // upload it to the GPU unless it's ready
-        if(data.constructor.name == 'HTMLVideoElement') {
+        //if(data.constructor.name == 'HTMLVideoElement') {
+        if(data instanceof HTMLVideoElement) {
             if(data.readyState < 2) {
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture

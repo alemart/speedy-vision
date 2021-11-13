@@ -22,7 +22,7 @@
 import { Utils } from '../../utils/utils';
 import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPipelinePortSpec } from './pipeline-portspec';
-import { SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing, SpeedyPipelineMessageType } from './pipeline-message';
+import { SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing } from './pipeline-message';
 import { SpeedyPipelineNode } from './pipeline-node';
 
 // Constants
@@ -179,7 +179,7 @@ export class SpeedyPipelineOutputPort extends SpeedyPipelinePort
 
     /**
      * Connect this port to another
-     * @param {SpeedyPipelinePort} port
+     * @param {SpeedyPipelineInputPort} port
      */
     connectTo(port)
     {
@@ -247,7 +247,7 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
     {
         super(name, spec, node);
 
-        /** @type {SpeedyPipelineOutputPort?} incoming link */
+        /** @type {SpeedyPipelineOutputPort|null} incoming link */
         this._incomingLink = null;
     }
 
@@ -262,7 +262,7 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
 
     /**
      * Connect this port to another
-     * @param {SpeedyPipelinePort} port
+     * @param {SpeedyPipelineOutputPort} port
      */
     connectTo(port)
     {

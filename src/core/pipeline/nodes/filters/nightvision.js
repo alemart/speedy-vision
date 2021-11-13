@@ -46,7 +46,9 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
     {
         super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.RGBA || msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.RGBA ||
+                    msg.format === ImageFormat.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -133,10 +135,10 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
      */
     set quality(quality)
     {
-        if(!(quality == 'high' || quality == 'medium' || quality == 'low'))
+        if(quality === 'high' || quality === 'medium' || quality === 'low')
+            this._quality = quality;
+        else
             throw new IllegalArgumentError(`Invalid quality level for the Nightvision filter: "${quality}"`);
-
-        this._quality = String(quality);
     }
 
     /**
@@ -146,7 +148,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const gain = this._gain;
         const offset = this._offset;

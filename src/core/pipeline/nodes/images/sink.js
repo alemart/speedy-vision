@@ -59,10 +59,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
     export()
     {
         Utils.assert(this._bitmap != null);
-
-        return SpeedyMediaSource.load(this._bitmap).then(source =>
-            new SpeedyMedia(source, {}, this._format)
-        );
+        return SpeedyMedia.load(this._bitmap, { format: this._format });
     }
 
     /**
@@ -72,7 +69,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
 
         return new SpeedyPromise(resolve => {
             const canvas = gpu.renderToCanvas(image);

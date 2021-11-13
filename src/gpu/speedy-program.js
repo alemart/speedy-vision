@@ -25,7 +25,7 @@ import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError } from '../utils/errors';
 
-/** @const {Object.<string,string>} Map uniform type to a gl function */
+/** @const {Object<string,string>} Map uniform type to a gl function */
 const UNIFORM_SETTERS = Object.freeze({
     'sampler2D': 'uniform1i',
     'isampler2D':'uniform1i',
@@ -56,6 +56,8 @@ const UNIFORM_SETTERS = Object.freeze({
  * @property {boolean} [renderToTexture] render results to a texture?
  * @property {boolean} [pingpong] alternate output texture between calls
  */
+
+/** @typedef {number|number[]|boolean|boolean[]|SpeedyTexture} SpeedyProgramUniformValue */
 
 /**
  * A SpeedyProgram is a Function that
@@ -162,7 +164,7 @@ export class SpeedyProgram extends Function
 
     /**
      * Run the SpeedyProgram
-     * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
+     * @param  {...SpeedyProgramUniformValue} args
      * @returns {SpeedyDrawableTexture}
      */
     _call(...args)
@@ -175,7 +177,7 @@ export class SpeedyProgram extends Function
             throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // can't use the output texture as an input
-        const flatArgs = args.flat(); // args.reduce((arr, val) => arr.concat(val), []);
+        const flatArgs = Utils.flatten(args);
         for(let j = flatArgs.length - 1; j >= 0; j--) {
             if(flatArgs[j] === this._texture[this._textureIndex])
                 throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
@@ -213,10 +215,14 @@ export class SpeedyProgram extends Function
             else {
                 // uniform array matches argument name
                 const array = args[i];
-                if(this._uniform.has(`${argname}[${array.length}]`))
-                    throw new IllegalArgumentError(`Can't run shader: too few elements in the "${argname}" array`);
-                for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
-                    texNo = uniform.setValue(gl, array[j], texNo);
+                if(Array.isArray(array)) {
+                    if(this._uniform.has(`${argname}[${array.length}]`))
+                        throw new IllegalArgumentError(`Can't run shader: too few elements in the "${argname}" array`);
+                    for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
+                        texNo = uniform.setValue(gl, array[j], texNo);
+                }
+                else
+                    throw new IllegalArgumentError(`Can't run shader: expected an array for "${argname}"`);
             }
         }
 
@@ -570,44 +576,50 @@ function UniformVariable(type, location)
     const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
 
     /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
-    this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
+    this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) ? 1 : 0);
 
     /** @type {number} required number of scalars */
     this.length = (this.dim == 2) ? n * n : n;
 
-    /** @type {number|number[]|boolean|boolean[]|null} cached value */
+    /** @type {SpeedyProgramUniformValue|null} cached value */
     this._value = null;
 }
 
 /**
  * Set the value of a uniform variable
  * @param {WebGL2RenderingContext} gl
- * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
- * @param {number} texNo current texture index
+ * @param {SpeedyProgramUniformValue} value use column-major format for matrices
+ * @param {number} [texNo] current texture index
  * @returns {number} new texture index
  */
-UniformVariable.prototype.setValue = function(gl, value, texNo)
+UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
 {
-    const setValue = gl[this.setter];
+    const setValue = /** @type {Function} */ ( gl[this.setter] );
 
     // check uniform type
-    if(this.type.endsWith('sampler2D')) {
+    if(this.type.endsWith('sampler2D') && typeof value === 'object') {
         // set texture
-        if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new NotSupportedError(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+        if(texNo >= gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+            throw new NotSupportedError(`Can't activate texture unit ${texNo}: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+        else if(Array.isArray(value))
+            throw new NotSupportedError(`Can't pass arrays of textures to shaders`);
         else if(value == null)
-            throw new IllegalArgumentError(`Can't run shader: cannot use null as an input texture`);
+            throw new IllegalArgumentError(`Can't run shader: cannot use ${value} as an input texture`);
+        else if(texNo < 0)
+            throw new IllegalArgumentError(`Missing texNo`);
 
+        const tex = value;
         gl.activeTexture(gl.TEXTURE0 + texNo);
-        gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
+        gl.bindTexture(gl.TEXTURE_2D, tex.glTexture);
         gl.uniform1i(this.location, texNo);
+
         texNo++;
     }
     else if(value === this._value) {
         // do not update the uniform if it hasn't changed
         void(0);
     }
-    else if(typeof value == 'number' || typeof value == 'boolean') {
+    else if(typeof value === 'number' || typeof value === 'boolean') {
         // set scalar value
         setValue.call(gl, this.location, value);
     }
@@ -659,7 +671,7 @@ function UBOHelper(gl, program)
     /** @type {number} auto-increment counter */
     this._nextIndex = 0;
 
-    /** @type {Object.<string,UBOStuff>} UBO dictionary */
+    /** @type {Object<string,UBOStuff>} UBO dictionary indexed by uniform block names */
     this._ubo = Object.create(null);
 }
 

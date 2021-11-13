@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNode } from '../../../pipeline-node';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage, SpeedyPipelineMessageWithKeypoints } from '../../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../../pipeline-message';
 import { InputPort, OutputPort } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
@@ -43,7 +43,8 @@ export class SpeedyPipelineNodeDiscardKeypointDescriptor extends SpeedyPipelineN
     {
         super(name, 0, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
-                msg => msg.descriptorSize > 0
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -56,7 +57,7 @@ export class SpeedyPipelineNodeDiscardKeypointDescriptor extends SpeedyPipelineN
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
 
         // allocate space
         const outputTexture = this._allocateDescriptors(gpu, descriptorSize, extraSize, 0, extraSize, encodedKeypoints);

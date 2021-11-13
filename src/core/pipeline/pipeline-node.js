@@ -25,32 +25,46 @@ import { SpeedyPromise } from '../../utils/speedy-promise';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
 import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';
-import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
-import { SpeedyTexture } from '../../gpu/speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../../gpu/speedy-texture';
 import { SpeedyTextureReader } from '../../gpu/speedy-texture-reader';
 
-/**
- * A PortDictionary is an object with null prototype storing instances of SpeedyPipelinePort
- * @typedef {Object.<string,SpeedyPipelinePort>} PortDictionary
- * @typedef {Object.<string,SpeedyPipelineInputPort>} InputPortDictionary
- * @typedef {Object.<string,SpeedyPipelineOutputPort>} OutputPortDictionary
- */
+/** @typedef {Object<string,SpeedyPipelineInputPort>} InputPortDictionary */
+/** @typedef {Object<string,SpeedyPipelineOutputPort>} OutputPortDictionary */
 
-/**
- * Map an array of ports to a PortDictionary whose keys are their names
- * @param {SpeedyPipelinePort[]} ports
- * @returns {PortDictionary}
- */
-const PortDictionary = ports =>
-    ports.reduce((dict, port) => ((dict[port.name] = port), dict), Object.create(null));
-    //ports.reduce((dict, port) => Object.assign(dict, { [port.name]: port }), Object.create(null));
-
-/**
- * Generate a random name for a node
- * @returns {string}
- */
+/** Generate a random name for a node */
 const generateRandomName = () => Math.random().toString(16).substr(2);
+
+/** Create an empty input port dictionary */
+const createInputPortDictionary = () => /** @type {InputPortDictionary} */ ( Object.create(null) );
+
+/** Create an empty output port dictionary */
+const createOutputPortDictionary = () => /** @type {OutputPortDictionary} */ ( Object.create(null) );
+
+/**
+ * Map an array of input ports to an InputPortDictionary whose keys are their names
+ * @param {SpeedyPipelineInputPort[]} ports
+ * @returns {InputPortDictionary}
+ */
+function InputPortDictionary(ports)
+{
+    return ports.reduce((dict, port) => ((dict[port.name] = port), dict), createInputPortDictionary());
+}
+
+/**
+ * Map an array of output ports to an OutputPortDictionary whose keys are their names
+ * @param {SpeedyPipelineOutputPort[]} ports
+ * @returns {OutputPortDictionary}
+ */
+function OutputPortDictionary(ports)
+{
+    return ports.reduce((dict, port) => ((dict[port.name] = port), dict), createOutputPortDictionary());
+}
+
+/** A flag used for debugging purposes */
+let _texView = false;
+
+
 
 /**
  * Node of a pipeline
@@ -69,32 +83,28 @@ export class SpeedyPipelineNode
         /** @type {string} the name of this node */
         this._name = String(name);
 
-
-
-        // build the ports
-        const ports = portBuilders.map(builder => builder.build(this));
-
-        /** @type {InputPortDictionary} input ports */
-        this._inputPorts = PortDictionary(ports.filter(port => port.isInputPort()));
-
-        /** @type {OutputPortDictionary} output ports */
-        this._outputPorts = PortDictionary(ports.filter(port => port.isOutputPort()));
-
-
-
-        // other properties
-
         /** @type {SpeedyDrawableTexture[]} work texture(s) */
         this._tex = (new Array(texCount)).fill(null);
 
 
 
-        // got a valid name?
+        // build the ports
+        const ports = portBuilders.map(builder => builder.build(this));
+        const inputPorts = /** @type {SpeedyPipelineInputPort[]} */ ( ports.filter(port => port.isInputPort()) );
+        const outputPorts = /** @type {SpeedyPipelineOutputPort[]} */ ( ports.filter(port => port.isOutputPort()) );
+
+        /** @type {InputPortDictionary} input ports */
+        this._inputPorts = InputPortDictionary(inputPorts);
+
+        /** @type {OutputPortDictionary} output ports */
+        this._outputPorts = OutputPortDictionary(outputPorts);
+
+
+
+        // validate
         if(this._name.length == 0)
             throw new IllegalArgumentError(`Invalid name "${this._name}" for node ${this.fullName}`);
-
-        // got some ports?
-        if(portBuilders.length == 0)
+        else if(portBuilders.length == 0)
             throw new IllegalArgumentError(`No ports have been found in node ${this.fullName}`);
     }
 
@@ -162,7 +172,7 @@ export class SpeedyPipelineNode
 
         // run the task
         const runTask = this._run(gpu);
-        if(runTask == undefined) {
+        if(typeof runTask === 'undefined') {
             for(portName in this._outputPorts) // ensure that no output ports are empty
                 Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
 
@@ -280,7 +290,7 @@ export class SpeedyPipelineNode
     /**
      * Inspect the pixels of a texture for debugging purposes
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture
+     * @param {SpeedyDrawableTexture} texture
      * @returns {Uint8Array}
      */
     _inspect(gpu, texture)
@@ -296,7 +306,7 @@ export class SpeedyPipelineNode
     /**
      * Inspect the pixels of a texture as unsigned 32-bit integers
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture
+     * @param {SpeedyDrawableTexture} texture
      * @returns {Uint32Array}
      */
     _inspect32(gpu, texture)
@@ -308,14 +318,14 @@ export class SpeedyPipelineNode
     /**
      * Visually inspect a texture for debugging purposes
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture
+     * @param {SpeedyDrawableTexture} texture
      */
     _visualize(gpu, texture)
     {
         const canvas = gpu.renderToCanvas(texture);
-        if(!SpeedyPipelineNode._texView) {
+        if(!_texView) {
             document.body.appendChild(canvas);
-            SpeedyPipelineNode._texView = 1;
+            _texView = true;
         }
     }
 }

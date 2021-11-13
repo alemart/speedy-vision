@@ -87,7 +87,7 @@ export class SpeedyProgramGroup
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {SpeedyProgramOptions} [options] Program settings
-     * @returns {SpeedyProgramGroup} This object
+     * @returns {this}
      */
     declare(name, shaderdecl, options = {})
     {
@@ -95,9 +95,7 @@ export class SpeedyProgramGroup
         Object.defineProperty(this, name, {
             get: (() => {
                 const key = Symbol(name);
-                return (function() {
-                    return this[key] || (this[key] = this._createProgram(shaderdecl, options));
-                }).bind(this);
+                return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
             })()
         });
 

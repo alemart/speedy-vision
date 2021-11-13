@@ -30,8 +30,8 @@ import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
-// 1D convolution filters
-const BOX_FILTER = {
+/** 1D convolution filters */
+const BOX_FILTER = Object.freeze({
     3: (new Array(3)).fill(1/3),
     5: (new Array(5)).fill(1/5),
     7: (new Array(7)).fill(1/7),
@@ -39,10 +39,10 @@ const BOX_FILTER = {
     11: (new Array(11)).fill(1/11),
     13: (new Array(13)).fill(1/13),
     15: (new Array(15)).fill(1/15),
-};
+});
 
-// convolution programs (x-axis)
-const CONVOLUTION_X = {
+/** convolution programs (x-axis) */
+const CONVOLUTION_X = Object.freeze({
     3: 'convolution3x',
     5: 'convolution5x',
     7: 'convolution7x',
@@ -50,10 +50,10 @@ const CONVOLUTION_X = {
     11: 'convolution11x',
     13: 'convolution13x',
     15: 'convolution15x',
-};
+});
 
-// convolution programs (y-axis)
-const CONVOLUTION_Y = {
+/** convolution programs (y-axis) */
+const CONVOLUTION_Y = Object.freeze({
     3: 'convolution3y',
     5: 'convolution5y',
     7: 'convolution7y',
@@ -61,7 +61,13 @@ const CONVOLUTION_Y = {
     11: 'convolution11y',
     13: 'convolution13y',
     15: 'convolution15y',
-};
+});
+
+/**
+ * @typedef {object} SeparableConvolutionKernel
+ * @property {number[]} x
+ * @property {number[]} y
+ */
 
 /**
  * Simple Blur (Box Filter)
@@ -82,7 +88,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
         /** @type {SpeedySize} size of the kernel */
         this._kernelSize = new SpeedySize(5,5);
 
-        /** @type {Object.<string,number[]>} convolution kernel */
+        /** @type {SeparableConvolutionKernel} convolution kernel */
         this._kernel = {
             x: BOX_FILTER[this._kernelSize.width],
             y: BOX_FILTER[this._kernelSize.height]
@@ -122,7 +128,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const kernX = this._kernel.x;
         const kernY = this._kernel.y;

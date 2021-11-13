@@ -55,8 +55,8 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const kps0 = this.input('in0').read();
-        const kps1 = this.input('in1').read();
+        const kps0 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('in0').read() );
+        const kps1 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('in1').read() );
         const descriptorSize = kps0.descriptorSize;
         const extraSize = kps0.extraSize;
         const keypoints = gpu.programs.keypoints;

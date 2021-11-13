@@ -117,8 +117,8 @@ export class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const in0 = this.input('in0').read();
-        const in1 = this.input('in1').read();
+        const in0 = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('in0').read() );
+        const in1 = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('in1').read() );
         const image0 = in0.image, image1 = in1.image;
         const format0 = in0.format, format1 = in1.format;
         const width = Math.max(image0.width, image1.width);

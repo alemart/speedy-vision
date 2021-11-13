@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
-import { SpeedyPipelineMessageType } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWith2DVectors } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
@@ -115,7 +115,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
      */
     _run(gpu)
     {
-        const vectors = this.input().read().vectors;
+        const { vectors } = /** @type {SpeedyPipelineMessageWith2DVectors} */ ( this.input().read() );
         const useBufferedDownloads = this._turbo;
         const encoderLength = vectors.width;
 

@@ -26,19 +26,7 @@ const REJECTED = 2;
 const SUSPEND_ASYNC = 1;
 const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
              (typeof process !== 'undefined' && process.nextTick) || // node.js
-             (f => Promise.resolve().then(f)); // most compatible
-
-/**
- * @callback SpeedyPromiseResolveCallback
- * @param {T} [value]
- * @returns {void}
- */
-
-/**
- * @callback SpeedyPromiseRejectCallback
- * @param {Error} error
- * @returns {void}
- */
+             (f => Promise.resolve().then(() => f())); // most compatible
 
 /**
  * SpeedyPromise: Super Fast Promises. SpeedyPromises can
@@ -50,7 +38,7 @@ export class SpeedyPromise
 {
     /**
      * Constructor
-     * @param {function(SpeedyPromiseResolveCallback, SpeedyPromiseRejectCallback): void} callback
+     * @param {function(function(T=): void, function(Error): void): void} callback
      */
     constructor(callback)
     {
@@ -75,8 +63,8 @@ export class SpeedyPromise
     /**
      * Setup handlers
      * @template U
-     * @param {function(T): U} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {function(Error): U|void} [onRejection] called when the SpeedyPromise is rejected
+     * @param {function(T=): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     then(onFulfillment, onRejection = null)
@@ -96,7 +84,7 @@ export class SpeedyPromise
     /**
      * Setup rejection handler
      * @template U
-     * @param {function(Error): U|void} onRejection called when the SpeedyPromise is rejected
+     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     catch(onRejection)
@@ -107,9 +95,8 @@ export class SpeedyPromise
     /**
      * Execute a callback when the promise is settled
      * (i.e., fulfilled or rejected)
-     * @template U
      * @param {function(): void} onFinally
-     * @returns {SpeedyPromise<U>}
+     * @returns {SpeedyPromise<T>}
      */
     finally(onFinally)
     {
@@ -161,7 +148,7 @@ export class SpeedyPromise
     /**
      * Creates a resolved SpeedyPromise
      * @template U
-     * @param {U} value
+     * @param {U} [value]
      * @returns {SpeedyPromise<U>}
      */
     static resolve(value)
@@ -184,7 +171,7 @@ export class SpeedyPromise
     /**
      * Creates a rejected SpeedyPromise
      * @template U
-     * @param {Error} reason usually an instance of Error
+     * @param {Error} reason
      * @returns {SpeedyPromise<U>}
      */
     static reject(reason)
@@ -202,8 +189,8 @@ export class SpeedyPromise
      * resolve if all input promises resolve, or reject if
      * any input promise rejects.
      * @template U
-     * @param {Iterable<U>} iterable e.g., a SpeedyPromise[]
-     * @returns {SpeedyPromise<U>}
+     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
+     * @returns {SpeedyPromise<U[]>}
      *
      * FIXME iterables need not be all <U>
      */
@@ -242,7 +229,7 @@ export class SpeedyPromise
      * as the first promise in the iterable gets fulfilled or
      * rejected (with its value/reason).
      * @template U
-     * @param {Iterable<U>} iterable e.g., a SpeedyPromise[]
+     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
      * @returns {SpeedyPromise<U>}
      */
     static race(iterable)

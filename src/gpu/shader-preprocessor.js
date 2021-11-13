@@ -50,9 +50,11 @@ const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
 const constantRegex = /@(\w+)@/g;
 const unrollRegex = [
-    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
-    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
+
+/** @typedef {Map<string,number>} ShaderDefines */
 
 /**
  * Custom preprocessor for the shaders
@@ -62,7 +64,7 @@ export class ShaderPreprocessor
     /**
      * Runs the preprocessor
      * @param {string} code 
-     * @param {Map<string,number>} [defines]
+     * @param {ShaderDefines} [defines]
      * @returns {string} preprocessed code
      */
     static run(code, defines = new Map())
@@ -102,7 +104,7 @@ export class ShaderPreprocessor
  */
 function readfileSync(filename)
 {
-    if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
+    if(String(filename).match(/^[a-zA-Z0-9_-]+\.glsl$/))
         return require('./shaders/include/' + filename);
 
     throw new FileNotFoundError(`Shader preprocessor: can't read file "${filename}"`);
@@ -111,7 +113,7 @@ function readfileSync(filename)
 /**
  * Unroll for loops in our own preprocessor
  * @param {string} code
- * @param {Map<string,number>} defines
+ * @param {ShaderDefines} defines
  * @returns {string}
  */
 function unrollLoops(code, defines)
@@ -139,28 +141,34 @@ function unrollLoops(code, defines)
 /**
  * Unroll a loop pattern (regexp)
  * @param {string} match the matched for loop
- * @param {...string} pi matched expression
+ * @param {string} type
+ * @param {string} counter
+ * @param {string} start
+ * @param {string} cmp
+ * @param {string} end
+ * @param {string} step
+ * @param {string} loopcode
  * @returns {string} unrolled loop
  */
 function unroll(match, type, counter, start, cmp, end, step, loopcode)
 {
-    const defines = this;
+    const defines = /** @type {ShaderDefines} */ ( this );
 
     // check if the loop limits are numeric constants or #defined numbers from the outside
-    start = Number.isFinite(+start) ? start : defines.get(start);
-    end = Number.isFinite(+end) ? end : defines.get(end);
-    if(start === undefined || end === undefined) {
+    const hasStart = Number.isFinite(+start) || defines.has(start);
+    const hasEnd = Number.isFinite(+end) || defines.has(end);
+    if(!hasStart || !hasEnd) {
         if(defines.size > 0)
             throw new ParseError(`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
         else
             return match; // don't unroll now, because defines is empty - maybe we'll succeed in the next pass
     }
 
-    // parse limits
-    start = parseInt(start);
-    end = parseInt(end);
-    step = (step.length == 0) ? 1 : parseInt(step);
-    Utils.assert(start <= end && step > 0);
+    // parse and validate limits & step
+    let istart = defines.has(start) ? defines.get(start) : parseInt(start);
+    let iend = defines.has(end) ? defines.get(end) : parseInt(end);
+    let istep = (step.length == 0) ? 1 : parseInt(step);
+    Utils.assert(istart <= iend && istep > 0);
 
     /*
     // debug
@@ -186,8 +194,8 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     unrolledCode += `${type} ${counter};\n`;
 
     // unroll loop
-    end += (cmp == '<=') ? 1 : 0;
-    for(let i = start; i < end; i += step)
+    iend += (cmp == '<=') ? 1 : 0;
+    for(let i = istart; i < iend; i += istep)
         unrolledCode += `{\n${counter} = ${i};\n${loopcode}\n}\n`;
 
     // close scope

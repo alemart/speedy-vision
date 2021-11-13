@@ -117,7 +117,7 @@ export class SpeedyTexture
      * Upload pixel data to the texture. The texture will be resized if needed.
      * @param {number} [width] in pixels
      * @param {number} [height] in pixels
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels
      * @return {SpeedyTexture} this
      */
     upload(pixels, width = this._width, height = this._height)
@@ -138,7 +138,7 @@ export class SpeedyTexture
 
     /**
      * Clear the texture
-     * @returns {SpeedyTexture} this texture
+     * @returns {this}
      */
     clear()
     {
@@ -164,7 +164,7 @@ export class SpeedyTexture
      * Resize this texture. Its content will be lost!
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
-     * @returns {SpeedyTexture} this texture
+     * @returns {this}
      */
     resize(width, height)
     {
@@ -372,7 +372,7 @@ export class SpeedyTexture
      * @param {WebGLTexture} texture
      * @param {GLsizei} width texture width
      * @param {GLsizei} height texture height
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels
      * @param {GLint} lod mipmap level-of-detail
      * @param {number} format
      * @param {number} internalFormat
@@ -495,12 +495,12 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
     }
 
-    /**
+    /*
      * Resize this texture
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
      * @param {boolean} [preserveContent] should we preserve the content of the texture? EXPENSIVE!
-     * @returns {SpeedyDrawableTexture} this texture
+     * @returns {this}
      */
     /*resize(width, height, preserveContent = false)
     {
@@ -566,7 +566,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
     /**
      * Clear the texture
-     * @returns {SpeedyDrawableTexture} this texture
+     * @returns {this}
      */
     clear()
     {
@@ -588,7 +588,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} g green component, a value in [0,1]
      * @param {number} b blue component, a value in [0,1]
      * @param {number} a alpha component, a value in [0,1]
-     * @returns {SpeedyDrawableTexture} this texture
+     * @returns {this}
      */
     clearToColor(r, g, b, a)
     {

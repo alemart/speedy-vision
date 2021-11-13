@@ -29,8 +29,8 @@ import { SpeedyMedia } from '../speedy-media';
 import { SpeedyKeypoint } from '../speedy-keypoint';
 
 /**
- * @typedef {Object.<string,(SpeedyMedia|SpeedyKeypoint[])>} SpeedyPipelineOutput
- * indexed by the names of the sink nodes
+ * A dictionary indexed by the names of the sink nodes
+ * @typedef {Object<string,any>} SpeedyPipelineOutput
  */
 
 /**
@@ -150,7 +150,7 @@ export class SpeedyPipeline
         }
 
         // find the sinks
-        const sinks = this._sequence.filter(node => node.isSink());
+        const sinks = /** @type {SpeedyPipelineSinkNode[]} */ ( this._sequence.filter(node => node.isSink()) );
 
         // create output template
         const template = SpeedyPipeline._createOutputTemplate(sinks);
@@ -191,7 +191,7 @@ export class SpeedyPipeline
             // this call greatly improves performance when downloading pixel data using PBOs
             gpu.gl.flush();
 
-            if(runTask !== undefined)
+            if(typeof runTask !== 'undefined')
                 return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
         }
 
@@ -205,8 +205,10 @@ export class SpeedyPipeline
      */
     static _tsort(nodes)
     {
+        /** @typedef {[SpeedyPipelineNode, boolean]} StackNode */
+
         const outlinks = SpeedyPipeline._outlinks(nodes);
-        const stack = nodes.map(node => [ node, false ]);
+        const stack = nodes.map(node => /** @type {StackNode} */ ([ node, false ]) );
         const trash = new Set();
         const sorted = new Array(nodes.length);
         let j = sorted.length;
@@ -219,7 +221,7 @@ export class SpeedyPipeline
 
                     trash.add(node);
                     stack.push([ node, true ]);
-                    stack.push(...(outnodes.map(node => [ node, false ])));
+                    stack.push(...(outnodes.map(node => /** @type {StackNode} */ ([ node, false ]) )));
 
                     if(outnodes.some(node => trash.has(node) && !sorted.includes(node)))
                         throw new IllegalOperationError(`Pipeline networks cannot have cycles!`);

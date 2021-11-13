@@ -96,7 +96,7 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const previousFormat = this._previousFormat;
         const page = this._tex;
         const previousInputTexture = page[1 - this._pageIndex];

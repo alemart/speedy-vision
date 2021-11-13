@@ -41,7 +41,8 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
     {
         super(name, 4, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -96,7 +97,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const outputTexture = this._tex[3];
         let minValue = this._minValue;

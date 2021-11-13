@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNodeMultiscaleKeypointDetector } from './detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWithImage } from '../../../pipeline-message';
 import { InputPort, OutputPort } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
@@ -48,7 +48,8 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
     {
         super(name, 5, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
-                msg => msg.format === ImageFormat.GREY
+                ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
+                    msg.format === ImageFormat.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -82,7 +83,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
      */
     _run(gpu)
     {
-        const image = this.input().read().image;
+        const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
         const width = image.width, height = image.height;
         const tex = this._tex;
         const capacity = this._capacity;

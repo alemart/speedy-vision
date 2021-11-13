@@ -24,6 +24,11 @@ import { SpeedyPromise } from '../utils/speedy-promise';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
 import { MediaType } from '../utils/types'
 
+/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} SpeedyMediaSourceNativeElement */
+
+/** Internal token for protected constructors */
+const PRIVATE_TOKEN = Symbol();
+
 /**
  * An abstract media source: a wrapper around native
  * elements such as: HTMLImageElement, HTMLVideoElement,
@@ -33,38 +38,41 @@ import { MediaType } from '../utils/types'
 export class SpeedyMediaSource
 {
     /**
-     * Constructor
+     * @protected Constructor
+     * @param {symbol} token
      */
-    constructor()
+    constructor(token)
     {
-        /** @type {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} underlying media object */
+        // the constructor is not public
+        if(token !== PRIVATE_TOKEN)
+            throw new IllegalOperationError();
+
+        /** @type {SpeedyMediaSourceNativeElement} underlying media object */
         this._data = null;
     }
 
     /**
      * Load a media source
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} wrappedObject
+     * @param {SpeedyMediaSourceNativeElement} wrappedObject
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
     static load(wrappedObject)
     {
-        const constructor = wrappedObject.constructor.name;
-
-        if(constructor == 'HTMLImageElement')
-            return new SpeedyImageMediaSource()._load(wrappedObject);
-        else if(constructor == 'HTMLVideoElement')
-            return new SpeedyVideoMediaSource()._load(wrappedObject);
-        else if(constructor == 'HTMLCanvasElement')
-            return new SpeedyCanvasMediaSource()._load(wrappedObject);
-        else if(constructor == 'ImageBitmap')
-            return new SpeedyBitmapMediaSource()._load(wrappedObject);
+        if(wrappedObject instanceof HTMLImageElement)
+            return SpeedyImageMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof HTMLVideoElement)
+            return SpeedyVideoMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof HTMLCanvasElement)
+            return SpeedyCanvasMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof ImageBitmap)
+            return SpeedyBitmapMediaSource.load(wrappedObject);
         else
             throw new IllegalArgumentError(`Unsupported media type: ${wrappedObject}`);
     }
 
     /**
      * The underlying wrapped object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap}
+     * @returns {SpeedyMediaSourceNativeElement}
      */
     get data()
     {
@@ -132,9 +140,10 @@ export class SpeedyMediaSource
     /**
      * Load the underlying media
      * @abstract
+     * @param {SpeedyMediaSourceNativeElement} element
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
-    _load()
+    _load(element)
     {
         throw new AbstractMethodError();
     }
@@ -169,6 +178,27 @@ export class SpeedyMediaSource
  */
 class SpeedyImageMediaSource extends SpeedyMediaSource
 {
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {HTMLImageElement} image element */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {HTMLImageElement}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
     /**
      * The type of the underlying media source
      * @returns {MediaType}
@@ -205,9 +235,8 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new IllegalOperationError(`Media not loaded`);
 
-        const newNode = this._data.cloneNode(true);
-        const newSource = new SpeedyImageMediaSource();
-        return newSource._load(newNode);
+        const newNode = /** @type {HTMLImageElement} */ ( this._data.cloneNode(true) );
+        return SpeedyImageMediaSource.load(newNode);
     }
 
     /**
@@ -221,9 +250,9 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
             this.release();
 
         if(image.complete && image.naturalWidth !== 0) { // already loaded?
-            return SpeedyPromise.resolve().then(() => {
+            return new SpeedyPromise(resolve => {
                 this._data = image;
-                return this;
+                resolve(this);
             });
         }
         else {
@@ -233,6 +262,16 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
             });
         }
     }
+
+    /**
+     * Load the underlying media
+     * @param {HTMLImageElement} image
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(image)
+    {
+        return new SpeedyImageMediaSource(PRIVATE_TOKEN)._load(image);
+    }
 }
 
 /**
@@ -241,6 +280,27 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
  */
 class SpeedyVideoMediaSource extends SpeedyMediaSource
 {
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {HTMLVideoElement} video element */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {HTMLVideoElement}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
     /**
      * The type of the underlying media source
      * @returns {MediaType}
@@ -279,9 +339,8 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new IllegalOperationError(`Media not loaded`);
 
-        const newNode = this._data.cloneNode(true);
-        const newSource = new SpeedyVideoMediaSource();
-        return newSource._load(newNode);
+        const newNode = /** @type {HTMLVideoElement} */ ( this._data.cloneNode(true) );
+        return SpeedyVideoMediaSource.load(newNode);
     }
 
     /**
@@ -295,9 +354,9 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
             this.release();
 
         if(video.readyState >= 4) { // already loaded?
-            return SpeedyPromise.resolve().then(() => {
+            return new SpeedyPromise(resolve => {
                 this._data = video;
-                return this;
+                resolve(this);
             });
         }
         else {
@@ -308,6 +367,16 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
             })
         }
     }
+
+    /**
+     * Load the underlying media
+     * @param {HTMLVideoElement} video
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(video)
+    {
+        return new SpeedyVideoMediaSource(PRIVATE_TOKEN)._load(video);
+    }
 }
 
 /**
@@ -316,6 +385,27 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
  */
 class SpeedyCanvasMediaSource extends SpeedyMediaSource
 {
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {HTMLCanvasElement} canvas element */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {HTMLCanvasElement}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
     /**
      * The type of the underlying media source
      * @returns {MediaType}
@@ -354,10 +444,9 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
 
         const newCanvas = Utils.createCanvas(this.width, this.height);
         const newContext = newCanvas.getContext('2d');
-        newContext.draw(this._data, 0, 0);
+        newContext.drawImage(this._data, 0, 0);
 
-        const newSource = new SpeedyCanvasMediaSource();
-        return newSource._load(newCanvas);
+        return SpeedyCanvasMediaSource.load(newCanvas);
     }
 
     /**
@@ -370,10 +459,20 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return SpeedyPromise.resolve().then(() => {
+        return new SpeedyPromise(resolve => {
             this._data = canvas;
-            return this;
+            resolve(this);
         });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {HTMLCanvasElement} canvas
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(canvas)
+    {
+        return new SpeedyCanvasMediaSource(PRIVATE_TOKEN)._load(canvas);
     }
 }
 
@@ -383,6 +482,27 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
  */
 class SpeedyBitmapMediaSource extends SpeedyMediaSource
 {
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {ImageBitmap} image bitmap */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {ImageBitmap}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
     /**
      * The type of the underlying media source
      * @returns {MediaType}
@@ -422,7 +542,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         return new SpeedyPromise((resolve, reject) => {
             createImageBitmap(this._data).then(
                 newBitmap => {
-                    const newSource = new SpeedyBitmapMediaSource();
+                    const newSource = new SpeedyBitmapMediaSource(PRIVATE_TOKEN);
                     newSource._load(newBitmap).then(resolve, reject);
                 },
                 reject
@@ -452,9 +572,19 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return SpeedyPromise.resolve().then(() => {
+        return new SpeedyPromise(resolve => {
             this._data = bitmap;
-            return this;
+            resolve(this);
         });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {ImageBitmap} bitmap
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(bitmap)
+    {
+        return new SpeedyBitmapMediaSource(PRIVATE_TOKEN)._load(bitmap);
     }
 }

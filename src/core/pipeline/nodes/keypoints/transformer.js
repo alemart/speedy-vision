@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNode } from '../../pipeline-node';
-import { SpeedyPipelineMessageType } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
@@ -78,7 +78,7 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
         const outputTexture = this._tex[0];
         const homography = this._transform.read();
 

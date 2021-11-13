@@ -22,6 +22,36 @@
 import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError } from './errors'
 import { SpeedyPromise } from './speedy-promise';
 
+/** @typedef {{fn: Function, args: any[]}} ZeroTimeoutCallback */
+/** @typedef {Map<string,ZeroTimeoutCallback>} ZeroTimeoutContext */
+
+/** @type {function(): ZeroTimeoutContext} helper for setZeroTimeout */
+const zeroTimeoutContext = (() => {
+    const callbacks = /** @type {ZeroTimeoutContext} */ ( new Map() );
+    let initialized = false;
+
+    return (function() {
+        if(!initialized) {
+            window.addEventListener('message', ev => {
+                if(ev.source === window) {
+                    const msgId = ev.data;
+                    const obj = callbacks.get(msgId);
+                    if(obj !== undefined) {
+                        ev.stopPropagation();
+                        obj.fn.apply(window, obj.args);
+                        callbacks.delete(msgId);
+                    }
+                }
+            }, true);
+            initialized = true;
+        }
+
+        return callbacks;
+    });
+})();
+
+
+
 /**
  * Generic utilities
  */
@@ -76,24 +106,10 @@ export class Utils
      */
     static setZeroTimeout(fn, ...args)
     {
-        const ctx = (Utils._setZeroTimeoutContext = Utils._setZeroTimeoutContext || (Utils._setZeroTimeoutContext = {
-            callbacks: new Map(),
-            _setup: window.addEventListener('message', ev => {
-                if(ev.source === window) {
-                    const ctx = Utils._setZeroTimeoutContext;
-                    const msgId = ev.data;
-                    const obj = ctx.callbacks.get(msgId);
-                    if(obj !== undefined) {
-                        ev.stopPropagation();
-                        obj.fn.apply(window, obj.args);
-                        ctx.callbacks.delete(msgId);
-                    }
-                }
-            }, true)
-        }));
-
+        const ctx = zeroTimeoutContext();
         const msgId = '0%' + Math.random();
-        ctx.callbacks.set(msgId, { fn, args });
+
+        ctx.set(msgId, { fn, args });
         window.postMessage(msgId, '*');
     }
 
@@ -119,8 +135,6 @@ export class Utils
         }
         else
             throw new ParseError(`Can't detect function arguments of ${code}`);
-
-        return [];
     }
 
     /**
@@ -320,6 +334,33 @@ export class Utils
             throw new IllegalArgumentError(`Expected a positive integer as input`);
 
         return [...(Array(n).keys())];
+    }
+
+    /**
+     * Flatten an array (1 level only)
+     * @template U
+     * @param {U[]} array
+     * @returns {U[]}
+     */
+    static flatten(array)
+    {
+        //return array.flat();
+        //return array.reduce((arr, val) => arr.concat(val), []);
+
+        const flat = [];
+
+        for(let i = 0, n = array.length; i < n; i++) {
+            const entry = array[i];
+
+            if(Array.isArray(entry)) {
+                for(let j = 0, m = entry.length; j < m; j++)
+                    flat.push(entry[j]);
+            }
+            else
+                flat.push(entry);
+        }
+
+        return flat;
     }
 
     /**

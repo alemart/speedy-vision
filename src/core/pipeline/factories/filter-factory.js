@@ -66,7 +66,7 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     /**
      * Median Blur
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeSimpleBlur}
+     * @returns {SpeedyPipelineNodeMedianBlur}
      */
     static MedianBlur(name = undefined)
     {
@@ -76,7 +76,7 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     /**
      * Image Convolution
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeSimpleBlur}
+     * @returns {SpeedyPipelineNodeConvolution}
      */
     static Convolution(name = undefined)
     {
@@ -86,7 +86,7 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     /**
      * Nightvision
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeSimpleBlur}
+     * @returns {SpeedyPipelineNodeNightvision}
      */
     static Nightvision(name = undefined)
     {

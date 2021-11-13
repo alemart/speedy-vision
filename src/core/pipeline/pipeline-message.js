@@ -149,7 +149,7 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
     {
         super(SpeedyPipelineMessageType.Image);
 
-        /** @type {SpeedyTexture} the image we carry */
+        /** @type {SpeedyDrawableTexture} the image we carry */
         this._image = null;
 
         /** @type {ImageFormat} image format */
@@ -158,7 +158,7 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 
     /**
      * Set parameters
-     * @param {SpeedyTexture} image the image we carry
+     * @param {SpeedyDrawableTexture} image the image we carry
      * @param {ImageFormat} [format] image format
      * @returns {SpeedyPipelineMessage} this message
      */
@@ -174,7 +174,7 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 
     /**
      * The image we carry
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     get image()
     {
@@ -309,13 +309,13 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
     {
         super(SpeedyPipelineMessageType.Vector2);
 
-        /** @type {SpeedyTexture} the set of vectors */
+        /** @type {SpeedyDrawableTexture} the set of vectors */
         this._vectors = null;
     }
 
     /**
      * Set parameters
-     * @param {SpeedyTexture} vectors the set of vectors
+     * @param {SpeedyDrawableTexture} vectors the set of vectors
      * @returns {SpeedyPipelineMessage} this message
      */
     set(vectors)
@@ -329,7 +329,7 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
 
     /**
      * The set of vectors
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     get vectors()
     {
@@ -349,7 +349,7 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
 
 
 
-// Map message type to message class
+/** Map message type to message class */
 const MESSAGE_CLASS = Object.freeze({
     [SpeedyPipelineMessageType.Nothing]: SpeedyPipelineMessageWithNothing,
     [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
@@ -365,5 +365,9 @@ const MESSAGE_CLASS = Object.freeze({
 function createMessage(type)
 {
     //return Reflect.construct(MESSAGE_CLASS[type], []);
-    return new MESSAGE_CLASS[type];
+    return new MESSAGE_CLASS[
+        // error TS2538: Type 'Symbol' cannot be used as an index type.
+        // heck, what the hack...
+        /** @type {any} */ ( type )
+    ];
 }

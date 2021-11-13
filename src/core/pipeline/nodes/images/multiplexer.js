@@ -63,7 +63,7 @@ export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
 
     /**
      * The number of the port that should be linked to the output
-     * @param {numver} port
+     * @param {number} port
      */
     set port(port)
     {

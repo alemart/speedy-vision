@@ -19,7 +19,6 @@
  * WebAssembly bridge
  */
 
-import { SpeedyMatrix } from './speedy-matrix';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { WebAssemblyError, TimeoutError, NotSupportedError } from '../utils/errors';
 import { Utils } from '../utils/utils';
@@ -79,7 +78,7 @@ export class SpeedyMatrixWASM
     /**
      * Gets you the WASM imports bound to a memory object
      * @param {AugmentedMemory} memory
-     * @returns {Object.<string,Function>}
+     * @returns {Object<string,Function>}
      */
     static imports(memory)
     {
@@ -329,9 +328,9 @@ class CStringUtils
 
         wasm.instance.exports.srand((Date.now() * 0.001) & 0xffffffff); // srand(time(NULL))
 
-        Utils.log(`The WebAssembly code has been loaded!`);
+        Utils.log(`The WebAssembly routines have been loaded!`);
     })
     .catch(err => {
-        throw new WebAssemblyError(`Can't load WebAssembly code: ${err}`, err);
+        throw new WebAssemblyError(`Can't load the WebAssembly routines: ${err}`, err);
     });
 })(_memory);
