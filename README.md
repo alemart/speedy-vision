@@ -119,7 +119,6 @@ Try the demos and take a look at their source code:
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
   * [Blurring a video with a median filter](https://alemart.github.io/speedy-vision-js/demos/median-filter.html)
   * [Normalize camera stream](https://alemart.github.io/speedy-vision-js/demos/normalize-demo.html)
-  * [Normalize camera stream](https://alemart.github.io/speedy-vision-js/demos/normalize-demo.html)
   * [Image Portals](https://alemart.github.io/speedy-vision-js/demos/image-portal.html)
 * Linear Algebra
   * [System of equations](https://alemart.github.io/speedy-vision-js/demos/system-of-equations.html)
