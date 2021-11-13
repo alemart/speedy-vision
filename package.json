@@ -6,11 +6,13 @@
   "homepage": "https://github.com/alemart/speedy-vision-js",
   "license": "Apache-2.0",
   "main": "dist/speedy-vision.js",
+  "types": "dist/declarations/speedy-vision.d.ts",
   "scripts": {
     "start": "webpack-dev-server --mode development",
-    "build": "npm run build-dev && npm run build-pro",
+    "build": "npm run build-dev && npm run build-pro && npm run build-dts",
     "build-dev": "NODE_ENV=development webpack --mode development",
     "build-pro": "NODE_ENV=production webpack --mode production",
+    "build-dts": "tsc",
     "make": "cd src/core/wasm; make; cd ..",
     "watch": "webpack --watch"
   },
@@ -52,6 +54,7 @@
     "eslint": "^7.16.0",
     "raw-loader": "^4.0.1",
     "terser-webpack-plugin": "^2.3.6",
+    "typescript": "^4.4.4",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.11.0"
