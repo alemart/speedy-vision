@@ -5,8 +5,8 @@
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
   "homepage": "https://github.com/alemart/speedy-vision-js",
   "license": "Apache-2.0",
-  "main": "dist/speedy-vision.js",
-  "types": "dist/declarations/speedy-vision.d.ts",
+  "main": "src/main.js",
+  "types": "types/main.d.ts",
   "scripts": {
     "start": "webpack-dev-server --mode development",
     "build": "npm run build-dev && npm run build-pro && npm run build-dts",

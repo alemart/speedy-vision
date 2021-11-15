@@ -30,7 +30,7 @@ module.exports = (env, argv) => ({
       resourceRegExp: /\.ignore\./i,
     }),
   ],
-  entry: './src/speedy-vision.js',
+  entry: path.resolve(__dirname, pack.main),
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
