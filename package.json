@@ -6,7 +6,7 @@
   "homepage": "https://github.com/alemart/speedy-vision-js",
   "license": "Apache-2.0",
   "main": "dist/speedy-vision.js",
-  "types": "types/main.d.ts",
+  "types": "dist/types/main.d.ts",
   "scripts": {
     "start": "webpack-dev-server --mode development --env PORT=8080",
     "build": "npm run clean && npm run build-dev && npm run build-pro && npm run build-dts",

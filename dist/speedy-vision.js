@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-11-16T18:36:02.626Z
+ * Date: 2021-11-16T20:15:46.457Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
