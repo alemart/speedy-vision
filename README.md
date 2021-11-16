@@ -2,7 +2,7 @@
 
 Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Vision library for JavaScript.
 
-[<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/best-features.html "Click to open a demo")
+[<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision/demos/best-features.html "Click to open a demo")
 
 ## Features
 
@@ -93,36 +93,36 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
-* [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
+* [Unit tests](https://alemart.github.io/speedy-vision/tests/index.html)
 
 ## Demos
 
 Try the demos and take a look at their source code:
 
-* [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html)
+* [Hello, world!](https://alemart.github.io/speedy-vision/demos/hello-world.html)
 * Feature detection
-  * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-demo.html)
-  * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
-  * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
-  * [Find the best Harris corners](https://alemart.github.io/speedy-vision-js/demos/best-features.html)
-  * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
+  * [Feature detection in a webcam](https://alemart.github.io/speedy-vision/demos/webcam-demo.html)
+  * [Feature detection in an image](https://alemart.github.io/speedy-vision/demos/image-features.html)
+  * [Feature detection in a video](https://alemart.github.io/speedy-vision/demos/video-features.html)
+  * [Find the best Harris corners](https://alemart.github.io/speedy-vision/demos/best-features.html)
+  * [ORB features](https://alemart.github.io/speedy-vision/demos/orb-features.html)
 * Feature tracking
-  * [Optical flow](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
+  * [Optical flow](https://alemart.github.io/speedy-vision/demos/optical-flow.html)
 * Image processing
-  * [Image convolution](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
-  * [Image warping](https://alemart.github.io/speedy-vision-js/demos/warping.html)
-  * [Alpha blending](https://alemart.github.io/speedy-vision-js/demos/alpha-blending.html)
-  * [Resize image](https://alemart.github.io/speedy-vision-js/demos/resize-image.html)
-  * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
-  * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
-  * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
-  * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
-  * [Blurring a video with a median filter](https://alemart.github.io/speedy-vision-js/demos/median-filter.html)
-  * [Normalize camera stream](https://alemart.github.io/speedy-vision-js/demos/normalize-demo.html)
-  * [Image Portals](https://alemart.github.io/speedy-vision-js/demos/image-portal.html)
+  * [Image convolution](https://alemart.github.io/speedy-vision/demos/convolution.html)
+  * [Image warping](https://alemart.github.io/speedy-vision/demos/warping.html)
+  * [Alpha blending](https://alemart.github.io/speedy-vision/demos/alpha-blending.html)
+  * [Resize image](https://alemart.github.io/speedy-vision/demos/resize-image.html)
+  * [Nightvision camera](https://alemart.github.io/speedy-vision/demos/nightvision-camera.html)
+  * [Convert image to greyscale](https://alemart.github.io/speedy-vision/demos/greyscale-image.html)
+  * [Convert video to greyscale](https://alemart.github.io/speedy-vision/demos/greyscale-video.html)
+  * [Blurring an image](https://alemart.github.io/speedy-vision/demos/image-blurring.html)
+  * [Blurring a video with a median filter](https://alemart.github.io/speedy-vision/demos/median-filter.html)
+  * [Normalize camera stream](https://alemart.github.io/speedy-vision/demos/normalize-demo.html)
+  * [Image Portals](https://alemart.github.io/speedy-vision/demos/image-portal.html)
 * Linear Algebra
-  * [System of equations](https://alemart.github.io/speedy-vision-js/demos/system-of-equations.html)
-  * [QR decomposition](https://alemart.github.io/speedy-vision-js/demos/qr-decomposition.html)
+  * [System of equations](https://alemart.github.io/speedy-vision/demos/system-of-equations.html)
+  * [QR decomposition](https://alemart.github.io/speedy-vision/demos/qr-decomposition.html)
 
 ## Installation
 
