@@ -30,12 +30,12 @@ module.exports = (env, argv) => ({
       resourceRegExp: /\.ignore\./i,
     }),
   ],
-  entry: path.resolve(__dirname, pack.main),
+  entry: './src/main.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
     library: 'Speedy',
-    libraryTarget: 'var',
+    libraryTarget: 'umd',
   },
   module: {
     rules: [
