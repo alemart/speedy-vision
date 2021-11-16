@@ -132,7 +132,7 @@ Download the latest release of speedy-vision.js and include it in the `<head>` s
 <script src="dist/speedy-vision.min.js"></script>
 ```
 
-Once you import the library, the `Speedy` object will be exposed. Check out the [Hello World demo](demos/hello-world.html) for a working example.
+Once you import the library, the `Speedy` object will be exposed. Check out the [Hello World demo](https://alemart.github.io/speedy-vision/demos/hello-world.html) for a working example.
 
 ## Motivation
 
