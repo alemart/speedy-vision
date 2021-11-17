@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-11-16T20:15:46.457Z
+ * Date: 2021-11-17T18:27:16.137Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -11402,230 +11402,6 @@ class SpeedyVector2
 
 /***/ }),
 
-/***/ "./src/core/speedy.js":
-/*!****************************!*\
-  !*** ./src/core/speedy.js ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Speedy": () => (/* binding */ Speedy)
-/* harmony export */ });
-/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
-/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
-/* harmony import */ var _pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy.js
- * Speedy's main class
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/** @typedef {import('./speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
-/** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
-
-// Constants
-const matrixFactory = new _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__.SpeedyMatrixFactory();
-const vector2Factory = new _pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineVector2Factory();
-
-/**
- * Speedy's main class
- */
-class Speedy
-{
-    /**
-     * Loads a SpeedyMedia object based on the provided source element
-     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
-     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
-     * @returns {SpeedyPromise<SpeedyMedia>}
-     */
-    static load(sourceElement, options = {})
-    {
-        return _speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(sourceElement, options);
-    }
-
-    /**
-     * Loads a camera stream
-     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
-     * @param {number} [height] height of the stream
-     * @returns {SpeedyPromise<SpeedyMedia>}
-     */
-    static camera(widthOrConstraints = 640, height = 360)
-    {
-        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
-            audio: false,
-            video: {
-                width: widthOrConstraints | 0,
-                height: height | 0,
-            },
-        });
-
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.requestCameraStream(constraints).then(
-            video => _speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(video)
-        );
-    }
-
-    /**
-     * The version of the library
-     * @returns {string} The version of the library
-     */
-    static get version()
-    {
-        return "0.8.3-wip";
-    }
-
-    /**
-     * The FPS rate
-     * @returns {number} Frames per second (FPS)
-     */
-    static get fps()
-    {
-        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__.FPSCounter.instance.fps;
-    }
-
-    /**
-     * 2D vector instantiation and related nodes
-     * @returns {SpeedyPipelineVector2Factory}
-     */
-    static get Vector2()
-    {
-        return vector2Factory;
-    }
-
-    /**
-     * Create a 2D point
-     * @param {number} x
-     * @param {number} y
-     * @returns {SpeedyPoint2}
-     */
-    static Point2(x, y)
-    {
-        return new _speedy_point__WEBPACK_IMPORTED_MODULE_2__.SpeedyPoint2(x, y);
-    }
-
-    /**
-     * Create a new size object
-     * @param {number} width
-     * @param {number} height
-     * @returns {SpeedySize}
-     */
-    static Size(width, height)
-    {
-        return new _speedy_size__WEBPACK_IMPORTED_MODULE_3__.SpeedySize(width, height);
-    }
-
-    /**
-     * Matrix routines
-     * @returns {SpeedyMatrixFactory}
-     */
-    static get Matrix()
-    {
-        return matrixFactory;
-    }
-
-    /**
-     * Speedy Promises
-     * @returns {typeof SpeedyPromise}
-     */
-    static get Promise()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__.SpeedyPromise;
-    }
-
-    /**
-     * Create a new Pipeline
-     * @returns {SpeedyPipeline}
-     */
-    static Pipeline()
-    {
-        return new _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__.SpeedyPipeline();
-    }
-
-    /**
-     * Image-related nodes
-     * @returns {typeof SpeedyPipelineImageFactory}
-     */
-    static get Image()
-    {
-        return _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineImageFactory;
-    }
-
-    /**
-     * Image filters
-     * @returns {typeof SpeedyPipelineFilterFactory}
-     */
-    static get Filter()
-    {
-        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineFilterFactory;
-    }
-
-    /**
-     * Image transforms
-     * @returns {typeof SpeedyPipelineTransformFactory}
-     */
-    static get Transform()
-    {
-        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineTransformFactory;
-    }
-
-    /**
-     * Keypoint-related nodes
-     * @returns {typeof SpeedyPipelineKeypointFactory}
-     */
-    static get Keypoint()
-    {
-        return _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineKeypointFactory;
-    }
-}
-
-// Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_13__.LITTLE_ENDIAN)
-    _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.warning('Running on a big-endian machine');
-
-/***/ }),
-
 /***/ "./src/gpu/programs/filters.js":
 /*!*************************************!*\
   !*** ./src/gpu/programs/filters.js ***!
@@ -16435,38 +16211,6 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
 /***/ }),
 
-/***/ "./src/main.js":
-/*!*********************!*\
-  !*** ./src/main.js ***!
-  \*********************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * main.js
- * The entry point of the library
- */
-
-module.exports = __webpack_require__(/*! ./core/speedy */ "./src/core/speedy.js").Speedy;
-
-
-/***/ }),
-
 /***/ "./src/utils/errors.js":
 /*!*****************************!*\
   !*** ./src/utils/errors.js ***!
@@ -19156,12 +18900,230 @@ AAAAAAAAAAAAAAAAAAAA
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module used 'module' so it can't be inlined
-/******/ 	var __webpack_exports__ = __webpack_require__("./src/main.js");
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+/*!*********************!*\
+  !*** ./src/main.js ***!
+  \*********************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ Speedy)
+/* harmony export */ });
+/* harmony import */ var _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./core/speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
+/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * main.js
+ * The entry point of the library
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
+/** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
+
+// Constants
+const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__.SpeedyMatrixFactory();
+const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineVector2Factory();
+
+/**
+ * Speedy's main class
+ */
+class Speedy
+{
+    /**
+     * Loads a SpeedyMedia object based on the provided source element
+     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
+     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+    static load(sourceElement, options = {})
+    {
+        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(sourceElement, options);
+    }
+
+    /**
+     * Loads a camera stream
+     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
+     * @param {number} [height] height of the stream
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+    static camera(widthOrConstraints = 640, height = 360)
+    {
+        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
+            audio: false,
+            video: {
+                width: widthOrConstraints | 0,
+                height: height | 0,
+            },
+        });
+
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.requestCameraStream(constraints).then(
+            video => _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(video)
+        );
+    }
+
+    /**
+     * The version of the library
+     * @returns {string} The version of the library
+     */
+    static get version()
+    {
+        return "0.8.3-wip";
+    }
+
+    /**
+     * The FPS rate
+     * @returns {number} Frames per second (FPS)
+     */
+    static get fps()
+    {
+        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__.FPSCounter.instance.fps;
+    }
+
+    /**
+     * 2D vector instantiation and related nodes
+     * @returns {SpeedyPipelineVector2Factory}
+     */
+    static get Vector2()
+    {
+        return vector2Factory;
+    }
+
+    /**
+     * Create a 2D point
+     * @param {number} x
+     * @param {number} y
+     * @returns {SpeedyPoint2}
+     */
+    static Point2(x, y)
+    {
+        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_2__.SpeedyPoint2(x, y);
+    }
+
+    /**
+     * Create a new size object
+     * @param {number} width
+     * @param {number} height
+     * @returns {SpeedySize}
+     */
+    static Size(width, height)
+    {
+        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_3__.SpeedySize(width, height);
+    }
+
+    /**
+     * Matrix routines
+     * @returns {SpeedyMatrixFactory}
+     */
+    static get Matrix()
+    {
+        return matrixFactory;
+    }
+
+    /**
+     * Speedy Promises
+     * @returns {typeof SpeedyPromise}
+     */
+    static get Promise()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__.SpeedyPromise;
+    }
+
+    /**
+     * Create a new Pipeline
+     * @returns {SpeedyPipeline}
+     */
+    static Pipeline()
+    {
+        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__.SpeedyPipeline();
+    }
+
+    /**
+     * Image-related nodes
+     * @returns {typeof SpeedyPipelineImageFactory}
+     */
+    static get Image()
+    {
+        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineImageFactory;
+    }
+
+    /**
+     * Image filters
+     * @returns {typeof SpeedyPipelineFilterFactory}
+     */
+    static get Filter()
+    {
+        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineFilterFactory;
+    }
+
+    /**
+     * Image transforms
+     * @returns {typeof SpeedyPipelineTransformFactory}
+     */
+    static get Transform()
+    {
+        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineTransformFactory;
+    }
+
+    /**
+     * Keypoint-related nodes
+     * @returns {typeof SpeedyPipelineKeypointFactory}
+     */
+    static get Keypoint()
+    {
+        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineKeypointFactory;
+    }
+}
+
+// Big-endian machine? Currently untested.
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_13__.LITTLE_ENDIAN)
+    _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.warning('Running on a big-endian machine');
+})();
+
+__webpack_exports__ = __webpack_exports__["default"];
 /******/ 	return __webpack_exports__;
 /******/ })()
 ;
