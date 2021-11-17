@@ -8,6 +8,7 @@ module.exports = (env, argv) => ({
     output: {
         filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
         path: path.resolve(__dirname, 'dist'),
+        publicPath: '/dist/',
         library: {
             name: 'Speedy',
             type: 'umd',
@@ -56,9 +57,9 @@ module.exports = (env, argv) => ({
     devServer: {
         host: env.HOST || 'localhost',
         port: env.PORT || 8080,
-        static: ['dist', 'assets', 'demos', 'tests'].map(dir => ({
+        static: ['assets', 'demos', 'tests'].map(dir => ({
             directory: path.resolve(__dirname, dir),
-            publicPath: path.resolve('/', dir),
+            publicPath: `/${dir}/`,
         })),
     },
     optimization: argv.mode == 'development' ? { minimize: false } : {
