@@ -12,6 +12,7 @@ module.exports = (env, argv) => ({
         library: {
             name: 'Speedy',
             type: 'umd',
+            export: 'default',
         },
     },
     plugins: [
