@@ -42,7 +42,7 @@ const matrixFactory = new SpeedyMatrixFactory();
 const vector2Factory = new SpeedyPipelineVector2Factory();
 
 /**
- * Speedy's main class
+ * GPU-accelerated Computer Vision for JavaScript
  */
 export default class Speedy
 {
