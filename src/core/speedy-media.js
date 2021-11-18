@@ -27,6 +27,8 @@ import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 
+/** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
+
 /**
  * @typedef {object} SpeedyMediaOptions
  * @property {ImageFormat} [format] default is RGBA
@@ -76,7 +78,7 @@ export class SpeedyMedia
     /**
      * Load a media source
      * Will wait until the HTML media source is loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
+     * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
@@ -95,7 +97,7 @@ export class SpeedyMedia
 
     /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
+     * @returns {SpeedyMediaSourceNativeElement} the media element
      */
     get source()
     {
@@ -122,7 +124,7 @@ export class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "bitmap"
+     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
      */
     get type()
     {
