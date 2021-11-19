@@ -26,6 +26,7 @@ import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedySize } from './speedy-size';
 
 /** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 
@@ -157,6 +158,15 @@ export class SpeedyMedia
     get options()
     {
         return this._options;
+    }
+
+    /**
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
+     */
+    size()
+    {
+        return new SpeedySize(this.width, this.height);
     }
 
     /**

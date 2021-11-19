@@ -316,6 +316,16 @@ Draws the media to a canvas.
 * `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
 * `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
 
+##### SpeedyMedia.size()
+
+`SpeedyMedia.size(): SpeedySize`
+
+The size of the media, in pixels.
+
+###### Returns
+
+A `SpeedySize` object.
+
 ##### SpeedyMedia.clone()
 
 `SpeedyMedia.clone(): SpeedyPromise<SpeedyMedia>`
