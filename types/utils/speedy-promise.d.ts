@@ -81,11 +81,11 @@ export class SpeedyPromise<T> {
     /**
      * Setup handlers
      * @template U
-     * @param {function(T=): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {function(T): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
      * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
-    then<U>(onFulfillment: (arg0?: T | undefined) => void | U | SpeedyPromise<U> | Promise<U>, onRejection?: (arg0: Error) => void | U | SpeedyPromise<U> | Promise<U>): SpeedyPromise<U>;
+    then<U>(onFulfillment: (arg0: T) => void | U | SpeedyPromise<U> | Promise<U>, onRejection?: (arg0: Error) => void | U | SpeedyPromise<U> | Promise<U>): SpeedyPromise<U>;
     /**
      * Setup rejection handler
      * @template U

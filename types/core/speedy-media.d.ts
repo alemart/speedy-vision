@@ -6,11 +6,11 @@ export class SpeedyMedia {
     /**
      * Load a media source
      * Will wait until the HTML media source is loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
+     * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, options?: SpeedyMediaOptions): SpeedyPromise<SpeedyMedia>;
+    static load(mediaSource: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions): SpeedyPromise<SpeedyMedia>;
     /**
      * @private Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @param {symbol} token
@@ -26,9 +26,9 @@ export class SpeedyMedia {
     _options: SpeedyMediaOptions;
     /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
+     * @returns {SpeedyMediaSourceNativeElement} the media element
      */
-    get source(): HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap;
+    get source(): import("./speedy-media-source").SpeedyMediaSourceNativeElement;
     /**
      * Gets the width of the media
      * @returns {number} media width
@@ -41,9 +41,9 @@ export class SpeedyMedia {
     get height(): number;
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "bitmap"
+     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
      */
-    get type(): string;
+    get type(): "canvas" | "video" | "image" | "unknown" | "bitmap";
     /**
      * Returns a read-only object featuring advanced options
      * related to this SpeedyMedia object
@@ -80,6 +80,7 @@ export class SpeedyMedia {
      */
     toBitmap(): SpeedyPromise<ImageBitmap>;
 }
+export type SpeedyMediaSourceNativeElement = import('./speedy-media-source').SpeedyMediaSourceNativeElement;
 export type SpeedyMediaOptions = {
     /**
      * default is RGBA
