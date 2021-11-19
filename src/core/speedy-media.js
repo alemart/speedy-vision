@@ -232,7 +232,9 @@ export class SpeedyMedia
             throw new IllegalOperationError('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
         else if(!this._source.isLoaded())
             throw new IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
-
-        return new SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
+        else if(this._source.type == MediaType.Bitmap)
+            return SpeedyPromise.resolve(this._source.data);
+        else
+            return new SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 }
