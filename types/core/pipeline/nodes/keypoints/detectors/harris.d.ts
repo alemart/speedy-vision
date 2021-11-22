@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedySize} neighborhood size */
     _windowSize: SpeedySize;
     /** @type {number} min corner quality in [0,1] */

@@ -14,7 +14,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Create(rows: number, columns: number, entries: number[], dtype?: SpeedyMatrixDtype): SpeedyMatrix;
+    static Create(rows: number, columns: number, entries: number[], dtype?: "float32" | undefined): SpeedyMatrix;
     /**
      * Create a new matrix filled with zeros with the specified size
      * @param {number} rows number of rows
@@ -22,7 +22,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Zeros(rows: number, columns?: number, dtype?: SpeedyMatrixDtype): SpeedyMatrix;
+    static Zeros(rows: number, columns?: number | undefined, dtype?: "float32" | undefined): SpeedyMatrix;
     /**
      * Create a new matrix filled with ones with the specified size
      * @param {number} rows number of rows
@@ -30,7 +30,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Ones(rows: number, columns?: number, dtype?: SpeedyMatrixDtype): SpeedyMatrix;
+    static Ones(rows: number, columns?: number | undefined, dtype?: "float32" | undefined): SpeedyMatrix;
     /**
      * Create a new identity matrix with the specified size
      * @param {number} rows number of rows
@@ -38,7 +38,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Eye(rows: number, columns?: number, dtype?: SpeedyMatrixDtype): SpeedyMatrix;
+    static Eye(rows: number, columns?: number | undefined, dtype?: "float32" | undefined): SpeedyMatrix;
     /**
      * @private
      *

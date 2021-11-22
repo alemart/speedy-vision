@@ -32,12 +32,12 @@ export class SpeedyTextureReader {
      * @param {number} [pollInterval] in milliseconds
      * @param {number} [remainingAttempts] for timeout
      */
-    static _clientWaitAsync(gl: WebGL2RenderingContext, sync: WebGLSync, flags: GLbitfield, resolve: Function, reject: Function, pollInterval?: number, remainingAttempts?: number): void;
+    static _clientWaitAsync(gl: WebGL2RenderingContext, sync: WebGLSync, flags: GLbitfield, resolve: Function, reject: Function, pollInterval?: number | undefined, remainingAttempts?: number | undefined): void;
     /**
      * Constructor
      * @param {number} [numberOfBuffers]
      */
-    constructor(numberOfBuffers?: number);
+    constructor(numberOfBuffers?: number | undefined);
     /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
     _pixelBuffer: Uint8Array[];
     /** @type {ObservableQueue<Consumable>} for async data transfers */
@@ -71,7 +71,7 @@ export class SpeedyTextureReader {
      * @param {number} [height]
      * @returns {Uint8Array} pixels in the RGBA format
      */
-    readPixelsSync(texture: SpeedyDrawableTexture, x?: number, y?: number, width?: number, height?: number): Uint8Array;
+    readPixelsSync(texture: SpeedyDrawableTexture, x?: number | undefined, y?: number | undefined, width?: number | undefined, height?: number | undefined): Uint8Array;
     /**
      * Read pixels from a texture, asynchronously, with PBOs.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
@@ -83,7 +83,7 @@ export class SpeedyTextureReader {
      * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(texture: SpeedyDrawableTexture, x?: number, y?: number, width?: number, height?: number, useBufferedDownloads?: boolean): SpeedyPromise<Uint8Array>;
+    readPixelsAsync(texture: SpeedyDrawableTexture, x?: number | undefined, y?: number | undefined, width?: number | undefined, height?: number | undefined, useBufferedDownloads?: boolean | undefined): SpeedyPromise<Uint8Array>;
     /**
      * Reallocate the pixel buffers, so that they can hold the required number of bytes
      * If the pixel buffers already have the required capacity, then nothing is done

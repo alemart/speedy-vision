@@ -14,7 +14,7 @@ export class SpeedyTexturePool {
      * @param {SpeedyGPU} gpu
      * @param {number} [capacity] number of textures in the pool
      */
-    constructor(gpu: SpeedyGPU, capacity?: number);
+    constructor(gpu: SpeedyGPU, capacity?: number | undefined);
     /** @type {TextureBucket[]} buckets */
     _bucket: TextureBucket[];
     /** @type {TextureBucketIndex} index of an available bucket */

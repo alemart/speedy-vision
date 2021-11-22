@@ -18,7 +18,7 @@ export class SpeedyMediaSource {
      * @param {number} [timeout] in ms
      * @returns {SpeedyPromise<Element>}
      */
-    static _waitUntil(element: Element, eventName: string, timeout?: number): SpeedyPromise<Element>;
+    static _waitUntil(element: Element, eventName: string, timeout?: number | undefined): SpeedyPromise<Element>;
     /**
      * @protected Constructor
      * @param {symbol} token

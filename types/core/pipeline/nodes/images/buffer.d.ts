@@ -7,7 +7,7 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} current page: 0 or 1 */
     _pageIndex: number;
     /** @type {boolean} first run? */

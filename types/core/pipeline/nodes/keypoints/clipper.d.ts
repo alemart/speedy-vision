@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} the maximum number of keypoints in the output */
     _size: number;
     /**

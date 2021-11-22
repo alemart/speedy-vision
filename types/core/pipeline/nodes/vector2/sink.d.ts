@@ -14,7 +14,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyVector2[]} 2D vectors (output) */
     _vectors: SpeedyVector2[];
     /** @type {SpeedyTextureReader} texture reader */

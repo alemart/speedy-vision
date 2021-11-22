@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SubpixelRefinementMethod} subpixel refinement method */
     _method: SubpixelRefinementMethod;
     /** @type {number} max iterations for the upsampling methods */

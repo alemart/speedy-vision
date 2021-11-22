@@ -6,7 +6,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyMatrix} perspective transformation */
     _transform: SpeedyMatrix;
     /**
@@ -25,7 +25,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode {
      * @param {number} [eps] epsilon
      * @returns {number[]} 3x3 inverse matrix in column-major format
      */
-    _inverse3(mat: number[], eps?: number): number[];
+    _inverse3(mat: number[], eps?: number | undefined): number[];
 }
 import { SpeedyPipelineNode } from "../../pipeline-node";
 import { SpeedyMatrix } from "../../../speedy-matrix";

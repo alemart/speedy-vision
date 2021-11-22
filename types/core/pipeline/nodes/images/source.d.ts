@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyMedia} source media */
     _media: SpeedyMedia;
     /** @type {number} texture index */

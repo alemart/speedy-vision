@@ -8,14 +8,14 @@ export default class Speedy {
      * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(sourceElement: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions): SpeedyPromise<SpeedyMedia>;
+    static load(sourceElement: SpeedyMediaSourceNativeElement, options?: import("./core/speedy-media").SpeedyMediaOptions | undefined): SpeedyPromise<SpeedyMedia>;
     /**
      * Loads a camera stream
      * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
      * @param {number} [height] height of the stream
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static camera(widthOrConstraints?: number | MediaStreamConstraints, height?: number): SpeedyPromise<SpeedyMedia>;
+    static camera(widthOrConstraints?: number | MediaStreamConstraints | undefined, height?: number | undefined): SpeedyPromise<SpeedyMedia>;
     /**
      * The version of the library
      * @returns {string} The version of the library

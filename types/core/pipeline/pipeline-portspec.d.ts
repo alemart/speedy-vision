@@ -7,7 +7,7 @@ export class SpeedyPipelinePortSpec {
      * @param {SpeedyPipelineMessageType} expectedMessageType expected message type
      * @param {SpeedyPipelineMessageConstraint} [messageConstraint] message validation function
      */
-    constructor(expectedMessageType: SpeedyPipelineMessageType, messageConstraint?: SpeedyPipelineMessageConstraint);
+    constructor(expectedMessageType: SpeedyPipelineMessageType, messageConstraint?: SpeedyPipelineMessageConstraint | undefined);
     /** @type {SpeedyPipelineMessageType} expected message type */
     _expectedMessageType: SpeedyPipelineMessageType;
     /** @type {SpeedyPipelineMessageConstraint} message validation function */

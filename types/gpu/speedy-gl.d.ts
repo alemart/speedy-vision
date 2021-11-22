@@ -57,7 +57,7 @@ export class SpeedyGL extends Observable {
      * @param {number} [secondsToRestore]
      * @return {SpeedyPromise<WEBGL_lose_context>} resolves as soon as the context is restored
      */
-    loseAndRestoreContext(secondsToRestore?: number): SpeedyPromise<WEBGL_lose_context>;
+    loseAndRestoreContext(secondsToRestore?: number | undefined): SpeedyPromise<WEBGL_lose_context>;
 }
 import { Observable } from "../utils/observable";
 import { SpeedyPromise } from "../utils/speedy-promise";

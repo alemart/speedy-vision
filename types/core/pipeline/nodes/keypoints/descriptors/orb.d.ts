@@ -6,6 +6,6 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
 }
 import { SpeedyPipelineNodeKeypointDescriptor } from "./descriptor";

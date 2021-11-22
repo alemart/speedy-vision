@@ -11,7 +11,7 @@ export class SpeedyPromise<T> {
      * @param {U} [value]
      * @returns {SpeedyPromise<U>}
      */
-    static resolve<U_2>(value?: U_2): SpeedyPromise<U_2>;
+    static resolve<U_2>(value?: U_2 | undefined): SpeedyPromise<U_2>;
     /**
      * Creates a rejected SpeedyPromise
      * @template U
@@ -51,7 +51,7 @@ export class SpeedyPromise<T> {
      */
     constructor(callback: (arg0: (arg0: T | undefined) => void, arg1: (arg0: Error) => void) => void);
     _state: number;
-    _value: Error | T;
+    _value: Error | T | undefined;
     _onFulfillment: any;
     _onRejection: any;
     _children: number;
@@ -80,19 +80,19 @@ export class SpeedyPromise<T> {
     _broadcastIfAsync(): void;
     /**
      * Setup handlers
-     * @template U
-     * @param {function(T): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(T): U|PromiseLike<U>|SpeedyPromise<U>)} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
-    then<U>(onFulfillment: (arg0: T) => void | U | SpeedyPromise<U> | Promise<U>, onRejection?: (arg0: Error) => void | U | SpeedyPromise<U> | Promise<U>): SpeedyPromise<U>;
+    then<U, V>(onFulfillment: ((arg0: T) => U | PromiseLike<U> | SpeedyPromise<U>) | null | undefined, onRejection?: ((arg0: Error) => V | PromiseLike<V> | SpeedyPromise<V>) | null | undefined): SpeedyPromise<U>;
     /**
      * Setup rejection handler
-     * @template U
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
-    catch<U_1>(onRejection?: (arg0: Error) => void | U_1 | SpeedyPromise<U_1> | Promise<U_1>): SpeedyPromise<U_1>;
+    catch<U_1, V_1>(onRejection?: ((arg0: Error) => V_1 | PromiseLike<V_1> | SpeedyPromise<V_1>) | null | undefined): SpeedyPromise<U_1>;
     /**
      * Execute a callback when the promise is settled
      * (i.e., fulfilled or rejected)
@@ -135,4 +135,9 @@ export class SpeedyPromise<T> {
      * No-operation
      */
     _nop(): void;
+    /**
+     * Symbol.toStringTag
+     * @returns {string}
+     */
+    get [Symbol.toStringTag](): string;
 }

@@ -4,14 +4,14 @@
  * @param {string|null} [vsfilepath] optional vertex shader (a .vs.glsl file)
  * @returns {ShaderDeclaration}
  */
-export function importShader(filepath: string, vsfilepath?: string | null): ShaderDeclaration;
+export function importShader(filepath: string, vsfilepath?: string | null | undefined): ShaderDeclaration;
 /**
  * Create a ShaderDeclaration from a GLSL source code
  * @param {string} source fragment shader
  * @param {string|null} [vssource] optional vertex shader
  * @returns {ShaderDeclaration}
  */
-export function createShader(source: string, vssource?: string | null): ShaderDeclaration;
+export function createShader(source: string, vssource?: string | null | undefined): ShaderDeclaration;
 /**
  * @typedef {object} ShaderDeclarationFilepathOptions
  * @property {"filepath"} type
@@ -36,14 +36,14 @@ export class ShaderDeclaration {
      * @param {string|null} [vssource] vertex shader
      * @returns {ShaderDeclaration}
      */
-    static create(source: string, vssource?: string | null): ShaderDeclaration;
+    static create(source: string, vssource?: string | null | undefined): ShaderDeclaration;
     /**
      * Import a Shader from a file containing a GLSL source
      * @param {string} filepath path to .glsl file relative to the shaders/ folder
      * @param {string} [vsfilepath] path to a .vs.glsl file relative to the shaders/ folder
      * @returns {ShaderDeclaration}
      */
-    static import(filepath: string, vsfilepath?: string): ShaderDeclaration;
+    static import(filepath: string, vsfilepath?: string | undefined): ShaderDeclaration;
     /**
      * @private Constructor
      * @param {ShaderDeclarationOptions} options
@@ -143,12 +143,12 @@ export class ShaderDeclaration {
 export type ShaderDeclarationFilepathOptions = {
     type: "filepath";
     filepath: string;
-    vsfilepath?: string;
+    vsfilepath?: string | undefined;
 };
 export type ShaderDeclarationSourceOptions = {
     type: "source";
     source: string;
-    vssource?: string;
+    vssource?: string | undefined;
 };
 export type ShaderDeclarationOptions = ShaderDeclarationFilepathOptions | ShaderDeclarationSourceOptions;
 export type ShaderDefines = import('./shader-preprocessor').ShaderDefines;

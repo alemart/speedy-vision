@@ -8,7 +8,7 @@ export class SpeedyError extends Error {
      * @param {string} message message text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message: string, cause?: SpeedyErrorCause);
+    constructor(message: string, cause?: SpeedyErrorCause | undefined);
     /** @type {SpeedyErrorCause} cause of the error */
     _cause: SpeedyErrorCause;
     /**
@@ -28,7 +28,7 @@ export class NotSupportedError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Not implemented error
@@ -40,7 +40,7 @@ export class NotImplementedError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * WebGL error
@@ -57,7 +57,7 @@ export class GLError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * AbstractMethodError
@@ -69,7 +69,7 @@ export class AbstractMethodError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Illegal argument error
@@ -81,7 +81,7 @@ export class IllegalArgumentError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Illegal operation error
@@ -94,7 +94,7 @@ export class IllegalOperationError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Out of memory
@@ -105,7 +105,7 @@ export class OutOfMemoryError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * File not found error
@@ -116,7 +116,7 @@ export class FileNotFoundError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Timeout error
@@ -127,7 +127,7 @@ export class TimeoutError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Parse error
@@ -138,7 +138,7 @@ export class ParseError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Assertion error
@@ -149,7 +149,7 @@ export class AssertionError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * Access denied
@@ -160,7 +160,7 @@ export class AccessDeniedError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
  * WebAssembly error
@@ -171,6 +171,6 @@ export class WebAssemblyError extends SpeedyError {
      * @param {string} [message] additional text
      * @param {SpeedyErrorCause} [cause] cause of the error
      */
-    constructor(message?: string, cause?: SpeedyErrorCause);
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 export type SpeedyErrorCause = SpeedyError | Error | null;

@@ -93,7 +93,7 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort {
      * Incoming link
      * @returns {SpeedyPipelineOutputPort|null}
      */
-    get incomingLink(): SpeedyPipelineOutputPort;
+    get incomingLink(): SpeedyPipelineOutputPort | null;
     /**
      * Unlink this port
      */
@@ -103,7 +103,7 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort {
      * @param {string} [nodeName]
      * @returns {SpeedyPipelineMessage}
      */
-    pullMessage(nodeName?: string): SpeedyPipelineMessage;
+    pullMessage(nodeName?: string | undefined): SpeedyPipelineMessage;
 }
 import { SpeedyPipelinePortSpec } from "./pipeline-portspec";
 import { SpeedyPipelineNode } from "./pipeline-node";

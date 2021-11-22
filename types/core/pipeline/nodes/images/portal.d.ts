@@ -7,7 +7,7 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {ImageFormat} stored image format */
     _format: ImageFormat;
     /** @type {boolean} is this node initialized? */
@@ -31,7 +31,7 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
     _source: SpeedyPipelineNodeImagePortalSink;
     /**

@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} alpha coefficient (applied to image0) */
     _alpha: number;
     /** @type {number} beta coefficient (applied to image1) */

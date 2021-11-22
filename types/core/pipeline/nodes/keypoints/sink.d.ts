@@ -16,7 +16,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyKeypoint[]} keypoints (output) */
     _keypoints: SpeedyKeypoint[];
     /** @type {SpeedyTextureReader} texture reader */

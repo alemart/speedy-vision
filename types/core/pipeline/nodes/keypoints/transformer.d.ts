@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyMatrix} transformation matrix */
     _transform: SpeedyMatrix;
     /**

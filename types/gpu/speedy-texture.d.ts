@@ -45,7 +45,7 @@ export class SpeedyTexture {
      * @param {number} [filter]
      * @param {number} [wrap]
      */
-    constructor(gl: WebGL2RenderingContext, width: number, height: number, format?: number, internalFormat?: number, dataType?: number, filter?: number, wrap?: number);
+    constructor(gl: WebGL2RenderingContext, width: number, height: number, format?: number | undefined, internalFormat?: number | undefined, dataType?: number | undefined, filter?: number | undefined, wrap?: number | undefined);
     /** @type {WebGL2RenderingContext} rendering context */
     _gl: WebGL2RenderingContext;
     /** @type {number} width of the texture */
@@ -78,7 +78,7 @@ export class SpeedyTexture {
      * @param {number} [height] in pixels
      * @return {SpeedyTexture} this
      */
-    upload(pixels: TexImageSource, width?: number, height?: number): SpeedyTexture;
+    upload(pixels: TexImageSource, width?: number | undefined, height?: number | undefined): SpeedyTexture;
     /**
      * Clear the texture
      * @returns {this}
@@ -96,7 +96,7 @@ export class SpeedyTexture {
      * @param {SpeedyDrawableTexture[]} [mipmap] custom texture for each mip level
      * @returns {SpeedyTexture} this
      */
-    generateMipmaps(mipmap?: SpeedyDrawableTexture[]): SpeedyTexture;
+    generateMipmaps(mipmap?: SpeedyDrawableTexture[] | undefined): SpeedyTexture;
     /**
      * Invalidates previously generated mipmap, if any
      */
@@ -160,7 +160,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      * @param {GLint} [lod] mipmap level-of-detail
      * @returns {WebGLTexture} texture
      */
-    static _copyToTexture(gl: WebGL2RenderingContext, fbo: WebGLFramebuffer, texture: WebGLTexture, x: GLint, y: GLint, width: GLsizei, height: GLsizei, lod?: GLint): WebGLTexture;
+    static _copyToTexture(gl: WebGL2RenderingContext, fbo: WebGLFramebuffer, texture: WebGLTexture, x: GLint, y: GLint, width: GLsizei, height: GLsizei, lod?: number | undefined): WebGLTexture;
     /** @type {WebGLFramebuffer} framebuffer */
     _glFbo: WebGLFramebuffer;
     /**
@@ -174,7 +174,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      * @param {SpeedyTexture} texture target texture
      * @param {number} [lod] level-of-detail of the target texture
      */
-    copyTo(texture: SpeedyTexture, lod?: number): void;
+    copyTo(texture: SpeedyTexture, lod?: number | undefined): void;
     /**
      * Clear the texture to a color
      * @param {number} r red component, a value in [0,1]

@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {ImageBitmap} output bitmap */
     _bitmap: ImageBitmap;
     /** @type {ImageFormat} output format */

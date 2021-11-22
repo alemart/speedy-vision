@@ -62,9 +62,9 @@ export class SpeedyPromise
 
     /**
      * Setup handlers
-     * @template U
-     * @param {function(T): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(T): U|PromiseLike<U>|SpeedyPromise<U>)} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     then(onFulfillment, onRejection = null)
@@ -83,8 +83,8 @@ export class SpeedyPromise
 
     /**
      * Setup rejection handler
-     * @template U
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     catch(onRejection)

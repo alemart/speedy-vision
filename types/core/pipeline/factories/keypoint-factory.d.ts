@@ -7,13 +7,13 @@ export class SpeedyPipelineKeypointPortalFactory extends SpeedyNamespace {
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeKeypointPortalSource}
      */
-    static Source(name?: string): SpeedyPipelineNodeKeypointPortalSource;
+    static Source(name?: string | undefined): SpeedyPipelineNodeKeypointPortalSource;
     /**
      * Create an image portal sink
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeKeypointPortalSink}
      */
-    static Sink(name?: string): SpeedyPipelineNodeKeypointPortalSink;
+    static Sink(name?: string | undefined): SpeedyPipelineNodeKeypointPortalSink;
 }
 /**
  * Keypoint-related nodes
@@ -44,49 +44,49 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointSource}
      */
-    static Source(name?: string): SpeedyPipelineNodeKeypointSource;
+    static Source(name?: string | undefined): SpeedyPipelineNodeKeypointSource;
     /**
      * Create a keypoint sink
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointSink}
      */
-    static Sink(name?: string): SpeedyPipelineNodeKeypointSink;
+    static Sink(name?: string | undefined): SpeedyPipelineNodeKeypointSink;
     /**
      * Keypoint clipper
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointClipper}
      */
-    static Clipper(name?: string): SpeedyPipelineNodeKeypointClipper;
+    static Clipper(name?: string | undefined): SpeedyPipelineNodeKeypointClipper;
     /**
      * Create a keypoint buffer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointBuffer}
      */
-    static Buffer(name?: string): SpeedyPipelineNodeKeypointBuffer;
+    static Buffer(name?: string | undefined): SpeedyPipelineNodeKeypointBuffer;
     /**
      * Create a keypoint mixer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointMixer}
      */
-    static Mixer(name?: string): SpeedyPipelineNodeKeypointMixer;
+    static Mixer(name?: string | undefined): SpeedyPipelineNodeKeypointMixer;
     /**
      * Create a keypoint multiplexer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointMultiplexer}
      */
-    static Multiplexer(name?: string): SpeedyPipelineNodeKeypointMultiplexer;
+    static Multiplexer(name?: string | undefined): SpeedyPipelineNodeKeypointMultiplexer;
     /**
      * Create a keypoint transformer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointTransformer}
      */
-    static Transformer(name?: string): SpeedyPipelineNodeKeypointTransformer;
+    static Transformer(name?: string | undefined): SpeedyPipelineNodeKeypointTransformer;
     /**
      * Create a subpixel refiner of keypoint locations
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointSubpixelRefiner}
      */
-    static SubpixelRefiner(name?: string): SpeedyPipelineNodeKeypointSubpixelRefiner;
+    static SubpixelRefiner(name?: string | undefined): SpeedyPipelineNodeKeypointSubpixelRefiner;
 }
 import { SpeedyNamespace } from "../../speedy-namespace";
 import { SpeedyPipelineNodeKeypointPortalSource } from "../nodes/keypoints/portal";
@@ -100,13 +100,13 @@ declare class SpeedyPipelineKeypointDetectorFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeFASTKeypointDetector}
      */
-    static FAST(name?: string): SpeedyPipelineNodeFASTKeypointDetector;
+    static FAST(name?: string | undefined): SpeedyPipelineNodeFASTKeypointDetector;
     /**
      * Harris corner detector
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeHarrisKeypointDetector}
      */
-    static Harris(name?: string): SpeedyPipelineNodeHarrisKeypointDetector;
+    static Harris(name?: string | undefined): SpeedyPipelineNodeHarrisKeypointDetector;
 }
 /**
  * Keypoint descriptors
@@ -117,13 +117,13 @@ declare class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeORBKeypointDescriptor}
      */
-    static ORB(name?: string): SpeedyPipelineNodeORBKeypointDescriptor;
+    static ORB(name?: string | undefined): SpeedyPipelineNodeORBKeypointDescriptor;
     /**
      * Discard descriptors
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
      */
-    static Discard(name?: string): SpeedyPipelineNodeDiscardKeypointDescriptor;
+    static Discard(name?: string | undefined): SpeedyPipelineNodeDiscardKeypointDescriptor;
 }
 /**
  * Keypoint trackers
@@ -134,7 +134,7 @@ declare class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeLKKeypointTracker}
      */
-    static LK(name?: string): SpeedyPipelineNodeLKKeypointTracker;
+    static LK(name?: string | undefined): SpeedyPipelineNodeLKKeypointTracker;
 }
 import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
 import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";

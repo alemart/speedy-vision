@@ -23,7 +23,7 @@ export class SpeedyProgramGroup {
      * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {this}
      */
-    protected declare(name: string, shaderdecl: ShaderDeclaration, options?: SpeedyProgramOptions): this;
+    protected declare(name: string, shaderdecl: ShaderDeclaration, options?: import("./speedy-program").SpeedyProgramOptions | undefined): this;
     /**
      * Neat helpers to be used when declaring programs
      * @returns {SpeedyProgramHelpers}
@@ -40,7 +40,7 @@ export class SpeedyProgramGroup {
      * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {SpeedyProgram}
      */
-    _createProgram(shaderdecl: ShaderDeclaration, options?: SpeedyProgramOptions): SpeedyProgram;
+    _createProgram(shaderdecl: ShaderDeclaration, options?: import("./speedy-program").SpeedyProgramOptions | undefined): SpeedyProgram;
 }
 export type SpeedyProgramOptions = import('./speedy-program').SpeedyProgramOptions;
 export type SpeedyProgramHelpers = {

@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} a value in [0,255] */
     _minValue: number;
     /** @type {number} a value in [0,255] */

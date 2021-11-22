@@ -55,7 +55,7 @@ export class SpeedyMatrixWASM {
      * @param {Function} reject
      * @param {number} [counter]
      */
-    static _ready(resolve: Function, reject: Function, counter?: number): void;
+    static _ready(resolve: Function, reject: Function, counter?: number | undefined): void;
 }
 export type SpeedyMatrix = import('./speedy-matrix').SpeedyMatrix;
 /**

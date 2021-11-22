@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} FAST threshold in [0,255] */
     _threshold: number;
     /**

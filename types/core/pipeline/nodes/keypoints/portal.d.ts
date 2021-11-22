@@ -7,7 +7,7 @@ export class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} descriptor size, in bytes */
     _descriptorSize: number;
     /** @type {number} extra size, in bytes */
@@ -45,7 +45,7 @@ export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSource
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
     _source: SpeedyPipelineNodeKeypointPortalSink;
     /**

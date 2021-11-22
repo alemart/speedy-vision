@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} which port should be linked to the output? */
     _port: number;
     /**

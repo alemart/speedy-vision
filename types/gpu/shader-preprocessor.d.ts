@@ -9,6 +9,6 @@ export class ShaderPreprocessor {
      * @param {ShaderDefines} [defines]
      * @returns {string} preprocessed code
      */
-    static run(code: string, defines?: ShaderDefines): string;
+    static run(code: string, defines?: ShaderDefines | undefined): string;
 }
 export type ShaderDefines = Map<string, number>;

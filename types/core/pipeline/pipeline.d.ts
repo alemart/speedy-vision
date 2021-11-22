@@ -14,7 +14,7 @@ export class SpeedyPipeline {
      * @param {number} [n] number of nodes
      * @returns {SpeedyPromise<void>}
      */
-    static _runSequence(sequence: SpeedyPipelineNode[], gpu: SpeedyGPU, i?: number, n?: number): SpeedyPromise<void>;
+    static _runSequence(sequence: SpeedyPipelineNode[], gpu: SpeedyGPU, i?: number | undefined, n?: number | undefined): SpeedyPromise<void>;
     /**
      * Topological sorting
      * @param {SpeedyPipelineNode[]} nodes
@@ -32,7 +32,7 @@ export class SpeedyPipeline {
      * @param {SpeedyPipelineNode[]} [sinks]
      * @returns {SpeedyPipelineOutput}
      */
-    static _createOutputTemplate(sinks?: SpeedyPipelineNode[]): SpeedyPipelineOutput;
+    static _createOutputTemplate(sinks?: SpeedyPipelineNode[] | undefined): SpeedyPipelineOutput;
     /**
      * Validate a sequence of nodes
      * @param {SpeedyPipelineNode[]} sequence

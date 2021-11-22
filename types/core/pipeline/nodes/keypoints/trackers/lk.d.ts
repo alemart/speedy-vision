@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedySize} window size */
     _windowSize: SpeedySize;
     /** @type {number} number of pyramid levels to use */

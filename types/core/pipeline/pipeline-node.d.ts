@@ -9,7 +9,7 @@ export class SpeedyPipelineNode {
      * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name?: string, texCount?: number, portBuilders?: SpeedyPipelinePortBuilder[]);
+    constructor(name?: string | undefined, texCount?: number | undefined, portBuilders?: SpeedyPipelinePortBuilder[] | undefined);
     /** @type {string} the name of this node */
     _name: string;
     /** @type {SpeedyDrawableTexture[]} work texture(s) */
@@ -33,13 +33,13 @@ export class SpeedyPipelineNode {
      * @param {string} [portName]
      * @returns {SpeedyPipelineInputPort}
      */
-    input(portName?: string): SpeedyPipelineInputPort;
+    input(portName?: string | undefined): SpeedyPipelineInputPort;
     /**
      * Find output port by name
      * @param {string} [portName]
      * @returns {SpeedyPipelineOutputPort}
      */
-    output(portName?: string): SpeedyPipelineOutputPort;
+    output(portName?: string | undefined): SpeedyPipelineOutputPort;
     /**
      * Get data from the input ports and execute
      * the task that this node is supposed to!

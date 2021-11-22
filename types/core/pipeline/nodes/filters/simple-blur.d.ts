@@ -11,7 +11,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedySize} size of the kernel */
     _kernelSize: SpeedySize;
     /** @type {SeparableConvolutionKernel} convolution kernel */

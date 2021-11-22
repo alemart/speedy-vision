@@ -53,7 +53,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode {
      * @param {number} [extraSize] in bytes
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    _encodeKeypoints(gpu: SpeedyGPU, corners: SpeedyTexture, encodedKeypoints: SpeedyDrawableTexture, descriptorSize?: number, extraSize?: number): SpeedyDrawableTexture;
+    _encodeKeypoints(gpu: SpeedyGPU, corners: SpeedyTexture, encodedKeypoints: SpeedyDrawableTexture, descriptorSize?: number | undefined, extraSize?: number | undefined): SpeedyDrawableTexture;
     _encodeKeypointsOLD(gpu: any, corners: any, encodedKeypoints: any, descriptorSize?: number, extraSize?: number): any;
     /**
      * Create a tiny texture with zero encoded keypoints
@@ -63,7 +63,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode {
      * @param {number} [extraSize] in bytes
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    _encodeZeroKeypoints(gpu: SpeedyGPU, encodedKeypoints: SpeedyDrawableTexture, descriptorSize?: number, extraSize?: number): SpeedyDrawableTexture;
+    _encodeZeroKeypoints(gpu: SpeedyGPU, encodedKeypoints: SpeedyDrawableTexture, descriptorSize?: number | undefined, extraSize?: number | undefined): SpeedyDrawableTexture;
     /**
      * Allocate RGBA16 textures
      * @param {SpeedyGPU} gpu

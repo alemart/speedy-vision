@@ -7,7 +7,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedySize} size of the output image, in pixels */
     _size: SpeedySize;
     /** @type {SpeedyVector2} size of the output relative to the size of the input */

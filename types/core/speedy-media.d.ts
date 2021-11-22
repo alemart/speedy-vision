@@ -10,7 +10,7 @@ export class SpeedyMedia {
      * @param {SpeedyMediaOptions} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions): SpeedyPromise<SpeedyMedia>;
+    static load(mediaSource: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions | undefined): SpeedyPromise<SpeedyMedia>;
     /**
      * @private Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @param {symbol} token
@@ -51,6 +51,11 @@ export class SpeedyMedia {
      */
     get options(): SpeedyMediaOptions;
     /**
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
+     */
+    size(): SpeedySize;
+    /**
      * Releases resources associated with this media
      * @returns {null}
      */
@@ -73,7 +78,7 @@ export class SpeedyMedia {
      * @param {number} [width] desired width
      * @param {number} [height] desired height
      */
-    draw(canvas: HTMLCanvasElement, x?: number, y?: number, width?: number, height?: number): void;
+    draw(canvas: HTMLCanvasElement, x?: number | undefined, y?: number | undefined, width?: number | undefined, height?: number | undefined): void;
     /**
      * Converts the media to an ImageBitmap
      * @returns {SpeedyPromise<ImageBitmap>}
@@ -85,8 +90,9 @@ export type SpeedyMediaOptions = {
     /**
      * default is RGBA
      */
-    format?: ImageFormat;
+    format?: Symbol | undefined;
 };
 import { SpeedyMediaSource } from "./speedy-media-source";
 import { ImageFormat } from "../utils/types";
+import { SpeedySize } from "./speedy-size";
 import { SpeedyPromise } from "../utils/speedy-promise";

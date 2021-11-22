@@ -9,7 +9,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {number} a value typically in [0,1]: larger number => higher contrast */
     _gain: number;
     /** @type {number} a value typically in [0,1]: controls brightness */

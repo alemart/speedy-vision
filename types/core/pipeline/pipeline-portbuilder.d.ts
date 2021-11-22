@@ -3,13 +3,13 @@
  * @param {string} [portName]
  * @returns {SpeedyPipelinePortBuilder}
  */
-export function InputPort(portName?: string): SpeedyPipelinePortBuilder;
+export function InputPort(portName?: string | undefined): SpeedyPipelinePortBuilder;
 /**
  * Creates a builder for an output port
  * @param {string} [portName]
  * @returns {SpeedyPipelinePortBuilder}
  */
-export function OutputPort(portName?: string): SpeedyPipelinePortBuilder;
+export function OutputPort(portName?: string | undefined): SpeedyPipelinePortBuilder;
 /**
  * @typedef {import('./pipeline-portspec').SpeedyPipelineMessageConstraint} SpeedyPipelineMessageConstraint
  */

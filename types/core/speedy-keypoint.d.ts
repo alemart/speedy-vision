@@ -11,12 +11,12 @@ export class SpeedyKeypoint {
      * @param {number} [score] Cornerness measure
      * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
      */
-    constructor(x: number, y: number, lod?: number, rotation?: number, score?: number, descriptor?: SpeedyKeypointDescriptor | null);
+    constructor(x: number, y: number, lod?: number | undefined, rotation?: number | undefined, score?: number | undefined, descriptor?: SpeedyKeypointDescriptor | null | undefined);
     _position: SpeedyPoint2;
     _lod: number;
     _rotation: number;
     _score: number;
-    _descriptor: SpeedyKeypointDescriptor;
+    _descriptor: SpeedyKeypointDescriptor | null;
     /**
      * Converts this keypoint to a descriptive string
      * @returns {string}
@@ -61,7 +61,7 @@ export class SpeedyKeypoint {
      * Keypoint descriptor
      * @return {SpeedyKeypointDescriptor|null}
      */
-    get descriptor(): SpeedyKeypointDescriptor;
+    get descriptor(): SpeedyKeypointDescriptor | null;
 }
 import { SpeedyPoint2 } from "./speedy-point";
 import { SpeedyKeypointDescriptor } from "./speedy-keypoint-descriptor";

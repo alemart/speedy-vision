@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyMatrix} convolution kernel (square matrix) */
     _kernel: SpeedyMatrix;
     /**

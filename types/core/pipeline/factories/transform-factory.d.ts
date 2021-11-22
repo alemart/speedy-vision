@@ -7,13 +7,13 @@ export class SpeedyPipelineTransformFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeResize}
      */
-    static Resize(name?: string): SpeedyPipelineNodeResize;
+    static Resize(name?: string | undefined): SpeedyPipelineNodeResize;
     /**
      * Warp an image using a perspective transformation
      * @param {string} [name]
      * @returns {SpeedyPipelineNodePerspectiveWarp}
      */
-    static PerspectiveWarp(name?: string): SpeedyPipelineNodePerspectiveWarp;
+    static PerspectiveWarp(name?: string | undefined): SpeedyPipelineNodePerspectiveWarp;
 }
 import { SpeedyNamespace } from "../../speedy-namespace";
 import { SpeedyPipelineNodeResize } from "../nodes/transforms/resize";

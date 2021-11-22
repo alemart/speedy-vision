@@ -13,28 +13,28 @@ export class SpeedyMatrixFactory extends Function {
      * @param {number[]} [entries] in column-major format
      * @returns {SpeedyMatrix}
      */
-    _create(rows: number, columns?: number, entries?: number[]): SpeedyMatrix;
+    _create(rows: number, columns?: number | undefined, entries?: number[] | undefined): SpeedyMatrix;
     /**
      * Create a new matrix filled with zeros with the specified size
      * @param {number} rows
      * @param {number} [columns]
      * @returns {SpeedyMatrix}
      */
-    Zeros(rows: number, columns?: number): SpeedyMatrix;
+    Zeros(rows: number, columns?: number | undefined): SpeedyMatrix;
     /**
      * Create a new matrix filled with ones with the specified size
      * @param {number} rows
      * @param {number} [columns]
      * @returns {SpeedyMatrix}
      */
-    Ones(rows: number, columns?: number): SpeedyMatrix;
+    Ones(rows: number, columns?: number | undefined): SpeedyMatrix;
     /**
      * Create an identity matrix with the specified size
      * @param {number} rows
      * @param {number} [columns]
      * @returns {SpeedyMatrix}
      */
-    Eye(rows: number, columns?: number): SpeedyMatrix;
+    Eye(rows: number, columns?: number | undefined): SpeedyMatrix;
     /**
      * QR decomposition
      * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
@@ -45,8 +45,8 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<void>}
      */
     qr(Q: SpeedyMatrix, R: SpeedyMatrix, mat: SpeedyMatrix, { mode }?: {
-        mode?: 'reduced' | 'full';
-    }): SpeedyPromise<void>;
+        mode?: "reduced" | "full" | undefined;
+    } | undefined): SpeedyPromise<void>;
     /**
      * Solve a possibly overdetermined system of linear
      * equations Ax = b for x using ordinary least squares
@@ -58,8 +58,8 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to solution
      */
     ols(solution: SpeedyMatrix, A: SpeedyMatrix, b: SpeedyMatrix, { method }?: {
-        method?: 'qr';
-    }): SpeedyPromise<SpeedyMatrix>;
+        method?: "qr" | undefined;
+    } | undefined): SpeedyPromise<SpeedyMatrix>;
     /**
      * Solve a system of linear equations Ax = b for x
      * @param {SpeedyMatrix} solution m x 1, output
@@ -70,8 +70,8 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to solution
      */
     solve(solution: SpeedyMatrix, A: SpeedyMatrix, b: SpeedyMatrix, { method }?: {
-        method?: 'qr';
-    }): SpeedyPromise<SpeedyMatrix>;
+        method?: "qr" | undefined;
+    } | undefined): SpeedyPromise<SpeedyMatrix>;
     /**
      * Compute a perspective transformation using 4 correspondences of points
      * @param {SpeedyMatrix} homography 3x3 output - homography matrix
@@ -94,12 +94,12 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
      */
     findHomography(homography: SpeedyMatrix, src: SpeedyMatrix, dest: SpeedyMatrix, { method, mask, reprojectionError, numberOfHypotheses, bundleSize, }?: {
-        method?: 'dlt' | 'pransac';
-        mask?: SpeedyMatrix | null;
-        reprojectionError?: number;
-        numberOfHypotheses?: number;
-        bundleSize?: number;
-    }): SpeedyPromise<SpeedyMatrix>;
+        method?: "dlt" | "pransac" | undefined;
+        mask?: SpeedyMatrix | null | undefined;
+        reprojectionError?: number | undefined;
+        numberOfHypotheses?: number | undefined;
+        bundleSize?: number | undefined;
+    } | undefined): SpeedyPromise<SpeedyMatrix>;
     /**
      * Apply a perspective transformation to a set of 2D points
      * @param {SpeedyMatrix} dest 2 x n output matrix

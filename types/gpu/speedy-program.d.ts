@@ -23,7 +23,7 @@ export class SpeedyProgram extends Function {
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {SpeedyProgramOptions} [options] user options
      */
-    constructor(gl: WebGL2RenderingContext, shaderdecl: ShaderDeclaration, options?: SpeedyProgramOptions);
+    constructor(gl: WebGL2RenderingContext, shaderdecl: ShaderDeclaration, options?: SpeedyProgramOptions | undefined);
     /** @type {SpeedyProgram} this function bound to this function! */
     _self: SpeedyProgram;
     /**
@@ -34,29 +34,29 @@ export class SpeedyProgram extends Function {
      */
     _init(gl: WebGL2RenderingContext, shaderdecl: ShaderDeclaration, options: SpeedyProgramOptions): void;
     /** @type {WebGL2RenderingContext} */
-    _gl: WebGL2RenderingContext;
+    _gl: WebGL2RenderingContext | undefined;
     /** @type {WebGLProgram} vertex shader + fragment shader */
-    _program: WebGLProgram;
+    _program: WebGLProgram | undefined;
     /** @type {ProgramGeometry} this is a quad */
-    _geometry: ProgramGeometry;
+    _geometry: ProgramGeometry | undefined;
     /** @type {string[]} names of the arguments of the SpeedyProgram */
-    _argnames: string[];
+    _argnames: string[] | undefined;
     /** @type {boolean[]} tells whether the i-th argument of the SpeedyProgram is an array or not */
-    _argIsArray: boolean[];
+    _argIsArray: boolean[] | undefined;
     /** @type {UBOHelper} UBO helper (lazy instantiation) */
-    _ubo: UBOHelper;
+    _ubo: UBOHelper | undefined;
     /** @type {boolean} should we render to a texture? If false, we render to the canvas */
-    _renderToTexture: boolean;
+    _renderToTexture: boolean | undefined;
     /** @type {number} width of the output */
-    _width: number;
+    _width: number | undefined;
     /** @type {number} height of the output */
-    _height: number;
+    _height: number | undefined;
     /** @type {SpeedyDrawableTexture[]} output texture(s) */
-    _texture: SpeedyDrawableTexture[];
+    _texture: SpeedyDrawableTexture[] | undefined;
     /** @type {number} used for pingpong rendering */
-    _textureIndex: number;
+    _textureIndex: number | undefined;
     /** @type {Map<string,UniformVariable>} uniform variables */
-    _uniform: Map<string, UniformVariable>;
+    _uniform: Map<string, UniformVariable> | undefined;
     /**
      * Run the SpeedyProgram
      * @param  {...SpeedyProgramUniformValue} args
@@ -139,11 +139,11 @@ export type SpeedyProgramOptions = {
     /**
      * render results to a texture?
      */
-    renderToTexture?: boolean;
+    renderToTexture?: boolean | undefined;
     /**
      * alternate output texture between calls
      */
-    pingpong?: boolean;
+    pingpong?: boolean | undefined;
 };
 export type SpeedyProgramUniformValue = number | number[] | boolean | boolean[] | SpeedyTexture;
 import { ShaderDeclaration } from "./shader-declaration";
@@ -278,7 +278,7 @@ declare class UniformVariable {
      * @param {number} [texNo] current texture index
      * @returns {number} new texture index
      */
-    setValue(gl: WebGL2RenderingContext, value: SpeedyProgramUniformValue, texNo?: number): number;
+    setValue(gl: WebGL2RenderingContext, value: SpeedyProgramUniformValue, texNo?: number | undefined): number;
 }
 import { SpeedyTexture } from "./speedy-texture";
 export {};

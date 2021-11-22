@@ -21,7 +21,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedyKeypoint[]} keypoints to be uploaded to the GPU */
     _keypoints: SpeedyKeypoint[];
     /** @type {Float32Array} upload buffer (UBO) */

@@ -7,13 +7,13 @@ export class SpeedyPipelineImagePortalFactory extends SpeedyNamespace {
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImagePortalSource}
      */
-    static Source(name?: string): SpeedyPipelineNodeImagePortalSource;
+    static Source(name?: string | undefined): SpeedyPipelineNodeImagePortalSource;
     /**
      * Create an image portal sink
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImagePortalSink}
      */
-    static Sink(name?: string): SpeedyPipelineNodeImagePortalSink;
+    static Sink(name?: string | undefined): SpeedyPipelineNodeImagePortalSink;
 }
 /**
  * Image nodes
@@ -24,37 +24,37 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace {
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageSource}
      */
-    static Source(name?: string): SpeedyPipelineNodeImageSource;
+    static Source(name?: string | undefined): SpeedyPipelineNodeImageSource;
     /**
      * Create an image sink
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageSink}
      */
-    static Sink(name?: string): SpeedyPipelineNodeImageSink;
+    static Sink(name?: string | undefined): SpeedyPipelineNodeImageSink;
     /**
      * Create an image multiplexer
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageMultiplexer}
      */
-    static Multiplexer(name?: string): SpeedyPipelineNodeImageMultiplexer;
+    static Multiplexer(name?: string | undefined): SpeedyPipelineNodeImageMultiplexer;
     /**
      * Create an image buffer
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageBuffer}
      */
-    static Buffer(name?: string): SpeedyPipelineNodeImageBuffer;
+    static Buffer(name?: string | undefined): SpeedyPipelineNodeImageBuffer;
     /**
      * Image Pyramid
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImagePyramid}
      */
-    static Pyramid(name?: string): SpeedyPipelineNodeImagePyramid;
+    static Pyramid(name?: string | undefined): SpeedyPipelineNodeImagePyramid;
     /**
      * Image Mixer (blending)
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageMixer}
      */
-    static Mixer(name?: string): SpeedyPipelineNodeImageMixer;
+    static Mixer(name?: string | undefined): SpeedyPipelineNodeImageMixer;
     /**
      * Image Portals
      * @returns {typeof SpeedyPipelineImagePortalFactory}

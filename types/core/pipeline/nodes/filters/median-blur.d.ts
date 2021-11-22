@@ -6,7 +6,7 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode {
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name?: string);
+    constructor(name?: string | undefined);
     /** @type {SpeedySize} size of the kernel (assumed to be square) */
     _kernelSize: SpeedySize;
     /**

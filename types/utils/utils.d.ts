@@ -22,7 +22,7 @@ export class Utils {
      * @param {string} [text] error message
      * @throws {AssertionError}
      */
-    static assert(expr: boolean, text?: string): void;
+    static assert(expr: boolean, text?: string | undefined): void;
     /**
      * Similar to setTimeout(fn, 0), but without the ~4ms delay.
      * Although much faster than setTimeout, this may be resource-hungry
@@ -68,14 +68,14 @@ export class Utils {
      * @param {boolean} [normalized] normalize entries so that their sum is 1
      * @returns {number[]}
      */
-    static gaussianKernel(sigma: number, kernelSize?: number, normalized?: boolean): number[];
+    static gaussianKernel(sigma: number, kernelSize?: number | undefined, normalized?: boolean | undefined): number[];
     /**
      * Generate a 2D kernel in column-major format using two separable 1D kernels
      * @param {number[]} ka 1D kernel
      * @param {number[]} [kb]
      * @returns {number[]}
      */
-    static kernel2d(ka: number[], kb?: number[]): number[];
+    static kernel2d(ka: number[], kb?: number[] | undefined): number[];
     /**
      * Cartesian product a x b: [ [ai, bj] for all i, j ]
      * @param {number[]} a
@@ -114,7 +114,7 @@ export class Utils {
      * @param {MediaStreamConstraints} [constraints] will be passed to getUserMedia()
      * @returns {SpeedyPromise<HTMLVideoElement>}
      */
-    static requestCameraStream(constraints?: MediaStreamConstraints): SpeedyPromise<HTMLVideoElement>;
+    static requestCameraStream(constraints?: MediaStreamConstraints | undefined): SpeedyPromise<HTMLVideoElement>;
 }
 export type ZeroTimeoutCallback = {
     fn: Function;
