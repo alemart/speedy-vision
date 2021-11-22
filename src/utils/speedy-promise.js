@@ -146,6 +146,15 @@ export class SpeedyPromise
     }
 
     /**
+     * Symbol.toStringTag
+     * @returns {string}
+     */
+    get [Symbol.toStringTag]()
+    {
+        return 'SpeedyPromise';
+    }
+
+    /**
      * Creates a resolved SpeedyPromise
      * @template U
      * @param {U} [value]
