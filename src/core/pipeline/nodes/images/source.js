@@ -48,7 +48,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
             OutputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 
-        /** @type {SpeedyMedia} source media */
+        /** @type {SpeedyMedia|null} source media */
         this._media = null;
 
         /** @type {number} texture index */
@@ -57,7 +57,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 
     /**
      * Source media
-     * @returns {SpeedyMedia}
+     * @returns {SpeedyMedia|null}
      */
     get media()
     {
@@ -66,7 +66,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 
     /**
      * Source media
-     * @param {SpeedyMedia} media
+     * @param {SpeedyMedia|null} media
      */
     set media(media)
     {
