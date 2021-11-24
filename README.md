@@ -2480,3 +2480,9 @@ Speedy includes a frames per second (FPS) counter for testing purposes. It will 
 ```js
 console.log(Speedy.fps);
 ```
+
+##### Speedy.powerPreference
+
+`Speedy.powerPreference: "default" | "low-power" | "high-performance"`
+
+The desired power preference for the WebGL context. This option can only be set before creating any pipelines. The browser may use this setting as a hint to impact rendering performance and battery life on mobile devices. Experimental.

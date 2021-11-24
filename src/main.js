@@ -19,6 +19,7 @@
  * The entry point of the library
  */
 
+import { SpeedyGL } from './gpu/speedy-gl';
 import { SpeedyMedia } from './core/speedy-media';
 import { FPSCounter } from './utils/fps-counter';
 import { SpeedyPoint2 } from './core/speedy-point';
@@ -36,6 +37,7 @@ import { LITTLE_ENDIAN } from './utils/globals';
 
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
+/** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
 // Constants
 const matrixFactory = new SpeedyMatrixFactory();
@@ -76,24 +78,6 @@ export default class Speedy
         return Utils.requestCameraStream(constraints).then(
             video => SpeedyMedia.load(video)
         );
-    }
-
-    /**
-     * The version of the library
-     * @returns {string} The version of the library
-     */
-    static get version()
-    {
-        return __SPEEDY_VERSION__;
-    }
-
-    /**
-     * The FPS rate
-     * @returns {number} Frames per second (FPS)
-     */
-    static get fps()
-    {
-        return FPSCounter.instance.fps;
     }
 
     /**
@@ -188,6 +172,42 @@ export default class Speedy
     static get Keypoint()
     {
         return SpeedyPipelineKeypointFactory;
+    }
+
+    /**
+     * The version of the library
+     * @returns {string} The version of the library
+     */
+    static get version()
+    {
+        return __SPEEDY_VERSION__;
+    }
+
+    /**
+     * The FPS rate
+     * @returns {number} Frames per second (FPS)
+     */
+    static get fps()
+    {
+        return FPSCounter.instance.fps;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @returns {SpeedyPowerPreference}
+     */
+    static get powerPreference()
+    {
+        return SpeedyGL.powerPreference;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @param {SpeedyPowerPreference} value
+     */
+    static set powerPreference(value)
+    {
+        SpeedyGL.powerPreference = value;
     }
 }
 

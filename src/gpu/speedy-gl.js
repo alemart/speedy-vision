@@ -24,8 +24,11 @@ import { Observable } from '../utils/observable';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError } from '../utils/errors';
 
+/** @typedef {'default' | 'low-power' | 'high-performance'} SpeedyPowerPreference */
+
 // Constants
 const SINGLETON_KEY = Symbol();
+const DEFAULT_POWER_PREFERENCE = 'default';
 
 //
 // We use a small canvas to improve the performance
@@ -42,6 +45,11 @@ const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 
 /** @type {SpeedyGL} Singleton */
 let instance = null;
+
+/** @type {SpeedyPowerPreference} power preference */
+let powerPreference = DEFAULT_POWER_PREFERENCE;
+
+
 
 /**
  * A wrapper around the WebGL Rendering Context
@@ -130,10 +138,12 @@ export class SpeedyGL extends Observable
      */
     _createContext(canvas)
     {
+        Utils.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
+
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
             preserveDrawingBuffer: false,
-            //preferLowPowerToHighPerformance: false, // TODO user option?
+            powerPreference: powerPreference,
             alpha: true, // see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#avoid_alphafalse_which_can_be_expensive
             antialias: false,
             depth: false,
@@ -142,7 +152,7 @@ export class SpeedyGL extends Observable
         });
 
         if(!gl)
-            throw new NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`);       
+            throw new NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`);
 
         return gl;
     }
@@ -217,5 +227,28 @@ export class SpeedyGL extends Observable
                 setTimeout(() => resolve(ext), 0); // next frame
             }, ms);
         });
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @returns {SpeedyPowerPreference}
+     */
+    static get powerPreference()
+    {
+        return powerPreference;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @param {SpeedyPowerPreference} value
+     */
+    static set powerPreference(value)
+    {
+        if(value === 'default' || value === 'low-power' || value === 'high-performance') {
+            // the power preference can only be set
+            // before we create the WebGL context
+            if(instance == null)
+                powerPreference = value;
+        }
     }
 }
