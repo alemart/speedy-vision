@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-11-17T18:27:16.137Z
+ * Date: 2021-11-24T21:33:33.041Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -2798,7 +2798,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Image)
         ]);
 
-        /** @type {SpeedyMedia} source media */
+        /** @type {SpeedyMedia|null} source media */
         this._media = null;
 
         /** @type {number} texture index */
@@ -2807,7 +2807,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
     /**
      * Source media
-     * @returns {SpeedyMedia}
+     * @returns {SpeedyMedia|null}
      */
     get media()
     {
@@ -2816,7 +2816,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
     /**
      * Source media
-     * @param {SpeedyMedia} media
+     * @param {SpeedyMedia|null} media
      */
     set media(media)
     {
@@ -2846,6 +2846,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
         this.output().swrite(outputTexture, this._media._format);
     }
 }
+
 
 /***/ }),
 
@@ -7825,8 +7826,9 @@ class SpeedyPipeline
 
     /**
      * Find a node by its name
+     * @template T extends SpeedyPipelineNode
      * @param {string} name
-     * @returns {SpeedyPipelineNode|null}
+     * @returns {T|null}
      */
     node(name)
     {
@@ -10654,6 +10656,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-media-source */ "./src/core/speedy-media-source.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10682,6 +10685,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+/** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 
 /**
  * @typedef {object} SpeedyMediaOptions
@@ -10732,7 +10738,7 @@ class SpeedyMedia
     /**
      * Load a media source
      * Will wait until the HTML media source is loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
+     * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
@@ -10751,7 +10757,7 @@ class SpeedyMedia
 
     /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
+     * @returns {SpeedyMediaSourceNativeElement} the media element
      */
     get source()
     {
@@ -10778,7 +10784,7 @@ class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "bitmap"
+     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
      */
     get type()
     {
@@ -10811,6 +10817,15 @@ class SpeedyMedia
     get options()
     {
         return this._options;
+    }
+
+    /**
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
+     */
+    size()
+    {
+        return new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(this.width, this.height);
     }
 
     /**
@@ -10886,10 +10901,13 @@ class SpeedyMedia
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.IllegalOperationError('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
         else if(!this._source.isLoaded())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
-
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
+        else if(this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__.MediaType.Bitmap)
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise.resolve(this._source.data);
+        else
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 }
+
 
 /***/ }),
 
@@ -13277,8 +13295,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+/** @typedef {'default' | 'low-power' | 'high-performance'} SpeedyPowerPreference */
+
 // Constants
 const SINGLETON_KEY = Symbol();
+const DEFAULT_POWER_PREFERENCE = 'default';
 
 //
 // We use a small canvas to improve the performance
@@ -13295,6 +13316,11 @@ const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 
 /** @type {SpeedyGL} Singleton */
 let instance = null;
+
+/** @type {SpeedyPowerPreference} power preference */
+let powerPreference = DEFAULT_POWER_PREFERENCE;
+
+
 
 /**
  * A wrapper around the WebGL Rendering Context
@@ -13383,10 +13409,12 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
      */
     _createContext(canvas)
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
+
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
             preserveDrawingBuffer: false,
-            //preferLowPowerToHighPerformance: false, // TODO user option?
+            powerPreference: powerPreference,
             alpha: true, // see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#avoid_alphafalse_which_can_be_expensive
             antialias: false,
             depth: false,
@@ -13395,8 +13423,8 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
         });
 
         if(!gl)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`);       
-
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`); 
+            
         return gl;
     }
 
@@ -13470,6 +13498,29 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
                 setTimeout(() => resolve(ext), 0); // next frame
             }, ms);
         });
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @returns {SpeedyPowerPreference}
+     */
+    static get powerPreference()
+    {
+        return powerPreference;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @param {SpeedyPowerPreference} value
+     */
+    static set powerPreference(value)
+    {
+        if(value === 'default' || value === 'low-power' || value === 'high-performance') {
+            // the power preference can only be set
+            // before we create the WebGL context
+            if(instance == null)
+                powerPreference = value;
+        }
     }
 }
 
@@ -16945,9 +16996,9 @@ class SpeedyPromise
 
     /**
      * Setup handlers
-     * @template U
-     * @param {function(T=): void|SpeedyPromise<U>|Promise<U>|U} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(T): U|PromiseLike<U>|SpeedyPromise<U>)} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     then(onFulfillment, onRejection = null)
@@ -16966,8 +17017,8 @@ class SpeedyPromise
 
     /**
      * Setup rejection handler
-     * @template U
-     * @param {function(Error): void|SpeedyPromise<U>|Promise<U>|U} [onRejection] called when the SpeedyPromise is rejected
+     * @template U, V=never
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
     catch(onRejection)
@@ -17026,6 +17077,15 @@ class SpeedyPromise
             default:
                 return '';
         }
+    }
+
+    /**
+     * Symbol.toStringTag
+     * @returns {string}
+     */
+    get [Symbol.toStringTag]()
+    {
+        return 'SpeedyPromise';
     }
 
     /**
@@ -17326,6 +17386,7 @@ class SpeedyPromise
 module.exports = { SpeedyPromise: Promise };
 Promise.prototype.turbocharge = function() { return this };
 */
+
 
 /***/ }),
 
@@ -18911,20 +18972,21 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (/* binding */ Speedy)
 /* harmony export */ });
-/* harmony import */ var _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./core/speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
-/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
-/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu/speedy-gl */ "./src/gpu/speedy-gl.js");
+/* harmony import */ var _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./core/speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
+/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -18961,15 +19023,17 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
+/** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
 // Constants
-const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__.SpeedyMatrixFactory();
-const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineVector2Factory();
+const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__.SpeedyMatrixFactory();
+const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineVector2Factory();
 
 /**
- * Speedy's main class
+ * GPU-accelerated Computer Vision for JavaScript
  */
 class Speedy
 {
@@ -18981,7 +19045,7 @@ class Speedy
      */
     static load(sourceElement, options = {})
     {
-        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(sourceElement, options);
+        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__.SpeedyMedia.load(sourceElement, options);
     }
 
     /**
@@ -19000,27 +19064,9 @@ class Speedy
             },
         });
 
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.requestCameraStream(constraints).then(
-            video => _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__.SpeedyMedia.load(video)
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.requestCameraStream(constraints).then(
+            video => _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__.SpeedyMedia.load(video)
         );
-    }
-
-    /**
-     * The version of the library
-     * @returns {string} The version of the library
-     */
-    static get version()
-    {
-        return "0.8.3-wip";
-    }
-
-    /**
-     * The FPS rate
-     * @returns {number} Frames per second (FPS)
-     */
-    static get fps()
-    {
-        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__.FPSCounter.instance.fps;
     }
 
     /**
@@ -19040,7 +19086,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_2__.SpeedyPoint2(x, y);
+        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_3__.SpeedyPoint2(x, y);
     }
 
     /**
@@ -19051,7 +19097,7 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_3__.SpeedySize(width, height);
+        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_4__.SpeedySize(width, height);
     }
 
     /**
@@ -19069,7 +19115,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__.SpeedyPromise;
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise;
     }
 
     /**
@@ -19078,7 +19124,7 @@ class Speedy
      */
     static Pipeline()
     {
-        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__.SpeedyPipeline();
+        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipeline();
     }
 
     /**
@@ -19087,7 +19133,7 @@ class Speedy
      */
     static get Image()
     {
-        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineImageFactory;
+        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineImageFactory;
     }
 
     /**
@@ -19096,7 +19142,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineFilterFactory;
+        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineFilterFactory;
     }
 
     /**
@@ -19105,7 +19151,7 @@ class Speedy
      */
     static get Transform()
     {
-        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineTransformFactory;
+        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineTransformFactory;
     }
 
     /**
@@ -19114,13 +19160,50 @@ class Speedy
      */
     static get Keypoint()
     {
-        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineKeypointFactory;
+        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineKeypointFactory;
+    }
+
+    /**
+     * The version of the library
+     * @returns {string} The version of the library
+     */
+    static get version()
+    {
+        return "0.8.3-wip";
+    }
+
+    /**
+     * The FPS rate
+     * @returns {number} Frames per second (FPS)
+     */
+    static get fps()
+    {
+        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__.FPSCounter.instance.fps;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @returns {SpeedyPowerPreference}
+     */
+    static get powerPreference()
+    {
+        return _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.powerPreference;
+    }
+
+    /**
+     * Power preference for the WebGL context
+     * @param {SpeedyPowerPreference} value
+     */
+    static set powerPreference(value)
+    {
+        _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.powerPreference = value;
     }
 }
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_13__.LITTLE_ENDIAN)
-    _utils_utils__WEBPACK_IMPORTED_MODULE_12__.Utils.warning('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_14__.LITTLE_ENDIAN)
+    _utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.warning('Running on a big-endian machine');
+
 })();
 
 __webpack_exports__ = __webpack_exports__["default"];
