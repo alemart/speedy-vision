@@ -48,10 +48,11 @@ export class SpeedyPipeline {
     _busy: boolean;
     /**
      * Find a node by its name
+     * @template T extends SpeedyPipelineNode
      * @param {string} name
-     * @returns {SpeedyPipelineNode|null}
+     * @returns {T|null}
      */
-    node(name: string): SpeedyPipelineNode | null;
+    node<T>(name: string): T | null;
     /**
      * Initialize the pipeline
      * @param  {...SpeedyPipelineNode} nodes

@@ -7,20 +7,20 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode {
      * @param {string} [name] name of the node
      */
     constructor(name?: string | undefined);
-    /** @type {SpeedyMedia} source media */
-    _media: SpeedyMedia;
+    /** @type {SpeedyMedia|null} source media */
+    _media: SpeedyMedia | null;
     /** @type {number} texture index */
     _textureIndex: number;
     /**
      * Source media
-     * @param {SpeedyMedia} media
+     * @param {SpeedyMedia|null} media
      */
-    set media(arg: SpeedyMedia);
+    set media(arg: SpeedyMedia | null);
     /**
      * Source media
-     * @returns {SpeedyMedia}
+     * @returns {SpeedyMedia|null}
      */
-    get media(): SpeedyMedia;
+    get media(): SpeedyMedia | null;
 }
 import { SpeedyPipelineSourceNode } from "../../pipeline-node";
 import { SpeedyMedia } from "../../../speedy-media";

@@ -17,16 +17,6 @@ export default class Speedy {
      */
     static camera(widthOrConstraints?: number | MediaStreamConstraints | undefined, height?: number | undefined): SpeedyPromise<SpeedyMedia>;
     /**
-     * The version of the library
-     * @returns {string} The version of the library
-     */
-    static get version(): string;
-    /**
-     * The FPS rate
-     * @returns {number} Frames per second (FPS)
-     */
-    static get fps(): number;
-    /**
      * 2D vector instantiation and related nodes
      * @returns {SpeedyPipelineVector2Factory}
      */
@@ -80,9 +70,30 @@ export default class Speedy {
      * @returns {typeof SpeedyPipelineKeypointFactory}
      */
     static get Keypoint(): typeof SpeedyPipelineKeypointFactory;
+    /**
+     * The version of the library
+     * @returns {string} The version of the library
+     */
+    static get version(): string;
+    /**
+     * The FPS rate
+     * @returns {number} Frames per second (FPS)
+     */
+    static get fps(): number;
+    /**
+     * Power preference for the WebGL context
+     * @param {SpeedyPowerPreference} value
+     */
+    static set powerPreference(arg: import("./gpu/speedy-gl").SpeedyPowerPreference);
+    /**
+     * Power preference for the WebGL context
+     * @returns {SpeedyPowerPreference}
+     */
+    static get powerPreference(): import("./gpu/speedy-gl").SpeedyPowerPreference;
 }
 export type SpeedyMediaOptions = import('./core/speedy-media').SpeedyMediaOptions;
 export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source').SpeedyMediaSourceNativeElement;
+export type SpeedyPowerPreference = import('./gpu/speedy-gl').SpeedyPowerPreference;
 import { SpeedyPromise } from "./utils/speedy-promise";
 import { SpeedyMedia } from "./core/speedy-media";
 import { SpeedyPipelineVector2Factory } from "./core/pipeline/factories/vector2-factory";
