@@ -58,8 +58,9 @@ export class SpeedyPipeline
 
     /**
      * Find a node by its name
+     * @template T extends SpeedyPipelineNode
      * @param {string} name
-     * @returns {SpeedyPipelineNode|null}
+     * @returns {T|null}
      */
     node(name)
     {
