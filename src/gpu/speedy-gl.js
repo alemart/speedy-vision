@@ -245,10 +245,14 @@ export class SpeedyGL extends Observable
     static set powerPreference(value)
     {
         if(value === 'default' || value === 'low-power' || value === 'high-performance') {
-            // the power preference can only be set
-            // before we create the WebGL context
-            if(instance == null)
+            // the power preference should be set before we create the WebGL context
+            if(instance == null || powerPreference !== value) {
                 powerPreference = value;
+
+                // recreate the context if it already exists. Experimental.
+                if(instance != null)
+                    instance.loseAndRestoreContext();
+            }
         }
     }
 }

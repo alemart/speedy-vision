@@ -2485,4 +2485,4 @@ console.log(Speedy.fps);
 
 `Speedy.powerPreference: "default" | "low-power" | "high-performance"`
 
-The desired power preference for the WebGL context. This option can only be set before creating any pipelines. The browser may use this setting as a hint to impact rendering performance and battery life on mobile devices. Experimental.
+The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices). Experimental.
