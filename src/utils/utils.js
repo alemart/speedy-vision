@@ -66,7 +66,7 @@ export class Utils
     static warning(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-vision.js]', message);
+        console.warn('[speedy-vision]', message);
         return message;
     }
 
@@ -80,7 +80,7 @@ export class Utils
     {
         const message = [ text, ...args ].join(' ');
         if(__SPEEDY_DEVELOPMENT_MODE__)
-            console.log('[speedy-vision.js]', message);
+            console.log('[speedy-vision]', message);
         return message;
     }
 
