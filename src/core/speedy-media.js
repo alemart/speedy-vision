@@ -81,17 +81,22 @@ export class SpeedyMedia
      * Will wait until the HTML media source is loaded
      * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
+     * @param {boolean} [log] show log message?
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource, options = {})
+    static load(mediaSource, options = {}, log = true)
     {
         return SpeedyMediaSource.load(mediaSource).then(source => {
             Utils.assert(source.width !== 0 && source.height !== 0);
 
             // FIXME user could pass an invalid format in options if ImageFormat is made public
             const media = new SpeedyMedia(PRIVATE_TOKEN, source, options);
-            Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
+            // show log message
+            if(log)
+                Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+
+            // done!
             return media;
         });
     }

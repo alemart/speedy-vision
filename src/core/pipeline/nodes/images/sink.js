@@ -59,7 +59,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
     export()
     {
         Utils.assert(this._bitmap != null);
-        return SpeedyMedia.load(this._bitmap, { format: this._format });
+        return SpeedyMedia.load(this._bitmap, { format: this._format }, false);
     }
 
     /**
