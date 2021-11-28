@@ -69,10 +69,14 @@ const refineScaleFAST916 = importShader('keypoints/refine-scale.glsl')
                           .withDefines({ 'METHOD': 1 })
                           .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
-// ORB descriptors
+// Pixel allocation
 const allocateDescriptors = importShader('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
+const allocateExtra = importShader('keypoints/allocate-extra.glsl')
+                     .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
+
+// ORB descriptors
 const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
                      .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
@@ -261,9 +265,14 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('refineScaleFAST916', refineScaleFAST916)
 
             //
-            // ORB descriptors
+            // Pixel allocation
             //
             .declare('allocateDescriptors', allocateDescriptors)
+            .declare('allocateExtra', allocateExtra)
+
+            //
+            // ORB descriptors
+            //
             .declare('orbDescriptor', orbDescriptor)
             .declare('orbOrientation', orbOrientation)
 

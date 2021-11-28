@@ -1,0 +1,54 @@
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * allocate-extra.glsl
+ * Allocate space for extra data
+ */
+
+@include "keypoints.glsl"
+
+uniform sampler2D inputEncodedKeypoints;
+uniform int inputDescriptorSize;
+uniform int inputExtraSize; // must be zero!!!
+uniform int inputEncoderLength;
+
+uniform int outputDescriptorSize;
+uniform int outputExtraSize; // must be a positive multiple of 4
+uniform int outputEncoderLength;
+
+void main()
+{
+    // find my location
+    ivec2 thread = threadLocation();
+    KeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);
+    int myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);
+
+    // what kind of cell is this?
+    int headerSize = sizeofEncodedKeypoint(0, 0);
+    bool isHead = (myAddress.offset < headerSize / 4);
+    bool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);
+    bool isExtra = (!isHead && !isDescriptor);
+
+    // find the corresponding location in the input texture
+    int numberOfExtraPixels = outputExtraSize / 4;
+    int addressOffset = myAddress.offset - int(isDescriptor) * numberOfExtraPixels;
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;
+    KeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);
+
+    // copy the data
+    color = isExtra ? vec4(0.0f) : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);
+}
