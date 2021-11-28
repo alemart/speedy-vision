@@ -38,10 +38,19 @@ export class SpeedyKeypoint
      */
     constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
+        /** @type {SpeedyPoint2} keypoint position */
         this._position = new SpeedyPoint2(+x, +y);
+
+        /** @type {number} level of detail */
         this._lod = +lod;
+
+        /** @type {number} rotation in radians */
         this._rotation = +rotation;
+
+        /** @type {number} a cornerness measure */
         this._score = +score;
+
+        /** @type {SpeedyKeypointDescriptor|null} keypoint descriptor, if any */
         this._descriptor = descriptor;
     }
 
