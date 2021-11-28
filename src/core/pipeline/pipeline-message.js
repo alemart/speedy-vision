@@ -276,25 +276,6 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     {
         return this._encoderLength;
     }
-
-    /**
-     * Do we have keypoint descriptors in this message?
-     * @returns {boolean}
-     */
-    hasDescriptors()
-    {
-        return this._descriptorSize > 0;
-    }
-
-    /**
-     * Do we have keypoint matches in this message?
-     * @returns {boolean}
-     */
-    hasMatches()
-    {
-        // FIXME - find a better solution
-        return this._extraSize > 0;
-    }
 }
 
 /**
