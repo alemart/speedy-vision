@@ -28,7 +28,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../../speedy-media';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
-import { IllegalOperationError } from '../../../../utils/errors';
+import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { SpeedyKeypoint } from '../../../speedy-keypoint';
 import { SpeedyKeypointDescriptor } from '../../../speedy-keypoint-descriptor';
@@ -44,20 +44,22 @@ const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
 
 /**
  * Gets keypoints out of the pipeline
+ * @template {SpeedyKeypoint} T
+ * @abstract
  */
-export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
+class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
 {
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount]
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders]
      */
-    constructor(name = 'keypoints')
+    constructor(name = 'keypoints', texCount = 0, portBuilders = [])
     {
-        super(name, 2, [
-            InputPort().expects(SpeedyPipelineMessageType.Keypoints)
-        ]);
+        super(name, texCount + 2, portBuilders);
 
-        /** @type {SpeedyKeypoint[]} keypoints (output) */
+        /** @type {T[]} keypoints (output) */
         this._keypoints = [];
 
         /** @type {SpeedyTextureReader} texture reader */
@@ -110,7 +112,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
     /**
      * Export data from this node to the user
-     * @returns {SpeedyPromise<SpeedyKeypoint[]>}
+     * @returns {SpeedyPromise<T[]>}
      */
     export()
     {
@@ -125,6 +127,20 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        return this._download(gpu, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Download and decode keypoints from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyDrawableTexture} encodedKeypoints
+     * @param {number} descriptorSize
+     * @param {number} extraSize
+     * @param {number} encoderLength
+     * @returns {SpeedyPromise<void>}
+     */
+    _download(gpu, encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    {
         const useBufferedDownloads = this._turbo;
 
         /*
@@ -143,7 +159,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         //const encoderWidth=encoderLength,encoderHeight=encoderLength;
 
         // copy the set of keypoints to an internal texture
-        const copiedTexture = this._tex[this._page];
+        const copiedTexture = this._tex[(this._tex.length - 1) - this._page];
         (gpu.programs.utils.copyKeypoints
             .outputs(encoderWidth, encoderHeight, copiedTexture)
         )(encodedKeypoints);
@@ -153,7 +169,10 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
+
+            // decode the keypoints and store them in this._keypoints
+            this._keypoints = this._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
+
         });
     }
 
@@ -164,16 +183,22 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
      * @param {number} extraSize in bytes
      * @param {number} encoderWidth
      * @param {number} encoderHeight
-     * @returns {SpeedyKeypoint[]} keypoints
+     * @returns {T[]} keypoints
      */
-    static _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
+    _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
+        const noBytes = new Uint8Array([]);
         const bytesPerKeypoint = MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
         const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
         const keypoints = [];
+        let descriptorBytes = noBytes, extraBytes = noBytes;
         let x, y, z, w, lod, rotation, score;
-        let descriptorBytes, extraBytes, descriptor;
+        let keypoint;
+
+        // validate
+        if(descriptorSize % 4 != 0 || extraSize % 4 != 0)
+            throw new IllegalArgumentError(`Invalid descriptorSize (${descriptorSize}) / extraSize (${extraSize})`);
 
         // how many bytes should we read?
         const e2 = encoderWidth * encoderHeight * 4;
@@ -226,14 +251,79 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             // decode score
             score = Utils.decodeFloat16(w);
 
-            // read descriptor, if any
-            descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
+            // create keypoint
+            keypoint = this._createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes);
 
             // register keypoint
-            keypoints.push(new SpeedyKeypoint(x, y, lod, rotation, score, descriptor));
+            keypoints.push(keypoint);
         }
 
         // done!
         return keypoints;
     }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {T}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        throw new AbstractMethodError();
+    }
+}
+
+/**
+ * Gets standard keypoints out of the pipeline
+ * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyKeypoint>}
+ */
+export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+    {
+        super(name, 0, [
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints)
+        ]);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // create keypoint
+        return new SpeedyKeypoint(x, y, lod, rotation, score, descriptor);
+    }
+}
+
+/**
+ * Gets tracked keypoints out of the pipeline
+ * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyKeypoint>}
+ */
+export class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    // TODO
 }
