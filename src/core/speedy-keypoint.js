@@ -43,8 +43,6 @@ export class SpeedyKeypoint
         this._rotation = +rotation;
         this._score = +score;
         this._descriptor = descriptor;
-
-        return Object.freeze(this);
     }
 
     /**
