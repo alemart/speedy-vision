@@ -76,6 +76,9 @@ const allocateDescriptors = importShader('keypoints/allocate-descriptors.glsl')
 const allocateExtra = importShader('keypoints/allocate-extra.glsl')
                      .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
+const transferToExtra = importShader('keypoints/transfer-to-extra.glsl')
+                        .withArguments('encodedData', 'strideOfEncodedData', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
 // ORB descriptors
 const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
                      .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
@@ -269,6 +272,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             .declare('allocateDescriptors', allocateDescriptors)
             .declare('allocateExtra', allocateExtra)
+            .declare('transferToExtra', transferToExtra)
 
             //
             // ORB descriptors
