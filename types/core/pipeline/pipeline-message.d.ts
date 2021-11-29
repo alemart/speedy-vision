@@ -127,16 +127,6 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage {
      * @returns {number}
      */
     get encoderLength(): number;
-    /**
-     * Do we have keypoint descriptors in this message?
-     * @returns {boolean}
-     */
-    hasDescriptors(): boolean;
-    /**
-     * Do we have keypoint matches in this message?
-     * @returns {boolean}
-     */
-    hasMatches(): boolean;
 }
 /**
  * A message transporting a set of 2D vectors

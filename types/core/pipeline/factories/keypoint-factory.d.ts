@@ -52,6 +52,12 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      */
     static Sink(name?: string | undefined): SpeedyPipelineNodeKeypointSink;
     /**
+     * Create a sink of tracked keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeTrackedKeypointSink}
+     */
+    static SinkOfTrackedKeypoints(name?: string | undefined): SpeedyPipelineNodeTrackedKeypointSink;
+    /**
      * Keypoint clipper
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointClipper}
@@ -118,12 +124,6 @@ declare class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeORBKeypointDescriptor}
      */
     static ORB(name?: string | undefined): SpeedyPipelineNodeORBKeypointDescriptor;
-    /**
-     * Discard descriptors
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
-     */
-    static Discard(name?: string | undefined): SpeedyPipelineNodeDiscardKeypointDescriptor;
 }
 /**
  * Keypoint trackers
@@ -138,6 +138,7 @@ declare class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace {
 }
 import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
 import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";
+import { SpeedyPipelineNodeTrackedKeypointSink } from "../nodes/keypoints/sink";
 import { SpeedyPipelineNodeKeypointClipper } from "../nodes/keypoints/clipper";
 import { SpeedyPipelineNodeKeypointBuffer } from "../nodes/keypoints/buffer";
 import { SpeedyPipelineNodeKeypointMixer } from "../nodes/keypoints/mixer";
@@ -147,6 +148,5 @@ import { SpeedyPipelineNodeKeypointSubpixelRefiner } from "../nodes/keypoints/su
 import { SpeedyPipelineNodeFASTKeypointDetector } from "../nodes/keypoints/detectors/fast";
 import { SpeedyPipelineNodeHarrisKeypointDetector } from "../nodes/keypoints/detectors/harris";
 import { SpeedyPipelineNodeORBKeypointDescriptor } from "../nodes/keypoints/descriptors/orb";
-import { SpeedyPipelineNodeDiscardKeypointDescriptor } from "../nodes/keypoints/descriptors/discard";
 import { SpeedyPipelineNodeLKKeypointTracker } from "../nodes/keypoints/trackers/lk";
 export {};

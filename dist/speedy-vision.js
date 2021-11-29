@@ -1,12 +1,12 @@
 /*!
  * speedy-vision v0.8.3-wip
  * GPU-accelerated Computer Vision for JavaScript
- * https://github.com/alemart/speedy-vision-js
+ * https://github.com/alemart/speedy-vision
  *
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-11-24T21:33:33.041Z
+ * Date: 2021-11-29T22:28:18.293Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -325,9 +325,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
 /* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/discard */ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js");
-/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
-/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
+/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -348,7 +347,6 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
-
 
 
 
@@ -405,16 +403,6 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
     {
         return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineNodeORBKeypointDescriptor(name);
     }
-
-    /**
-     * Discard descriptors
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
-     */
-    static Discard(name = undefined)
-    {
-        return new _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeDiscardKeypointDescriptor(name);
-    }
 }
 
 /**
@@ -429,7 +417,7 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
      */
     static LK(name = undefined)
     {
-        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeLKKeypointTracker(name);
+        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeLKKeypointTracker(name);
     }
 }
 
@@ -445,7 +433,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Source(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSource(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeKeypointPortalSource(name);
     }
 
     /**
@@ -455,7 +443,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Sink(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSink(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeKeypointPortalSink(name);
     }
 }
 
@@ -518,6 +506,16 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static Sink(name = undefined)
     {
         return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineNodeKeypointSink(name);
+    }
+
+    /**
+     * Create a sink of tracked keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeTrackedKeypointSink}
+     */
+    static SinkOfTrackedKeypoints(name = undefined)
+    {
+        return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineNodeTrackedKeypointSink(name);
     }
 
     /**
@@ -2702,7 +2700,7 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
     export()
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.assert(this._bitmap != null);
-        return _speedy_media__WEBPACK_IMPORTED_MODULE_5__.SpeedyMedia.load(this._bitmap, { format: this._format });
+        return _speedy_media__WEBPACK_IMPORTED_MODULE_5__.SpeedyMedia.load(this._bitmap, { format: this._format }, false);
     }
 
     /**
@@ -3259,105 +3257,6 @@ class SpeedyPipelineNodeKeypointDescriptor extends _pipeline_node__WEBPACK_IMPOR
         )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
     }
 }
-
-/***/ }),
-
-/***/ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js":
-/*!******************************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/descriptors/discard.js ***!
-  \******************************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyPipelineNodeDiscardKeypointDescriptor": () => (/* binding */ SpeedyPipelineNodeDiscardKeypointDescriptor)
-/* harmony export */ });
-/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
-/* harmony import */ var _descriptor__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./descriptor */ "./src/core/pipeline/nodes/keypoints/descriptors/descriptor.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * discard.js
- * Discard keypoint descriptors
- */
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Discard keypoint descriptors
- */
-class SpeedyPipelineNodeDiscardKeypointDescriptor extends _descriptor__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineNodeKeypointDescriptor
-{
-    /**
-     * Constructor
-     * @param {string} [name] name of the node
-     */
-    constructor(name = undefined)
-    {
-        super(name, 0, [
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
-                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
-                    msg.descriptorSize > 0
-            ),
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
-        ]);
-    }
-
-    /**
-     * Run the specific task of this node
-     * @param {SpeedyGPU} gpu
-     * @returns {void|SpeedyPromise<void>}
-     */
-    _run(gpu)
-    {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
-
-        // allocate space
-        const outputTexture = this._allocateDescriptors(gpu, descriptorSize, extraSize, 0, extraSize, encodedKeypoints);
-        const newEncoderLength = outputTexture.width;
-
-        // discard descriptors
-        (gpu.programs.keypoints.discardDescriptors
-            .outputs(newEncoderLength, newEncoderLength, outputTexture)
-        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, newEncoderLength);
-
-        // done!
-        this.output().swrite(outputTexture, 0, extraSize, newEncoderLength);
-    }
-}
-
 
 /***/ }),
 
@@ -4747,22 +4646,25 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyPipelineNodeKeypointSink": () => (/* binding */ SpeedyPipelineNodeKeypointSink)
+/* harmony export */   "SpeedyPipelineNodeKeypointSink": () => (/* binding */ SpeedyPipelineNodeKeypointSink),
+/* harmony export */   "SpeedyPipelineNodeTrackedKeypointSink": () => (/* binding */ SpeedyPipelineNodeTrackedKeypointSink)
 /* harmony export */ });
 /* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
-/* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
+/* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../../../speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4799,30 +4701,37 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// next power of 2
+
+
+/** next power of 2 */
 const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
+
+/** empty array of bytes */
+const ZERO_BYTES = new Uint8Array([]);
 
 
 /**
  * Gets keypoints out of the pipeline
+ * @template {SpeedyKeypoint} T
+ * @abstract
  */
-class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineSinkNode
+class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineSinkNode
 {
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount]
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders]
      */
-    constructor(name = 'keypoints')
+    constructor(name = 'keypoints', texCount = 0, portBuilders = [])
     {
-        super(name, 2, [
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints)
-        ]);
+        super(name, texCount + 2, portBuilders);
 
-        /** @type {SpeedyKeypoint[]} keypoints (output) */
+        /** @type {T[]} keypoints (output) */
         this._keypoints = [];
 
         /** @type {SpeedyTextureReader} texture reader */
-        this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__.SpeedyTextureReader();
+        this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_5__.SpeedyTextureReader();
 
         /** @type {number} page flipping index */
         this._page = 0;
@@ -4871,11 +4780,11 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
 
     /**
      * Export data from this node to the user
-     * @returns {SpeedyPromise<SpeedyKeypoint[]>}
+     * @returns {SpeedyPromise<T[]>}
      */
     export()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__.SpeedyPromise.resolve(this._keypoints);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__.SpeedyPromise.resolve(this._keypoints);
     }
 
     /**
@@ -4886,6 +4795,20 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        return this._download(gpu, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Download and decode keypoints from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyDrawableTexture} encodedKeypoints
+     * @param {number} descriptorSize
+     * @param {number} extraSize
+     * @param {number} encoderLength
+     * @returns {SpeedyPromise<void>}
+     */
+    _download(gpu, encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    {
         const useBufferedDownloads = this._turbo;
 
         /*
@@ -4904,7 +4827,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
         //const encoderWidth=encoderLength,encoderHeight=encoderLength;
 
         // copy the set of keypoints to an internal texture
-        const copiedTexture = this._tex[this._page];
+        const copiedTexture = this._tex[(this._tex.length - 1) - this._page];
         (gpu.programs.utils.copyKeypoints
             .outputs(encoderWidth, encoderHeight, copiedTexture)
         )(encodedKeypoints);
@@ -4914,7 +4837,10 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
+
+            // decode the keypoints and store them in this._keypoints
+            this._keypoints = this._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
+
         });
     }
 
@@ -4925,22 +4851,27 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
      * @param {number} extraSize in bytes
      * @param {number} encoderWidth
      * @param {number} encoderHeight
-     * @returns {SpeedyKeypoint[]} keypoints
+     * @returns {T[]} keypoints
      */
-    static _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
+    _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
-        const bytesPerKeypoint = _utils_globals__WEBPACK_IMPORTED_MODULE_13__.MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
-        const m = _utils_globals__WEBPACK_IMPORTED_MODULE_13__.LOG2_PYRAMID_MAX_SCALE, h = _utils_globals__WEBPACK_IMPORTED_MODULE_13__.PYRAMID_MAX_LEVELS;
+        const bytesPerKeypoint = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
+        const m = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.LOG2_PYRAMID_MAX_SCALE, h = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
         const keypoints = [];
+        let descriptorBytes = ZERO_BYTES, extraBytes = ZERO_BYTES;
         let x, y, z, w, lod, rotation, score;
-        let descriptorBytes, extraBytes, descriptor;
+        let keypoint;
+
+        // validate
+        if(descriptorSize % 4 != 0 || extraSize % 4 != 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_10__.IllegalArgumentError(`Invalid descriptorSize (${descriptorSize}) / extraSize (${extraSize})`);
 
         // how many bytes should we read?
         const e2 = encoderWidth * encoderHeight * 4;
         const size = pixels.byteLength;
         if(size != e2)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
 
         // copy the data (we use shared buffers when receiving pixels[])
         if(descriptorSize + extraSize > 0)
@@ -4975,8 +4906,8 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
             }
 
             // decode position: convert from fixed-point
-            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_13__.FIX_RESOLUTION;
-            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_13__.FIX_RESOLUTION;
+            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_15__.FIX_RESOLUTION;
+            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_15__.FIX_RESOLUTION;
 
             // decode level-of-detail
             lod = (pixels[i+4] < 255) ? -m + ((m + h) * pixels[i+4]) / 255.0 : 0.0;
@@ -4985,17 +4916,174 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
             rotation = (2 * pixels[i+5] - 255) * piOver255;
 
             // decode score
-            score = _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.decodeFloat16(w);
+            score = _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.decodeFloat16(w);
 
-            // read descriptor, if any
-            descriptor = descriptorSize > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_12__.SpeedyKeypointDescriptor(descriptorBytes) : null;
+            // create keypoint
+            keypoint = this._createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes);
 
             // register keypoint
-            keypoints.push(new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_11__.SpeedyKeypoint(x, y, lod, rotation, score, descriptor));
+            keypoints.push(keypoint);
         }
 
         // done!
         return keypoints;
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {T}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_10__.AbstractMethodError();
+    }
+
+    /**
+     * Allocate extra soace
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyDrawableTexture} output output texture
+     * @param {SpeedyTexture} inputEncodedKeypoints input with no extra space
+     * @param {number} inputDescriptorSize in bytes, must be positive
+     * @param {number} inputExtraSize must be 0
+     * @param {number} outputDescriptorSize must be inputDescriptorSize
+     * @param {number} outputExtraSize in bytes, must be positive and a multiple of 4
+     * @returns {SpeedyDrawableTexture} encodedKeypoints with extra space
+     */
+    _allocateExtra(gpu, output, inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.assert(inputExtraSize === 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.assert(outputDescriptorSize === inputDescriptorSize && outputExtraSize > 0 && outputExtraSize % 4 === 0);
+
+        const inputEncoderLength = inputEncodedKeypoints.width;
+        const inputEncoderCapacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
+        const outputEncoderCapacity = inputEncoderCapacity;
+        const outputEncoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderLength(outputEncoderCapacity, outputDescriptorSize, outputExtraSize);
+
+        return (gpu.programs.keypoints.allocateExtra
+            .outputs(outputEncoderLength, outputEncoderLength, output)
+        )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
+    }
+}
+
+/**
+ * Gets standard keypoints out of the pipeline
+ * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyKeypoint>}
+ */
+class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+    {
+        super(name, 0, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__.SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // create keypoint
+        return new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__.SpeedyKeypoint(x, y, lod, rotation, score, descriptor);
+    }
+}
+
+/**
+ * Gets tracked keypoints out of the pipeline
+ * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyTrackedKeypoint>}
+ */
+class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+    {
+        super(name, 2, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.extraSize == 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)('flow').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Vector2)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const { vectors } = /** @type {SpeedyPipelineMessageWith2DVectors} */ ( this.input('flow').read() );
+
+        // allocate extra space
+        const newDescriptorSize = descriptorSize;
+        const newExtraSize = 4; // 1 pixel per flow vector per keypoint
+        const encodedKeypointsWithExtraSpace = this._allocateExtra(gpu, this._tex[0], encodedKeypoints, descriptorSize, extraSize, newDescriptorSize, newExtraSize);
+
+        // attach flow vectors
+        const newEncoderLength = encodedKeypointsWithExtraSpace.width;
+        const newEncodedKeypoints = (gpu.programs.keypoints.transferToExtra
+            .outputs(newEncoderLength, newEncoderLength, this._tex[1])
+        )(vectors, vectors.width, encodedKeypointsWithExtraSpace, newDescriptorSize, newExtraSize, newEncoderLength);
+
+        // done!
+        return this._download(gpu, newEncodedKeypoints, newDescriptorSize, newExtraSize, newEncoderLength);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyTrackedKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+        const extraSize = extraBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__.SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // read flow vector
+        const fx = _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.decodeFloat16((extraBytes[1] << 8) | extraBytes[0]);
+        const fy = _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.decodeFloat16((extraBytes[3] << 8) | extraBytes[2]);
+        const flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_14__.SpeedyVector2(fx, fy);
+
+        // create keypoint
+        return new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__.SpeedyTrackedKeypoint(x, y, lod, rotation, score, descriptor, flow);
     }
 }
 
@@ -6630,25 +6718,6 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     {
         return this._encoderLength;
     }
-
-    /**
-     * Do we have keypoint descriptors in this message?
-     * @returns {boolean}
-     */
-    hasDescriptors()
-    {
-        return this._descriptorSize > 0;
-    }
-
-    /**
-     * Do we have keypoint matches in this message?
-     * @returns {boolean}
-     */
-    hasMatches()
-    {
-        // FIXME - find a better solution
-        return this._extraSize > 0;
-    }
 }
 
 /**
@@ -7437,9 +7506,9 @@ class SpeedyPipelineInputPort extends SpeedyPipelinePort
     connectTo(port)
     {
         if(!port.isOutputPort())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.IllegalArgumentError(`Can't connect input port ${this.name} to port ${port.name}: expected an output port`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.IllegalArgumentError(`Can't connect input port ${this.name} of "${this.node.fullName}" to input port ${port.name} of "${port.node.fullName}": expected an output port`);
         else if(!this._spec.isCompatibleWith(port._spec))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.IllegalArgumentError(`Can't connect ports ${this.name} and ${port.name}: incompatible types`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.IllegalArgumentError(`Can't connect port ${this.name} of "${this.node.fullName}" to port ${port.name} of "${port.node.fullName}": incompatible types`);
 
         this._incomingLink = port;
     }
@@ -8153,10 +8222,12 @@ class SpeedyKeypointDescriptor
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyKeypoint": () => (/* binding */ SpeedyKeypoint)
+/* harmony export */   "SpeedyKeypoint": () => (/* binding */ SpeedyKeypoint),
+/* harmony export */   "SpeedyTrackedKeypoint": () => (/* binding */ SpeedyTrackedKeypoint)
 /* harmony export */ });
 /* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
 /* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -8181,6 +8252,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Represents a keypoint
  */
@@ -8197,13 +8269,20 @@ class SpeedyKeypoint
      */
     constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
+        /** @type {SpeedyPoint2} keypoint position */
         this._position = new _speedy_point__WEBPACK_IMPORTED_MODULE_1__.SpeedyPoint2(+x, +y);
-        this._lod = +lod;
-        this._rotation = +rotation;
-        this._score = +score;
-        this._descriptor = descriptor;
 
-        return Object.freeze(this);
+        /** @type {number} level of detail */
+        this._lod = +lod;
+
+        /** @type {number} rotation in radians */
+        this._rotation = +rotation;
+
+        /** @type {number} a cornerness measure */
+        this._score = +score;
+
+        /** @type {SpeedyKeypointDescriptor|null} keypoint descriptor, if any */
+        this._descriptor = descriptor;
     }
 
     /**
@@ -8285,6 +8364,39 @@ class SpeedyKeypoint
     get descriptor()
     {
         return this._descriptor;
+    }
+}
+
+/**
+ * Represents a tracked keypoint
+ */
+class SpeedyTrackedKeypoint extends SpeedyKeypoint
+{
+    /**
+     * Constructor
+     * @param {number} x X position
+     * @param {number} y Y position
+     * @param {number} [lod] Level-of-detail
+     * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
+     * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
+     * @param {SpeedyVector2} [flow] flow vector
+     */
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_2__.SpeedyVector2(0,0))
+    {
+        super(x, y, lod, rotation, score, descriptor);
+
+        /** @type {SpeedyVector2} flow vector */
+        this._flow = flow;
+    }
+
+    /**
+     * Flow vector
+     * @returns {SpeedyVector2}
+     */
+    get flow()
+    {
+        return this._flow;
     }
 }
 
@@ -10740,17 +10852,22 @@ class SpeedyMedia
      * Will wait until the HTML media source is loaded
      * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
+     * @param {boolean} [log] show log message?
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource, options = {})
+    static load(mediaSource, options = {}, log = true)
     {
         return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__.SpeedyMediaSource.load(mediaSource).then(source => {
             _utils_utils__WEBPACK_IMPORTED_MODULE_4__.Utils.assert(source.width !== 0 && source.height !== 0);
 
             // FIXME user could pass an invalid format in options if ImageFormat is made public
             const media = new SpeedyMedia(PRIVATE_TOKEN, source, options);
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__.Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
+            // show log message
+            if(log)
+                _utils_utils__WEBPACK_IMPORTED_MODULE_4__.Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+
+            // done!
             return media;
         });
     }
@@ -11709,10 +11826,17 @@ const refineScaleFAST916 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.i
                           .withDefines({ 'METHOD': 1 })
                           .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
-// ORB descriptors
+// Pixel allocation
 const allocateDescriptors = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
+const allocateExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/allocate-extra.glsl')
+                     .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
+
+const transferToExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/transfer-to-extra.glsl')
+                        .withArguments('encodedData', 'strideOfEncodedData', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+// ORB descriptors
 const orbDescriptor = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/orb-descriptor.glsl')
                      .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
@@ -11824,9 +11948,6 @@ const encodeNullKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.
 const transferOrientation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const discardDescriptors = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/discard-descriptors.glsl')
-                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'newEncoderLength');
-
 const uploadKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/upload-keypoints.glsl')
                        .withDefines({
                             // UBOs can hold at least 16KB of data;
@@ -11901,9 +12022,15 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             .declare('refineScaleFAST916', refineScaleFAST916)
 
             //
-            // ORB descriptors
+            // Pixel allocation
             //
             .declare('allocateDescriptors', allocateDescriptors)
+            .declare('allocateExtra', allocateExtra)
+            .declare('transferToExtra', transferToExtra)
+
+            //
+            // ORB descriptors
+            //
             .declare('orbDescriptor', orbDescriptor)
             .declare('orbOrientation', orbOrientation)
 
@@ -11984,7 +12111,6 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
 
 
             .declare('transferOrientation', transferOrientation)
-            .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
@@ -13187,8 +13313,8 @@ var map = {
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
 	"./include/subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl",
 	"./keypoints/allocate-descriptors.glsl": "./src/gpu/shaders/keypoints/allocate-descriptors.glsl",
+	"./keypoints/allocate-extra.glsl": "./src/gpu/shaders/keypoints/allocate-extra.glsl",
 	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
-	"./keypoints/discard-descriptors.glsl": "./src/gpu/shaders/keypoints/discard-descriptors.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
@@ -13215,6 +13341,7 @@ var map = {
 	"./keypoints/subpixel-refinement.glsl": "./src/gpu/shaders/keypoints/subpixel-refinement.glsl",
 	"./keypoints/transfer-flow.glsl": "./src/gpu/shaders/keypoints/transfer-flow.glsl",
 	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
+	"./keypoints/transfer-to-extra.glsl": "./src/gpu/shaders/keypoints/transfer-to-extra.glsl",
 	"./keypoints/upload-keypoints.glsl": "./src/gpu/shaders/keypoints/upload-keypoints.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
@@ -13423,8 +13550,8 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
         });
 
         if(!gl)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`); 
-            
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`Can't create a WebGL2 Rendering Context. Try a different browser!`);
+
         return gl;
     }
 
@@ -13516,10 +13643,14 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
     static set powerPreference(value)
     {
         if(value === 'default' || value === 'low-power' || value === 'high-performance') {
-            // the power preference can only be set
-            // before we create the WebGL context
-            if(instance == null)
+            // the power preference should be set before we create the WebGL context
+            if(instance == null || powerPreference !== value) {
                 powerPreference = value;
+
+                // recreate the context if it already exists. Experimental.
+                if(instance != null)
+                    instance.loseAndRestoreContext();
+            }
         }
     }
 }
@@ -17550,7 +17681,7 @@ class Utils
     static warning(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-vision.js]', message);
+        console.warn('[speedy-vision]', message);
         return message;
     }
 
@@ -17564,7 +17695,7 @@ class Utils
     {
         const message = [ text, ...args ].join(' ');
         if(true)
-            console.log('[speedy-vision.js]', message);
+            console.log('[speedy-vision]', message);
         return message;
     }
 
@@ -17904,6 +18035,7 @@ class Utils
     }
 }
 
+
 /***/ }),
 
 /***/ "./src/gpu/shaders/filters/convolution1d.glsl":
@@ -18076,6 +18208,16 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKey
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/allocate-extra.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/allocate-extra.glsl ***!
+  \*******************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nbool isHead = (myAddress.offset < headerSize / 4);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nbool isExtra = (!isHead && !isDescriptor);\nint numberOfExtraPixels = outputExtraSize / 4;\nint addressOffset = myAddress.offset - int(isDescriptor) * numberOfExtraPixels;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isExtra ? vec4(0.0f) : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/apply-homography.glsl":
 /*!*********************************************************!*\
   !*** ./src/gpu/shaders/keypoints/apply-homography.glsl ***!
@@ -18083,16 +18225,6 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKey
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nvec3 pos3 = homography * vec3(keypoint.position, 1.0f);\ncolor = encodeKeypointPosition(pos3.xy / pos3.z);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/discard-descriptors.glsl":
-/*!************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/discard-descriptors.glsl ***!
-  \************************************************************/
-/***/ ((module) => {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int newEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, 0, extraSize);\nint myIndex = findKeypointIndex(myAddress, 0, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, myAddress.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -18353,6 +18485,16 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedOrientations;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint orientationEncoderLength = textureSize(encodedOrientations, 0).x;\nivec2 location = ivec2(myIndex % orientationEncoderLength, myIndex / orientationEncoderLength);\nvec4 targetPixel = pixelAt(encodedOrientations, location);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nbool isValid = !isBadKeypoint(keypoint);\nfloat encodedOrientation = targetPixel.g;\ncolor = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.ba) : pixel;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/transfer-to-extra.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/transfer-to-extra.glsl ***!
+  \**********************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedData;\nuniform int strideOfEncodedData;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec4 readEncodedData(sampler2D encodedData, int strideOfEncodedData, int elementId, int pixelsPerElement, int pixelOffset)\n{\nint rasterIndex = elementId * pixelsPerElement + pixelOffset;\nivec2 pos = ivec2(rasterIndex % strideOfEncodedData, rasterIndex / strideOfEncodedData);\nreturn texelFetch(encodedData, pos, 0);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nint extraCell = myAddress.offset - headerSize / 4;\nint numberOfExtraCells = extraSize / 4;\ncolor = threadPixel(encodedKeypoints);\nif(extraCell < 0 || extraCell >= numberOfExtraCells)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nif(isBadKeypoint(keypoint))\nreturn;\ncolor = readEncodedData(encodedData, strideOfEncodedData, myIndex, numberOfExtraCells, extraCell);\n}"
 
 /***/ }),
 
@@ -19032,6 +19174,8 @@ __webpack_require__.r(__webpack_exports__);
 const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__.SpeedyMatrixFactory();
 const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineVector2Factory();
 
+
+
 /**
  * GPU-accelerated Computer Vision for JavaScript
  */
@@ -19169,7 +19313,10 @@ class Speedy
      */
     static get version()
     {
-        return "0.8.3-wip";
+        if(true)
+            return "0.8.3-wip" + '-dev';
+        else
+            {}
     }
 
     /**
@@ -19199,6 +19346,13 @@ class Speedy
         _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.powerPreference = value;
     }
 }
+
+// Notice
+_utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.log(
+    `Speedy Vision v${Speedy.version}. ` +
+    `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
+    "https://github.com/alemart/speedy-vision"
+);
 
 // Big-endian machine? Currently untested.
 if(!_utils_globals__WEBPACK_IMPORTED_MODULE_14__.LITTLE_ENDIAN)

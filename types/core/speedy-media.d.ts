@@ -8,9 +8,10 @@ export class SpeedyMedia {
      * Will wait until the HTML media source is loaded
      * @param {SpeedyMediaSourceNativeElement} mediaSource An image, video or canvas
      * @param {SpeedyMediaOptions} [options] options object
+     * @param {boolean} [log] show log message?
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions | undefined): SpeedyPromise<SpeedyMedia>;
+    static load(mediaSource: SpeedyMediaSourceNativeElement, options?: SpeedyMediaOptions | undefined, log?: boolean | undefined): SpeedyPromise<SpeedyMedia>;
     /**
      * @private Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @param {symbol} token
