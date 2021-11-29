@@ -191,9 +191,6 @@ const encodeNullKeypoints = importShader('keypoints/encode-null-keypoints.glsl')
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const discardDescriptors = importShader('keypoints/discard-descriptors.glsl')
-                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'newEncoderLength');
-
 const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
                        .withDefines({
                             // UBOs can hold at least 16KB of data;
@@ -357,7 +354,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
 
 
             .declare('transferOrientation', transferOrientation)
-            .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })

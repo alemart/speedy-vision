@@ -278,66 +278,6 @@ describe('Feature detection', function() {
         });
     });
 
-    describe('Discard descriptors', function() {
-        const createPipeline = (media) => {
-            const pipeline = Speedy.Pipeline();
-            const source = Speedy.Image.Source();
-            const greyscale = Speedy.Filter.Greyscale();
-            const pyramid = Speedy.Image.Pyramid();
-            const fast = Speedy.Keypoint.Detector.FAST('fast');
-            const gaussian = Speedy.Filter.GaussianBlur();
-            const blurredPyramid = Speedy.Image.Pyramid();
-            const clipper = Speedy.Keypoint.Clipper('clipper');
-            const orb = Speedy.Keypoint.Descriptor.ORB();
-            const discard = Speedy.Keypoint.Descriptor.Discard();
-            const sink1 = Speedy.Keypoint.Sink('keypointsWithoutDescriptors');
-            const sink2 = Speedy.Keypoint.Sink('keypointsWithDescriptors');
-
-            source.media = media;
-            gaussian.kernelSize = Speedy.Size(9, 9);
-            gaussian.sigma = Speedy.Vector2(2, 2);
-            fast.capacity = 8192;
-            fast.threshold = 80;
-            fast.levels = 12; // pyramid levels
-            fast.scaleFactor = 1.19; // approx. 2^0.25
-            //clipper.size = 800; // up to how many features?
-
-            source.output().connectTo(greyscale.input());
-
-            greyscale.output().connectTo(pyramid.input());
-            pyramid.output().connectTo(fast.input());
-            fast.output().connectTo(clipper.input());
-            clipper.output().connectTo(orb.input('keypoints'));
-
-            greyscale.output().connectTo(gaussian.input());
-            gaussian.output().connectTo(blurredPyramid.input());
-            blurredPyramid.output().connectTo(orb.input('image'));
-
-            orb.output().connectTo(discard.input());
-            discard.output().connectTo(sink1.input());
-            orb.output().connectTo(sink2.input());
-
-            pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, orb, discard, sink1, sink2);
-            return pipeline;
-        }
-
-        it('computes and discards descriptors', async function() {
-            const pipeline = createPipeline(media);
-            const { keypointsWithDescriptors, keypointsWithoutDescriptors } = await pipeline.run();
-
-            print(`Testing ${keypointsWithoutDescriptors.length} features`);
-
-            expect(keypointsWithoutDescriptors.length).toBeGreaterThan(0);
-            expect(keypointsWithoutDescriptors.length).toEqual(keypointsWithDescriptors.length);
-            for(let i = 0; i < keypointsWithoutDescriptors.length; i++) {
-                expect(keypointsWithDescriptors[i].descriptor).not.toBeNull();
-                expect(keypointsWithoutDescriptors[i].descriptor).toBeNull();
-            }
-
-            pipeline.release();
-        });
-    });
-
     describe('Clipper', function() {
         const createPipeline = (media) => {
             const fast = Speedy.Keypoint.Detector.FAST('fast');

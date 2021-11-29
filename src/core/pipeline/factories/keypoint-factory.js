@@ -31,7 +31,6 @@ import { SpeedyPipelineNodeKeypointSubpixelRefiner } from '../nodes/keypoints/su
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
-import { SpeedyPipelineNodeDiscardKeypointDescriptor } from '../nodes/keypoints/descriptors/discard';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
@@ -74,16 +73,6 @@ class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace
     static ORB(name = undefined)
     {
         return new SpeedyPipelineNodeORBKeypointDescriptor(name);
-    }
-
-    /**
-     * Discard descriptors
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
-     */
-    static Discard(name = undefined)
-    {
-        return new SpeedyPipelineNodeDiscardKeypointDescriptor(name);
     }
 }
 
