@@ -3,7 +3,7 @@
   "version": "0.8.3-wip",
   "description": "GPU-accelerated Computer Vision for JavaScript",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
-  "homepage": "https://github.com/alemart/speedy-vision-js",
+  "homepage": "https://github.com/alemart/speedy-vision",
   "license": "Apache-2.0",
   "main": "dist/speedy-vision.js",
   "types": "types/main.d.ts",
@@ -14,8 +14,7 @@
     "build-pro": "webpack --mode production",
     "build-dts": "tsc",
     "make": "cd src/core/wasm; make; cd ..",
-    "clean": "rm -rf dist/*",
-    "watch": "webpack --watch"
+    "clean": "rm -rf dist/*"
   },
   "repository": {
     "type": "git",
