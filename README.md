@@ -813,43 +813,43 @@ A `SpeedyKeypoint` object represents a keypoint.
 
 ###### SpeedyKeypoint.position
 
-`SpeedyKeypoint.position: SpeedyPoint2, read-only`
+`SpeedyKeypoint.position: SpeedyPoint2`
 
 The position of the keypoint in the image.
 
 ###### SpeedyKeypoint.x
 
-`SpeedyKeypoint.x: number, read-only`
+`SpeedyKeypoint.x: number`
 
 The x position of the keypoint in the image. A shortcut to `position.x`.
 
 ###### SpeedyKeypoint.y
 
-`SpeedyKeypoint.y: number, read-only`
+`SpeedyKeypoint.y: number`
 
 The y position of the keypoint in the image. A shortcut to `position.y`.
 
 ###### SpeedyKeypoint.lod
 
-`SpeedyKeypoint.lod: number, read-only`
+`SpeedyKeypoint.lod: number`
 
 The level-of-detail (pyramid level) from which the keypoint was extracted, starting from zero. Defaults to `0.0`.
 
 ###### SpeedyKeypoint.scale
 
-`SpeedyKeypoint.scale: number, read-only`
+`SpeedyKeypoint.scale: number`
 
 The scale of the keypoint. This is equivalent to *2 ^ lod*. Defaults to `1.0`.
 
 ###### SpeedyKeypoint.rotation
 
-`SpeedyKeypoint.rotation: number, read-only`
+`SpeedyKeypoint.rotation: number`
 
 The orientation angle of the keypoint, in radians. Defaults to `0.0`.
 
 ###### SpeedyKeypoint.score
 
-`SpeedyKeypoint.score: number, read-only`
+`SpeedyKeypoint.score: number`
 
 The score is a measure associated with the keypoint. Although different detection methods employ different measurement strategies, the larger the score, the "better" the keypoint is considered to be. The score is always a positive value.
 
@@ -880,6 +880,16 @@ The size of the keypoint descriptor, in bytes.
 `SpeedyKeypointDescriptor.toString(): string`
 
 Returns a string representation of the keypoint descriptor.
+
+##### SpeedyTrackedKeypoint
+
+A `SpeedyTrackedKeypoint` is a `SpeedyKeypoint` with the following additional properties:
+
+###### SpeedyTrackerKeypoint.flow
+
+`SpeedyTrackedKeypoint.flow: SpeedyVector2`
+
+A displacement vector associated with the tracked keypoint.
 
 ##### Speedy.Keypoint.Source()
 
@@ -913,6 +923,23 @@ Creates a sink of keypoints using the specified name. If the name is not specifi
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
 | `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
+
+##### Speedy.Keypoint.SinkOfTrackedKeypoints()
+
+`Speedy.Keypoint.SinkOfTrackedKeypoints(name?: string): SpeedyPipelineNodeTrackedKeypointSink`
+
+Creates a sink of tracked keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyTrackedKeypoint` objects will be exported from the pipeline.
+
+###### Parameters
+
+The same as `SpeedyPipelineNodeKeypointSink`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
+| `"flow"`  | Vector2   | A set of displacement vectors associated with each keypoint. |
 
 ##### Speedy.Keypoint.Clipper()
 

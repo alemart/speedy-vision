@@ -140,8 +140,7 @@ window.onload = async function()
 
     const lk = Speedy.Keypoint.Tracker.LK();
     const mixer = Speedy.Keypoint.Mixer();
-    const sink = Speedy.Keypoint.Sink();
-    const vec2sink = Speedy.Vector2.Sink('flow');
+    const sink = Speedy.Keypoint.SinkOfTrackedKeypoints();
 
     imgsrc.media = media;
     harris.quality = 0.10;
@@ -162,15 +161,15 @@ window.onload = async function()
     mixer.output().connectTo(lk.input('previousKeypoints'));
 
     lk.output().connectTo(sink.input());
-    lk.output('flow').connectTo(vec2sink.input());
+    lk.output('flow').connectTo(sink.input('flow'));
 
-    pipeline.init(imgsrc, grey, pyr, harris, kpsrc, clipper, buf, bufpyr, lk, mixer, sink, vec2sink);
+    pipeline.init(imgsrc, grey, pyr, harris, kpsrc, clipper, buf, bufpyr, lk, mixer, sink);
 
     // Main loop
     let detect = false, clear = false;
     (function() {
         const canvas = createCanvas(media.width, media.height, video.title);
-        let keypoints = [], flow = [], frameReady = false;
+        let keypoints = [], frameReady = false;
 
         async function update()
         {
@@ -190,7 +189,7 @@ window.onload = async function()
 
             // clear all keypoints
             if(clear) {
-                keypoints.length = flow.length = userPoints.length = 0;
+                keypoints.length = userPoints.length = 0;
                 clear = false;
             }
 
@@ -206,7 +205,6 @@ window.onload = async function()
             // run the pipeline
             const result = await pipeline.run();
             keypoints = result.keypoints;
-            flow = result.flow;
 
             // repeat
             frameReady = true;
@@ -218,7 +216,7 @@ window.onload = async function()
         {
             if(frameReady) {
                 media.draw(canvas);
-                renderFlowVectors(canvas, keypoints, flow, 3, '#f22');
+                renderFlowVectors(canvas, keypoints, 3, '#f22');
                 renderFeatures(canvas, keypoints, 1, '#f22');
             }
 
@@ -296,17 +294,17 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
     context.stroke();
 }
 
-function renderFlowVectors(canvas, features, flow, length = 1, color = 'red')
+function renderFlowVectors(canvas, features, length = 1, color = 'red')
 {
     const context = canvas.getContext('2d');
 
     context.beginPath();
-    for(let i = 0; i < flow.length; i++) {
+    for(let i = 0; i < features.length; i++) {
         const feature = features[i];
-        const v = flow[i];
+        const flow = feature.flow;
 
         // draw flow vector
-        context.moveTo(feature.x - v.x * length, feature.y - v.y * length);
+        context.moveTo(feature.x - flow.x * length, feature.y - flow.y * length);
         context.lineTo(feature.x, feature.y);
     }
     context.strokeStyle = color;

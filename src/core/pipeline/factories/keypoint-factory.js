@@ -21,7 +21,7 @@
 
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeKeypointSource } from '../nodes/keypoints/source';
-import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeKeypointSink, SpeedyPipelineNodeTrackedKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
 import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
@@ -188,6 +188,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Sink(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointSink(name);
+    }
+
+    /**
+     * Create a sink of tracked keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeTrackedKeypointSink}
+     */
+    static SinkOfTrackedKeypoints(name = undefined)
+    {
+        return new SpeedyPipelineNodeTrackedKeypointSink(name);
     }
 
     /**

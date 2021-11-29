@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWith2DVectors } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
@@ -31,8 +31,9 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
-import { SpeedyKeypoint } from '../../../speedy-keypoint';
+import { SpeedyKeypoint, SpeedyTrackedKeypoint } from '../../../speedy-keypoint';
 import { SpeedyKeypointDescriptor } from '../../../speedy-keypoint-descriptor';
+import { SpeedyVector2 } from '../../../speedy-vector';
 import {
     MIN_KEYPOINT_SIZE,
     FIX_RESOLUTION,
@@ -350,9 +351,75 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineNodeAbstractKe
 
 /**
  * Gets tracked keypoints out of the pipeline
- * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyKeypoint>}
+ * @extends {SpeedyPipelineNodeAbstractKeypointSink<SpeedyTrackedKeypoint>}
  */
 export class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
 {
-    // TODO
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+    {
+        super(name, 2, [
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.extraSize == 0
+            ),
+            InputPort('flow').expects(SpeedyPipelineMessageType.Vector2)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const { vectors } = /** @type {SpeedyPipelineMessageWith2DVectors} */ ( this.input('flow').read() );
+
+        // allocate extra space
+        const newDescriptorSize = descriptorSize;
+        const newExtraSize = 4; // 1 pixel per flow vector per keypoint
+        const encodedKeypointsWithExtraSpace = this._allocateExtra(gpu, this._tex[0], encodedKeypoints, descriptorSize, extraSize, newDescriptorSize, newExtraSize);
+
+        // attach flow vectors
+        const newEncoderLength = encodedKeypointsWithExtraSpace.width;
+        const newEncodedKeypoints = (gpu.programs.keypoints.transferToExtra
+            .outputs(newEncoderLength, newEncoderLength, this._tex[1])
+        )(vectors, vectors.width, encodedKeypointsWithExtraSpace, newDescriptorSize, newExtraSize, newEncoderLength);
+
+        // done!
+        return this._download(gpu, newEncodedKeypoints, newDescriptorSize, newExtraSize, newEncoderLength);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyTrackedKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+        const extraSize = extraBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // read flow vector
+        const fx = Utils.decodeFloat16((extraBytes[1] << 8) | extraBytes[0]);
+        const fy = Utils.decodeFloat16((extraBytes[3] << 8) | extraBytes[2]);
+        const flow = new SpeedyVector2(fx, fy);
+
+        // create keypoint
+        return new SpeedyTrackedKeypoint(x, y, lod, rotation, score, descriptor, flow);
+    }
 }

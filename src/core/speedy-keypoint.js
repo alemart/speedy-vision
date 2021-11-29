@@ -21,6 +21,7 @@
 
 import { SpeedyKeypointDescriptor } from './speedy-keypoint-descriptor';
 import { SpeedyPoint2 } from './speedy-point';
+import { SpeedyVector2 } from './speedy-vector';
 
 /**
  * Represents a keypoint
@@ -133,5 +134,38 @@ export class SpeedyKeypoint
     get descriptor()
     {
         return this._descriptor;
+    }
+}
+
+/**
+ * Represents a tracked keypoint
+ */
+export class SpeedyTrackedKeypoint extends SpeedyKeypoint
+{
+    /**
+     * Constructor
+     * @param {number} x X position
+     * @param {number} y Y position
+     * @param {number} [lod] Level-of-detail
+     * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
+     * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
+     * @param {SpeedyVector2} [flow] flow vector
+     */
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, flow = new SpeedyVector2(0,0))
+    {
+        super(x, y, lod, rotation, score, descriptor);
+
+        /** @type {SpeedyVector2} flow vector */
+        this._flow = flow;
+    }
+
+    /**
+     * Flow vector
+     * @returns {SpeedyVector2}
+     */
+    get flow()
+    {
+        return this._flow;
     }
 }
