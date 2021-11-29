@@ -43,6 +43,8 @@ import { LITTLE_ENDIAN } from './utils/globals';
 const matrixFactory = new SpeedyMatrixFactory();
 const vector2Factory = new SpeedyPipelineVector2Factory();
 
+
+
 /**
  * GPU-accelerated Computer Vision for JavaScript
  */
@@ -180,7 +182,10 @@ export default class Speedy
      */
     static get version()
     {
-        return __SPEEDY_VERSION__;
+        if(__SPEEDY_DEVELOPMENT_MODE__)
+            return __SPEEDY_VERSION__ + '-dev';
+        else
+            return __SPEEDY_VERSION__;
     }
 
     /**
@@ -210,6 +215,13 @@ export default class Speedy
         SpeedyGL.powerPreference = value;
     }
 }
+
+// Notice
+Utils.log(
+    `Speedy Vision v${Speedy.version}. ` +
+    `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
+    __SPEEDY_WEBSITE__
+);
 
 // Big-endian machine? Currently untested.
 if(!LITTLE_ENDIAN)
