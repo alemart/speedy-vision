@@ -284,7 +284,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
     /**
      * Allocate extra soace
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} tex output texture
+     * @param {SpeedyDrawableTexture} output output texture
      * @param {SpeedyTexture} inputEncodedKeypoints input with no extra space
      * @param {number} inputDescriptorSize in bytes, must be positive
      * @param {number} inputExtraSize must be 0
@@ -292,9 +292,9 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
      * @param {number} outputExtraSize in bytes, must be positive and a multiple of 4
      * @returns {SpeedyDrawableTexture} encodedKeypoints with extra space
      */
-    _allocateExtra(gpu, tex, inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize)
+    _allocateExtra(gpu, output, inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize)
     {
-        Utils.assert(inputDescriptorSize > 0 && inputExtraSize === 0);
+        Utils.assert(inputExtraSize === 0);
         Utils.assert(outputDescriptorSize === inputDescriptorSize && outputExtraSize > 0 && outputExtraSize % 4 === 0);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
@@ -303,7 +303,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
         const outputEncoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(outputEncoderCapacity, outputDescriptorSize, outputExtraSize);
 
         return (gpu.programs.keypoints.allocateExtra
-            .outputs(outputEncoderLength, outputEncoderLength, tex)
+            .outputs(outputEncoderLength, outputEncoderLength, output)
         )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
     }
 }
