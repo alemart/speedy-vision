@@ -267,9 +267,9 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
     connectTo(port)
     {
         if(!port.isOutputPort())
-            throw new IllegalArgumentError(`Can't connect input port ${this.name} to port ${port.name}: expected an output port`);
+            throw new IllegalArgumentError(`Can't connect input port ${this.name} of "${this.node.fullName}" to input port ${port.name} of "${port.node.fullName}": expected an output port`);
         else if(!this._spec.isCompatibleWith(port._spec))
-            throw new IllegalArgumentError(`Can't connect ports ${this.name} and ${port.name}: incompatible types`);
+            throw new IllegalArgumentError(`Can't connect port ${this.name} of "${this.node.fullName}" to port ${port.name} of "${port.node.fullName}": incompatible types`);
 
         this._incomingLink = port;
     }
