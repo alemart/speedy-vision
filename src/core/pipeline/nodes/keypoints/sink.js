@@ -159,8 +159,8 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
 
         */
         const encoderWidth = nextPot(encoderLength);
-        const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
-        //const encoderHeight = (Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
+        const encoderHeight = Math.ceil(encoderLength * encoderLength / encoderWidth);
         //const encoderWidth=encoderLength,encoderHeight=encoderLength;
 
         // copy the set of keypoints to an internal texture
