@@ -22,7 +22,7 @@
 
 @include "keypoints.glsl"
 
-uniform sampler2D pyramid; // image pyramid (patch size depends on keypoint scale)
+uniform sampler2D image; // input image (patch size depends on keypoint scale)
 uniform sampler2D encodedKeypoints; // encoded keypoints
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
@@ -106,14 +106,14 @@ void main()
     // read circular patch
     vec2 m = vec2(0.0f); // (m10, m01) image moments
     float pot = exp2(keypoint.lod);
-    ivec2 pyrBaseSize = textureSize(pyramid, 0);
+    vec2 imageSize = vec2(textureSize(image, 0));
     int scaledRadius = int(ceil(float(DEFAULT_PATCH_RADIUS) / pot));
     int radius = max(scaledRadius, MIN_PATCH_RADIUS);
     int count = diskPointCount[radius];
     for(int j = 0; j < count; j++) {
         vec2 offset = vec2(diskPoint[j]);
         vec2 position = keypoint.position + round(pot * offset);
-        vec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);
+        vec4 patchPixel = texture(image, (position + vec2(0.5f)) / imageSize);
         m += offset * patchPixel.g;
     }
 

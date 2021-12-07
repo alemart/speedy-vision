@@ -81,10 +81,10 @@ const transferToExtra = importShader('keypoints/transfer-to-extra.glsl')
 
 // ORB descriptors
 const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
-                     .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
+                     .withArguments('image', 'encodedCorners', 'extraSize', 'encoderLength');
 
 const orbOrientation = importShader('keypoints/orb-orientation.glsl')
-                      .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+                      .withArguments('image', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Non-maximum suppression
 const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')

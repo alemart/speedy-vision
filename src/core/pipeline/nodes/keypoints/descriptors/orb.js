@@ -47,8 +47,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         super(name, 3, [
             InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === ImageFormat.GREY &&
-                    msg.image.hasMipmaps()
+                    msg.format === ImageFormat.GREY
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
@@ -67,7 +66,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
-        const pyramid = ( /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('image').read() ) ).image;
+        const image = ( /** @type {SpeedyPipelineMessageWithImage} */ ( this.input('image').read() ) ).image;
         const tex = this._tex;
         const outputTexture = this._tex[2];
 
@@ -76,7 +75,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(capacity))); // 1 pixel per keypoint
         const encodedOrientations = (gpu.programs.keypoints.orbOrientation
             .outputs(orientationEncoderLength, orientationEncoderLength, tex[0])
-        )(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        )(image, encodedKeypoints, descriptorSize, extraSize, encoderLength);
         const orientedKeypoints = (gpu.programs.keypoints.transferOrientation
             .outputs(encoderLength, encoderLength, tex[1])
         )(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -85,10 +84,10 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         const encodedKps = this._allocateDescriptors(gpu, descriptorSize, extraSize, DESCRIPTOR_SIZE, extraSize, orientedKeypoints);
         const newEncoderLength = encodedKps.width;
 
-        // compute descriptors (it's a good idea to blur the pyramid)
+        // compute descriptors (it's a good idea to blur the image)
         const describedKeypoints = (gpu.programs.keypoints.orbDescriptor
             .outputs(newEncoderLength, newEncoderLength, outputTexture)
-        )(pyramid, encodedKps, extraSize, newEncoderLength);
+        )(image, encodedKps, extraSize, newEncoderLength);
 
         // done!
         this.output().swrite(describedKeypoints, DESCRIPTOR_SIZE, extraSize, newEncoderLength);

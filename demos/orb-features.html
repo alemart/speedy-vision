@@ -86,8 +86,8 @@ window.onload = async function()
     Source      greyscale       Pyramid       detector        Clipper       descriptors     Sink
                 |                                                            ^
                 |                                                            |
-                +----------> Gaussian --------------> Image -----------------+
-                             Blur                     Pyramid
+                +-------------------------> Gaussian ------------------------+
+                                            Blur
 
     The Keypoint detector is either FAST or Harris
 
@@ -113,7 +113,6 @@ window.onload = async function()
         const greyscale = Speedy.Filter.Greyscale();
         const pyramid = Speedy.Image.Pyramid();
         const blur = Speedy.Filter.GaussianBlur(); // reduce noise before computing the descriptors
-        const blurredPyramid = Speedy.Image.Pyramid();
         const clipper = Speedy.Keypoint.Clipper('clipper');
         const descriptor = Speedy.Keypoint.Descriptor.ORB();
         const sink = Speedy.Keypoint.Sink();
@@ -121,7 +120,7 @@ window.onload = async function()
         source.media = media;
         blur.kernelSize = Speedy.Size(9, 9);
         blur.sigma = Speedy.Vector2(2, 2);
-        detector.levels = 12; // pyramid levels
+        detector.levels = 8; // pyramid levels
         detector.scaleFactor = 1.19; // approx. 2^0.25
         detector.capacity = 8192;
         clipper.size = 800; // up to how many features?
@@ -135,12 +134,11 @@ window.onload = async function()
         clipper.output().connectTo(descriptor.input('keypoints'));
 
         greyscale.output().connectTo(blur.input());
-        blur.output().connectTo(blurredPyramid.input());
-        blurredPyramid.output().connectTo(descriptor.input('image'));
+        blur.output().connectTo(descriptor.input('image'));
 
         descriptor.output().connectTo(sink.input());
 
-        pipeline.init(source, greyscale, pyramid, blur, blurredPyramid, detector, clipper, descriptor, sink);
+        pipeline.init(source, greyscale, pyramid, blur, detector, clipper, descriptor, sink);
 
         return pipeline;
     }
