@@ -351,7 +351,7 @@ void main()
     // * tip: reduce the windowSize, the numberOfIterations and
     //        the number of keypoints!
     //
-    // ** note: according to the GLSL ES 3.0 spec secction 5.9,
+    // ** note: according to the GLSL ES 3.0 spec section 5.9,
     //    the ternary selection operator will only evaluate
     //    computeMismatch() if niceNumbers is not zero.
     //
