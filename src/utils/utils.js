@@ -61,27 +61,20 @@ export class Utils
      * Generates a warning
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
     static warning(text, ...args)
     {
-        const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-vision]', message);
-        return message;
+        console.warn('[speedy-vision]', text, ...args);
     }
 
     /**
      * Logs a message
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
     static log(text, ...args)
     {
-        const message = [ text, ...args ].join(' ');
-        if(__SPEEDY_DEVELOPMENT_MODE__)
-            console.log('[speedy-vision]', message);
-        return message;
+        console.log('[speedy-vision]', text, ...args);
     }
 
     /**
