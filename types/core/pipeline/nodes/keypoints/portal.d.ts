@@ -46,18 +46,18 @@ export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSource
      * @param {string} [name] name of the node
      */
     constructor(name?: string | undefined);
-    /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
-    _source: SpeedyPipelineNodeKeypointPortalSink;
+    /** @type {SpeedyPipelineNodeKeypointPortalSink|null} portal sink */
+    _source: SpeedyPipelineNodeKeypointPortalSink | null;
     /**
      * Data source
-     * @param {SpeedyPipelineNodeKeypointPortalSink} node
+     * @param {SpeedyPipelineNodeKeypointPortalSink|null} node
      */
-    set source(arg: SpeedyPipelineNodeKeypointPortalSink);
+    set source(arg: SpeedyPipelineNodeKeypointPortalSink | null);
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     * @returns {SpeedyPipelineNodeKeypointPortalSink|null}
      */
-    get source(): SpeedyPipelineNodeKeypointPortalSink;
+    get source(): SpeedyPipelineNodeKeypointPortalSink | null;
 }
 import { SpeedyPipelineNode } from "../../pipeline-node";
 import { SpeedyTexture } from "../../../../gpu/speedy-texture";

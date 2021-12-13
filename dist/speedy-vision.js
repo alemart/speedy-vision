@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-12-07T01:50:25.437Z
+ * Date: 2021-12-13T19:10:45.471Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -317,16 +317,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_source__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/keypoints/source */ "./src/core/pipeline/nodes/keypoints/source.js");
 /* harmony import */ var _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/keypoints/sink */ "./src/core/pipeline/nodes/keypoints/sink.js");
 /* harmony import */ var _nodes_keypoints_clipper__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/clipper */ "./src/core/pipeline/nodes/keypoints/clipper.js");
-/* harmony import */ var _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/buffer */ "./src/core/pipeline/nodes/keypoints/buffer.js");
-/* harmony import */ var _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/mixer */ "./src/core/pipeline/nodes/keypoints/mixer.js");
-/* harmony import */ var _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/multiplexer */ "./src/core/pipeline/nodes/keypoints/multiplexer.js");
-/* harmony import */ var _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/transformer */ "./src/core/pipeline/nodes/keypoints/transformer.js");
-/* harmony import */ var _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/subpixel */ "./src/core/pipeline/nodes/keypoints/subpixel.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
-/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
-/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
-/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
+/* harmony import */ var _nodes_keypoints_border_clipper__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/border-clipper */ "./src/core/pipeline/nodes/keypoints/border-clipper.js");
+/* harmony import */ var _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/buffer */ "./src/core/pipeline/nodes/keypoints/buffer.js");
+/* harmony import */ var _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/mixer */ "./src/core/pipeline/nodes/keypoints/mixer.js");
+/* harmony import */ var _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/multiplexer */ "./src/core/pipeline/nodes/keypoints/multiplexer.js");
+/* harmony import */ var _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/transformer */ "./src/core/pipeline/nodes/keypoints/transformer.js");
+/* harmony import */ var _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/subpixel */ "./src/core/pipeline/nodes/keypoints/subpixel.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
+/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
+/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -363,6 +364,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Keypoint detectors
  */
@@ -375,7 +377,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineNodeFASTKeypointDetector(name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineNodeFASTKeypointDetector(name);
     }
 
     /**
@@ -385,7 +387,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static Harris(name = undefined)
     {
-        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineNodeHarrisKeypointDetector(name);
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineNodeHarrisKeypointDetector(name);
     }
 }
 
@@ -401,7 +403,7 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
      */
     static ORB(name = undefined)
     {
-        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineNodeORBKeypointDescriptor(name);
+        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeORBKeypointDescriptor(name);
     }
 }
 
@@ -417,7 +419,7 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
      */
     static LK(name = undefined)
     {
-        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeLKKeypointTracker(name);
+        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeLKKeypointTracker(name);
     }
 }
 
@@ -433,7 +435,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Source(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeKeypointPortalSource(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSource(name);
     }
 
     /**
@@ -443,7 +445,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Sink(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeKeypointPortalSink(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSink(name);
     }
 }
 
@@ -529,13 +531,23 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     }
 
     /**
+     * Border Clipper
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointBorderClipper}
+     */
+    static BorderClipper(name = undefined)
+    {
+        return new _nodes_keypoints_border_clipper__WEBPACK_IMPORTED_MODULE_4__.SpeedyPipelineNodeKeypointBorderClipper(name);
+    }
+
+    /**
      * Create a keypoint buffer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointBuffer}
      */
     static Buffer(name = undefined)
     {
-        return new _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_4__.SpeedyPipelineNodeKeypointBuffer(name);
+        return new _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_5__.SpeedyPipelineNodeKeypointBuffer(name);
     }
 
     /**
@@ -545,7 +557,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static Mixer(name = undefined)
     {
-        return new _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__.SpeedyPipelineNodeKeypointMixer(name);
+        return new _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_6__.SpeedyPipelineNodeKeypointMixer(name);
     }
 
     /**
@@ -555,7 +567,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static Multiplexer(name = undefined)
     {
-        return new _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_6__.SpeedyPipelineNodeKeypointMultiplexer(name);
+        return new _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineNodeKeypointMultiplexer(name);
     }
 
     /**
@@ -565,7 +577,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static Transformer(name = undefined)
     {
-        return new _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineNodeKeypointTransformer(name);
+        return new _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineNodeKeypointTransformer(name);
     }
 
     /**
@@ -575,7 +587,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static SubpixelRefiner(name = undefined)
     {
-        return new _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineNodeKeypointSubpixelRefiner(name);
+        return new _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineNodeKeypointSubpixelRefiner(name);
     }
 }
 
@@ -2437,13 +2449,13 @@ class SpeedyPipelineNodeImagePortalSource extends _pipeline_node__WEBPACK_IMPORT
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
+        /** @type {SpeedyPipelineNodeImagePortalSink|null} portal sink */
         this._source = null;
     }
 
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeImagePortalSink}
+     * @returns {SpeedyPipelineNodeImagePortalSink|null}
      */
     get source()
     {
@@ -2452,7 +2464,7 @@ class SpeedyPipelineNodeImagePortalSource extends _pipeline_node__WEBPACK_IMPORT
 
     /**
      * Data source
-     * @param {SpeedyPipelineNodeImagePortalSink} node
+     * @param {SpeedyPipelineNodeImagePortalSink|null} node
      */
     set source(node)
     {
@@ -2475,6 +2487,7 @@ class SpeedyPipelineNodeImagePortalSource extends _pipeline_node__WEBPACK_IMPORT
         this.output().swrite(this._source.image, this._source.format);
     }
 }
+
 
 /***/ }),
 
@@ -2845,6 +2858,185 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
     }
 }
 
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/border-clipper.js":
+/*!*************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/border-clipper.js ***!
+  \*************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeKeypointBorderClipper": () => (/* binding */ SpeedyPipelineNodeKeypointBorderClipper)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * border-clipper.js
+ * Keypoint Border Clipper
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * The Border Clipper removes all keypoints within a border of the edges of an image
+ */
+class SpeedyPipelineNodeKeypointBorderClipper extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 5, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+
+        /** @type {SpeedySize} image size, in pixels */
+        this._imageSize = new _speedy_size__WEBPACK_IMPORTED_MODULE_5__.SpeedySize(0,0);
+
+        /** @type {SpeedyVector2} border size, in pixels */
+        this._borderSize = new _speedy_vector__WEBPACK_IMPORTED_MODULE_6__.SpeedyVector2(0,0);
+    }
+
+    /**
+     * Image size, in pixels
+     * @returns {SpeedySize}
+     */
+    get imageSize()
+    {
+        return this._imageSize;
+    }
+
+    /**
+     * Image size, in pixels
+     * @param {SpeedySize} imageSize
+     */
+    set imageSize(imageSize)
+    {
+        this._imageSize = imageSize;
+    }
+
+    /**
+     * Border size, in pixels
+     * @returns {SpeedyVector2}
+     */
+    get borderSize()
+    {
+        return this._borderSize;
+    }
+
+    /**
+     * Border size, in pixels
+     * @param {SpeedyVector2} borderSize
+     */
+    set borderSize(borderSize)
+    {
+        this._borderSize = borderSize;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const keypoints = gpu.programs.keypoints;
+        const imageSize = this._imageSize;
+        const borderSize = this._borderSize;
+        const imageWidth = imageSize.width, imageHeight = imageSize.height;
+        const borderLeft = borderSize.x, borderRight = borderSize.x;
+        const borderTop = borderSize.y, borderBottom = borderSize.y;
+        const tex = this._tex;
+
+        // validate
+        if(imageWidth == 0 || imageHeight == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.IllegalOperationError(`BorderClipper: did you forget to set the image size?`);
+
+        // find the capacity of the keypoint stream
+        const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const mixEncoderLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
+
+        // prepare programs
+        keypoints.clipBorder.outputs(encoderLength, encoderLength, tex[0]);
+        keypoints.mixKeypointsInit.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        keypoints.mixKeypointsSort.outputs(mixEncoderLength, mixEncoderLength, tex[2], tex[3]);
+        keypoints.mixKeypointsApply.outputs(encoderLength, encoderLength, tex[4]);
+
+        // clip keypoints
+        let clippedKeypoints = keypoints.clipBorder(
+            imageWidth, imageHeight,
+            borderTop, borderRight, borderBottom, borderLeft,
+            encodedKeypoints, descriptorSize, extraSize, encoderLength
+        );
+
+        // sort keypoints
+        let sortedKeypoints = keypoints.mixKeypointsInit(
+            clippedKeypoints, descriptorSize, extraSize, encoderLength, capacity
+        );
+
+        for(let b = 1; b < capacity; b *= 2)
+            sortedKeypoints = keypoints.mixKeypointsSort(sortedKeypoints, b);
+
+        clippedKeypoints = keypoints.mixKeypointsApply(
+            sortedKeypoints, clippedKeypoints, descriptorSize, extraSize, encoderLength
+        );
+
+        /*
+        // debug: view keypoints
+        keypoints.mixKeypointsView.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        this._visualize(gpu, keypoints.mixKeypointsView(sortedKeypoints));
+        */
+
+        // done!
+        this.output().swrite(clippedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+}
 
 /***/ }),
 
@@ -4595,13 +4787,13 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
         ]);
 
-        /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
+        /** @type {SpeedyPipelineNodeKeypointPortalSink|null} portal sink */
         this._source = null;
     }
 
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     * @returns {SpeedyPipelineNodeKeypointPortalSink|null}
      */
     get source()
     {
@@ -4610,7 +4802,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
 
     /**
      * Data source
-     * @param {SpeedyPipelineNodeKeypointPortalSink} node
+     * @param {SpeedyPipelineNodeKeypointPortalSink|null} node
      */
     set source(node)
     {
@@ -4633,6 +4825,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
         this.output().swrite(this._source.encodedKeypoints, this._source.descriptorSize, this._source.extraSize, this._source.encoderLength);
     }
 }
+
 
 /***/ }),
 
@@ -11910,9 +12103,6 @@ const mixKeypointsApply = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.im
                          .withDefines({ 'STAGE': 4 })
                          .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-
-
-
 // Keypoint encoding
 const initLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
@@ -11962,6 +12152,9 @@ const uploadKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.impo
 const applyHomography = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/apply-homography.glsl')
                         .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// Keypoint filters
+const clipBorder = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/clip-border.glsl')
+                  .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
 
@@ -12119,6 +12312,11 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             // Geometric transformations
             //
             .declare('applyHomography', applyHomography)
+
+            //
+            // Keypoint filters
+            //
+            .declare('clipBorder', clipBorder)
         ;
     }
 }
@@ -13315,6 +13513,7 @@ var map = {
 	"./keypoints/allocate-descriptors.glsl": "./src/gpu/shaders/keypoints/allocate-descriptors.glsl",
 	"./keypoints/allocate-extra.glsl": "./src/gpu/shaders/keypoints/allocate-extra.glsl",
 	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
+	"./keypoints/clip-border.glsl": "./src/gpu/shaders/keypoints/clip-border.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
@@ -17676,27 +17875,20 @@ class Utils
      * Generates a warning
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
     static warning(text, ...args)
     {
-        const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-vision]', message);
-        return message;
+        console.warn('[speedy-vision]', text, ...args);
     }
 
     /**
      * Logs a message
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
     static log(text, ...args)
     {
-        const message = [ text, ...args ].join(' ');
-        if(true)
-            console.log('[speedy-vision]', message);
-        return message;
+        console.log('[speedy-vision]', text, ...args);
     }
 
     /**
@@ -18225,6 +18417,16 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKey
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nvec3 pos3 = homography * vec3(keypoint.position, 1.0f);\ncolor = encodeKeypointPosition(pos3.xy / pos3.z);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/clip-border.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/clip-border.glsl ***!
+  \****************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform int imageWidth;\nuniform int imageHeight;\nuniform int borderTop;\nuniform int borderRight;\nuniform int borderBottom;\nuniform int borderLeft;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nvec2 p = keypoint.position;\nbool withinBorder = any(lessThan(\nvec4(p.x, p.y, -p.x, -p.y),\nvec4(borderLeft, borderTop, borderRight - (imageWidth - 1), borderBottom - (imageHeight - 1))\n));\nvec4 pixel = threadPixel(encodedKeypoints);\nvec4 nullPixel = encodeNullKeypoint();\ncolor = withinBorder ? nullPixel : pixel;\n}"
 
 /***/ }),
 

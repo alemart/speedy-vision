@@ -32,18 +32,18 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
      * @param {string} [name] name of the node
      */
     constructor(name?: string | undefined);
-    /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
-    _source: SpeedyPipelineNodeImagePortalSink;
+    /** @type {SpeedyPipelineNodeImagePortalSink|null} portal sink */
+    _source: SpeedyPipelineNodeImagePortalSink | null;
     /**
      * Data source
-     * @param {SpeedyPipelineNodeImagePortalSink} node
+     * @param {SpeedyPipelineNodeImagePortalSink|null} node
      */
-    set source(arg: SpeedyPipelineNodeImagePortalSink);
+    set source(arg: SpeedyPipelineNodeImagePortalSink | null);
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeImagePortalSink}
+     * @returns {SpeedyPipelineNodeImagePortalSink|null}
      */
-    get source(): SpeedyPipelineNodeImagePortalSink;
+    get source(): SpeedyPipelineNodeImagePortalSink | null;
 }
 import { SpeedyPipelineNode } from "../../pipeline-node";
 import { ImageFormat } from "../../../../utils/types";

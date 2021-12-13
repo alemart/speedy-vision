@@ -6,16 +6,14 @@ export class Utils {
      * Generates a warning
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
-    static warning(text: string, ...args: string[]): string;
+    static warning(text: string, ...args: string[]): void;
     /**
      * Logs a message
      * @param {string} text message text
      * @param  {...string} args optional text
-     * @returns {string} the message text
      */
-    static log(text: string, ...args: string[]): string;
+    static log(text: string, ...args: string[]): void;
     /**
      * Assertion
      * @param {boolean} expr expression
