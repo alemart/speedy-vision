@@ -140,13 +140,13 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
+        /** @type {SpeedyPipelineNodeImagePortalSink|null} portal sink */
         this._source = null;
     }
 
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeImagePortalSink}
+     * @returns {SpeedyPipelineNodeImagePortalSink|null}
      */
     get source()
     {
@@ -155,7 +155,7 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
 
     /**
      * Data source
-     * @param {SpeedyPipelineNodeImagePortalSink} node
+     * @param {SpeedyPipelineNodeImagePortalSink|null} node
      */
     set source(node)
     {

@@ -170,13 +170,13 @@ export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSource
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
 
-        /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
+        /** @type {SpeedyPipelineNodeKeypointPortalSink|null} portal sink */
         this._source = null;
     }
 
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     * @returns {SpeedyPipelineNodeKeypointPortalSink|null}
      */
     get source()
     {
@@ -185,7 +185,7 @@ export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSource
 
     /**
      * Data source
-     * @param {SpeedyPipelineNodeKeypointPortalSink} node
+     * @param {SpeedyPipelineNodeKeypointPortalSink|null} node
      */
     set source(node)
     {
