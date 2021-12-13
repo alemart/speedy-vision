@@ -958,6 +958,26 @@ Clips a set of keypoints, so that it outputs no more than a fixed quantity of th
 | `"in"`    | Keypoints | A set of keypoints. |
 | `"out"`   | Keypoints | A set of at most `size` keypoints. |
 
+##### Speedy.Keypoint.BorderClipper()
+
+`Speedy.Keypoint.BorderClipper(name?: string): SpeedyPipelineNodeKeypointBorderClipper`
+
+Removes all keypoints within a specified border of the edge of an image. The border is specified in pixels as an ordered pair of integers: the first is the size of the horizontal border and the second is the size of the vertical border.
+
+###### Parameters
+
+* `imageSize: SpeedySize`. Image size, in pixels.
+* `borderSize: SpeedyVector2`. Border size in both x and y axes. Defaults to zero, meaning that no clipping takes place.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
+| `"out"`   | Keypoints | The clipped set of keypoints. |
+
+
+
 ##### Speedy.Keypoint.Mixer()
 
 `Speedy.Keypoint.Mixer(name?: string): SpeedyPipelineNodeKeypointMixer`

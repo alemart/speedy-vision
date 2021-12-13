@@ -153,9 +153,6 @@ const mixKeypointsApply = importShader('keypoints/mix-keypoints.glsl')
                          .withDefines({ 'STAGE': 4 })
                          .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-
-
-
 // Keypoint encoding
 const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
@@ -205,6 +202,9 @@ const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
 const applyHomography = importShader('keypoints/apply-homography.glsl')
                         .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// Keypoint filters
+const clipBorder = importShader('keypoints/clip-border.glsl')
+                  .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
 
@@ -362,6 +362,11 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             // Geometric transformations
             //
             .declare('applyHomography', applyHomography)
+
+            //
+            // Keypoint filters
+            //
+            .declare('clipBorder', clipBorder)
         ;
     }
 }

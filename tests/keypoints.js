@@ -141,6 +141,63 @@ describe('Keypoint routines', function() {
         }
     });
 
+    it('removes keypoints near the borders', async function() {
+        const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+        const createPipeline = (imageSize, border) => {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Keypoint.Source('source');
+            const borderClipper = Speedy.Keypoint.BorderClipper();
+            const sink = Speedy.Keypoint.Sink();
+
+            source.output().connectTo(borderClipper.input());
+            borderClipper.output().connectTo(sink.input());
+            pipeline.init(source, borderClipper, sink);
+
+            borderClipper.imageSize = imageSize;
+            borderClipper.borderSize = Speedy.Vector2(border, border);
+
+            return pipeline;
+        };
+
+        const imageSize = Speedy.Size(30, 30);
+        const allKeypoints = [];
+        for(let x = 0; x < imageSize.width; x++) {
+            for(let y = 0; y < imageSize.height; y++) {
+                allKeypoints.push({
+                    position: {x, y},
+                    score: 1,
+                });
+            }
+        }
+
+        const clipKeypoints = (keypoints, border) => {
+            const clippedKeypoints = [];
+
+            for(let i = 0; i < keypoints.length; i++) {
+                if(!(keypoints[i].position.x < border || keypoints[i].position.y < border || keypoints[i].position.x > imageSize.width - 1 - border || keypoints[i].position.y > imageSize.height - 1 - border))
+                    clippedKeypoints.push(keypoints[i]);
+            }
+
+            return clippedKeypoints;
+        }
+
+
+        for(const border of [0,1,5,10,20]) {
+            const pipeline = createPipeline(imageSize, border);
+            const source = pipeline.node('source');
+            source.keypoints = allKeypoints;
+
+            const { keypoints } = await pipeline.run();
+            const clippedKeypoints = clipKeypoints(source.keypoints, border);
+
+            print(`When border = ${border} (all sides) and imageSize = ${imageSize.toString()}, ${allKeypoints.length - keypoints.length} out of ${allKeypoints.length} keypoints have been clipped. Result: ${serialize(keypoints)}`);
+            expect(keypoints.length).toEqual(clippedKeypoints.length);
+            expect(serialize(keypoints.sort(cmp))).toEqual(serialize(clippedKeypoints.sort(cmp)));
+
+            pipeline.release();
+        }
+    });
+
     it('travels through portals', async function() {
         const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
         const createPipeline1 = (keypoints) => {

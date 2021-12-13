@@ -23,6 +23,7 @@ import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeKeypointSource } from '../nodes/keypoints/source';
 import { SpeedyPipelineNodeKeypointSink, SpeedyPipelineNodeTrackedKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
+import { SpeedyPipelineNodeKeypointBorderClipper } from '../nodes/keypoints/border-clipper';
 import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
 import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
 import { SpeedyPipelineNodeKeypointMultiplexer } from '../nodes/keypoints/multiplexer';
@@ -197,6 +198,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Clipper(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointClipper(name);
+    }
+
+    /**
+     * Border Clipper
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointBorderClipper}
+     */
+    static BorderClipper(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointBorderClipper(name);
     }
 
     /**
