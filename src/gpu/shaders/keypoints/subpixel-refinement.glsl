@@ -442,7 +442,7 @@ void main()
 
     // end of list?
     color = encodeNullPairOfFloat16();
-    if(isNullKeypoint(keypoint));
+    if(isNullKeypoint(keypoint))
         return;
 
     // bad keypoint?
