@@ -92,6 +92,9 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
             (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
             */
 
+            // flush
+            gpu.gl.flush();
+
             // next level
             width = halfWidth;
             height = halfHeight;
