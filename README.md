@@ -1208,7 +1208,7 @@ Pyramid-based LK optical-flow.
 
 ###### Parameters
 
-* `windowSize: number`. The size of the window to be used by the feature tracker. The algorithm will read neighbor pixels to determine the motion of a keypoint. Typical values for this property include: `7`, `11`, `15`. This must be a positive odd integer. Defaults to `11`.
+* `windowSize: SpeedySize`. The size of the window to be used by the feature tracker. The algorithm will read neighbor pixels to determine the motion of a keypoint. You must specify a square window. Typical sizes include: 7x7, 11x11, 15x15 (use positive odd integers). Defaults to 11x11.
 * `levels: number`. Specifies how many pyramid levels will be used in the computation. The more levels you use, the faster the motions you can capture. Defaults to `3`.
 * `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. The higher the value, the more keypoints will be discarded. Defaults to `0.0001`.
 * `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. Defaults to `30`.
