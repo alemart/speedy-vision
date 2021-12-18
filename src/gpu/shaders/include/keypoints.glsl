@@ -95,7 +95,8 @@ struct KeypointAddress
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 const uint KPF_NONE = 0u; // no flags
 const uint KPF_NULL = 1u; // "null" keypoint (end of list)
-const uint KPF_INFINITY = 2u; // keypoint at infinity
+const uint KPF_DISCARDED = 2u; // discarded keypoint
+const uint KPF_INFINITY = 4u; // keypoint at infinity
 
 /**
  * Encode keypoint score
@@ -159,6 +160,13 @@ const uint KPF_INFINITY = 2u; // keypoint at infinity
  * @returns {bool}
  */
 #define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)
+
+/**
+ * Checks if the keypoint is dicarded
+ * @param {Keypoint} keypoint
+ * @returns {bool}
+ */
+#define isDiscardedKeypoint(keypoint) ((((keypoint).flags) & KPF_DISCARDED) != 0u)
 
 /**
  * Checks whether the given keypoint is "bad",
@@ -250,19 +258,20 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     ));
 
     // get keypoint properties: scale, orientation & score
-    vec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
-    keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
-    keypoint.orientation = decodeKeypointOrientation(encodedProperties.g); // in radians
-    keypoint.score = decodeKeypointScore(encodedProperties.ba); // score
+    vec4 rawEncodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
+    keypoint.lod = decodeLod(rawEncodedProperties.r); // level-of-detail
+    keypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g); // in radians
+    keypoint.score = decodeKeypointScore(rawEncodedProperties.ba); // score
 
     // got a null or invalid keypoint? give it a negative score
     bool isNull = all(equal(rawEncodedPosition, vec4(1)));
-    bool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0))); // implies score == 0
+    bool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0))); // implies score == 0
     keypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;
 
     // keypoint flags
     keypoint.flags = KPF_NONE;
     keypoint.flags |= KPF_NULL * uint(isNull);
+    keypoint.flags |= KPF_DISCARDED * uint(isDiscarded);
     keypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));
 
     // done!
