@@ -266,8 +266,8 @@ describe('Keypoint routines', function() {
         for(let i = 0; i < numPoints; i++) {
             const x = Math.round(Math.random() * 1000);
             const y = Math.round(Math.random() * 1000);
-            const dx = Math.round((Math.random() - 0.5) * 40) * 0.25;
-            const dy = Math.round((Math.random() - 0.5) * 40) * 0.25;
+            const dx = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
+            const dy = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
 
             points.push({
                 position: { x: x, y: y },
@@ -296,15 +296,15 @@ describe('Keypoint routines', function() {
             return filtered;
         }
 
-        print(`Let us filter two sets of keypoints by distance.`);
+        print(`Let us filter two sets of ${points.length} keypoints by distance.`);
         print(`A: ${serialize(points)}`);
         print(`B: ${serialize(otherPoints)}`);
 
-        for(const maxDistance of [0,1,2,3,4,5]) {
+        for(const maxDistance of [0,1,2,3,4,5,6,7]) {
             const pipeline = createPipeline(points, otherPoints, maxDistance);
             const { keypoints } = await pipeline.run();
 
-            print(`When maxDistance = ${maxDistance}, we get ${serialize(keypoints)}`);
+            print(`When maxDistance = ${maxDistance}, we get ${keypoints.length} points: ${serialize(keypoints)}`);
 
             const expectedResult = filterKeypoints(keypoints, points, otherPoints, maxDistance);
             expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
