@@ -160,13 +160,19 @@ const uint KPF_DISCARDED = 2u; // discarded keypoint
 #define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)
 
 /**
- * The size of an encoded keypoint in bytes
+ * The size of an encoded keypoint, in bytes
  * (must be a multiple of 4 - that's 32 bits per pixel)
  * @param {int} descriptorSize in bytes
  * @param {int} extraSize in bytes
  * @returns {int}
  */
 #define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))
+
+/**
+ * The size of an encoded keypoint header, in bytes
+ * @returns {int}
+ */
+#define sizeofEncodedKeypointHeader() sizeofEncodedKeypoint(0,0)
 
 /**
  * Find the keypoint index given its base address

@@ -60,7 +60,7 @@ void main()
 
     // not in a header (really?)
     color = vec4(0.0f);
-    if(address.offset > 1)
+    if(address.offset >= sizeofEncodedKeypointHeader() / 4)
         return;
 
     // properties cell?

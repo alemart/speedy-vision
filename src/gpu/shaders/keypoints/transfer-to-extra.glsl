@@ -54,7 +54,7 @@ void main()
     int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
 
     // is this an extra cell?
-    int headerSize = sizeofEncodedKeypoint(0, 0);
+    int headerSize = sizeofEncodedKeypointHeader();
     int extraCell = myAddress.offset - headerSize / 4;
     int numberOfExtraCells = extraSize / 4;
 

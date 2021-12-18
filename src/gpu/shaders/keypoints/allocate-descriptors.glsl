@@ -41,7 +41,7 @@ void main()
     int myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);
 
     // are we in a descriptor cell?
-    int headerSize = sizeofEncodedKeypoint(0, 0);
+    int headerSize = sizeofEncodedKeypointHeader();
     bool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);
 
     // find the corresponding location in the input texture

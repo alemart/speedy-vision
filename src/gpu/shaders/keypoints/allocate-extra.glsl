@@ -38,7 +38,7 @@ void main()
     int myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);
 
     // what kind of cell is this?
-    int headerSize = sizeofEncodedKeypoint(0, 0);
+    int headerSize = sizeofEncodedKeypointHeader();
     bool isHead = (myAddress.offset < headerSize / 4);
     bool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);
     bool isExtra = (!isHead && !isDescriptor);
