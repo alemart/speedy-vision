@@ -51,7 +51,7 @@ export const FIX_RESOLUTION = 1 << FIX_BITS; // float(2^(FIX_BITS))
 // -----------------------------------------------------------------
 
 /** @type {number} Maximum texture length (width, height) */
-export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // must be 2^n - 2 due to keypoint encoding
+export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 1; // must be 2^n - 1 due to keypoint encoding
 
 
 

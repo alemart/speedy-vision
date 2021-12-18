@@ -53,9 +53,6 @@
  *
  * The (X,Y) position is encoded as a fixed-point number
  * for subpixel representation
- *
- * Pixel value 0xFFFFFFFE is reserved (not available),
- * and is considered to be "infinity"
  */
 
 #ifndef _KEYPOINTS_GLSL
@@ -96,7 +93,6 @@ const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 const uint KPF_NONE = 0u; // no flags
 const uint KPF_NULL = 1u; // "null" keypoint (end of list)
 const uint KPF_DISCARDED = 2u; // discarded keypoint
-const uint KPF_INFINITY = 4u; // keypoint at infinity
 
 /**
  * Encode keypoint score
@@ -140,19 +136,6 @@ const uint KPF_INFINITY = 4u; // keypoint at infinity
  * @returns {vec4} RGBA
  */
 #define encodeDiscardedKeypoint() (vec4(0.0f))
-
-/**
- * Encode the position of a keypoint at "infinity"
- * @returns {vec4} RGBA
- */
-#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)
-
-/**
- * Checks whether the given keypoint is at "infinity"
- * @param {Keypoint} keypoint
- * @returns {bool}
- */
-#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)
 
 /**
  * Checks if the keypoint is "null" (i.e., end of list)
@@ -263,7 +246,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g); // in radians
     keypoint.score = decodeKeypointScore(rawEncodedProperties.ba); // score
 
-    // got a null or invalid keypoint? give it a negative score
+    // got a null or discarded keypoint? give it a negative score (sorting criteria)
     bool isNull = all(equal(rawEncodedPosition, vec4(1)));
     bool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0))); // implies score == 0
     keypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;
@@ -272,7 +255,6 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.flags = KPF_NONE;
     keypoint.flags |= KPF_NULL * uint(isNull);
     keypoint.flags |= KPF_DISCARDED * uint(isDiscarded);
-    keypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));
 
     // done!
     return keypoint;
