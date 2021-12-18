@@ -33,6 +33,7 @@ import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detec
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
+import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/trackers/distance-filter';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
 /**
@@ -90,6 +91,16 @@ class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
     static LK(name = undefined)
     {
         return new SpeedyPipelineNodeLKKeypointTracker(name);
+    }
+
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointDistanceFilter(name);
     }
 }
 

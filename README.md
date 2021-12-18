@@ -1226,6 +1226,26 @@ Pyramid-based LK optical-flow.
 
 **Note**: you need to provide pyramids as input if `levels > 1`.
 
+##### Speedy.Keypoint.Tracker.DistanceFilter()
+
+`Speedy.Keypoint.Tracker.DistanceFilter(name?: string): SpeedyPipelineNodeKeypointDistanceFilter`
+
+Given a set of pairs of keypoints, discard all pairs whose distance is above a user-defined threshold. This is useful for implementing bidirectional optical-flow.
+
+The pairs of keypoints are provided as two separate sets, "first" and "second". Keypoints that are kept will have their data extracted from the first set.
+
+###### Parameters
+
+* `maxDistance: number`. Distance threshold, given in pixels.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"first"` | Keypoints | First set of keypoints. |
+| `"second"` | Keypoints | Second set of keypoints. |
+| `"out"` | Keypoints | Filtered set of keypoints. |
+
 #### Keypoint matching
 
 Soon!

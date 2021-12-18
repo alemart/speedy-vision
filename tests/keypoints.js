@@ -240,6 +240,80 @@ describe('Keypoint routines', function() {
         expect(serialize(output2.sort(cmp))).toEqual(serialize(testKeypoints.sort(cmp)));
     });
 
+    it('filters keypoints that are near each other', async function() {
+        const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+        const createPipeline = (ptsA, ptsB, maxDistance) => {
+            const pipeline = Speedy.Pipeline();
+            const source1 = Speedy.Keypoint.Source('source1');
+            const source2 = Speedy.Keypoint.Source('source2');
+            const distanceFilter = Speedy.Keypoint.Tracker.DistanceFilter('distanceFilter');
+            const sink = Speedy.Keypoint.Sink();
+
+            source1.output().connectTo(distanceFilter.input('first'));
+            source2.output().connectTo(distanceFilter.input('second'));
+            distanceFilter.output().connectTo(sink.input());
+            pipeline.init(source1, source2, distanceFilter, sink);
+
+            source1.keypoints = ptsA;
+            source2.keypoints = ptsB;
+            distanceFilter.maxDistance = maxDistance;
+
+            return pipeline;
+        };
+
+        const numPoints = 10;
+        const points = [], otherPoints = [];
+        for(let i = 0; i < numPoints; i++) {
+            const x = Math.round(Math.random() * 1000);
+            const y = Math.round(Math.random() * 1000);
+            const dx = Math.round((Math.random() - 0.5) * 40) * 0.25;
+            const dy = Math.round((Math.random() - 0.5) * 40) * 0.25;
+
+            points.push({
+                position: { x: x, y: y },
+                score: 1,
+            });
+
+            otherPoints.push({
+                position: { x: x+dx, y: y+dy },
+                score: 1,
+            });
+        }
+
+        const filterKeypoints = (result, setA, setB, maxDist) => {
+            const n = Math.min(setA.length, setB.length);
+            const filtered = [];
+
+            for(let i = 0; i < n; i++) {
+                const dx = setA[i].position.x - setB[i].position.x;
+                const dy = setA[i].position.y - setB[i].position.y;
+
+                // result: get keypoints from set A
+                if(dx * dx + dy * dy <= maxDist * maxDist)
+                    filtered.push(setA[i]);
+            }
+
+            return filtered;
+        }
+
+        print(`Let us filter two sets of keypoints by distance.`);
+        print(`A: ${serialize(points)}`);
+        print(`B: ${serialize(otherPoints)}`);
+
+        for(const maxDistance of [0,1,2,3,4,5]) {
+            const pipeline = createPipeline(points, otherPoints, maxDistance);
+            const { keypoints } = await pipeline.run();
+
+            print(`When maxDistance = ${maxDistance}, we get ${serialize(keypoints)}`);
+
+            const expectedResult = filterKeypoints(keypoints, points, otherPoints, maxDistance);
+            expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
+
+            pipeline.release();
+        }
+
+    });
+
     describe('transformations', function() {
         const createPipeline = () => {
             const pipeline = Speedy.Pipeline();

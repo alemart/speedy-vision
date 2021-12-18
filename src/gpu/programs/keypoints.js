@@ -206,7 +206,8 @@ const applyHomography = importShader('keypoints/apply-homography.glsl')
 const clipBorder = importShader('keypoints/clip-border.glsl')
                   .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-
+const distanceFilter = importShader('keypoints/distance-filter.glsl')
+                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'maxDistance');
 
 
 /**
@@ -367,6 +368,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             // Keypoint filters
             //
             .declare('clipBorder', clipBorder)
+            .declare('distanceFilter', distanceFilter)
         ;
     }
 }
