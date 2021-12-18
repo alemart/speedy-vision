@@ -141,6 +141,12 @@ declare class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeLKKeypointTracker}
      */
     static LK(name?: string | undefined): SpeedyPipelineNodeLKKeypointTracker;
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name?: string | undefined): any;
 }
 import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
 import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";

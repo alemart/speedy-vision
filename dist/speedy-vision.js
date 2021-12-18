@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-12-13T19:10:45.471Z
+ * Date: 2021-12-18T22:38:11.118Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -327,7 +327,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
 /* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
-/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
+/* harmony import */ var _nodes_keypoints_trackers_distance_filter__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/trackers/distance-filter */ "./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js");
+/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -348,6 +349,7 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
+
 
 
 
@@ -421,6 +423,16 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
     {
         return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeLKKeypointTracker(name);
     }
+
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name = undefined)
+    {
+        return new _nodes_keypoints_trackers_distance_filter__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointDistanceFilter(name);
+    }
 }
 
 /**
@@ -435,7 +447,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Source(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSource(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__.SpeedyPipelineNodeKeypointPortalSource(name);
     }
 
     /**
@@ -445,7 +457,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Sink(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointPortalSink(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__.SpeedyPipelineNodeKeypointPortalSink(name);
     }
 }
 
@@ -2605,6 +2617,9 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
             (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
             */
 
+            // flush
+            gpu.gl.flush();
+
             // next level
             width = halfWidth;
             height = halfHeight;
@@ -2628,6 +2643,7 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
         this.output().swrite(outputTexture, format);
     }
 }
+
 
 /***/ }),
 
@@ -5669,6 +5685,136 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends _pipeline_node__WEBPACK_
         // done!
         this.output().swrite(refinedKeypoints, descriptorSize, extraSize, encoderLength);
         this.output('displacements').swrite(offsets);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js":
+/*!***********************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js ***!
+  \***********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeKeypointDistanceFilter": () => (/* binding */ SpeedyPipelineNodeKeypointDistanceFilter)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-matrix */ "./src/core/speedy-matrix.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * distance-filter.js
+ * Given a set of pairs of keypoints, discard all pairs whose distance is
+ * above a user-defined threshold. Useful for bidirectional optical-flow.
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Given a set of pairs of keypoints, discard all pairs whose distance is
+ * above a user-defined threshold. Useful for bidirectional optical-flow.
+ * 
+ * The pairs of keypoints are provided as two separate sets, "first" and
+ * "second". Keypoints that are kept will have their data extracted from
+ * the first set.
+ */
+class SpeedyPipelineNodeKeypointDistanceFilter extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('first').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('second').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+
+        /** @type {number} maximum accepted distance */
+        this._maxDistance = 65535; // a large value
+    }
+
+    /**
+     * Maximum accepted distance
+     * @returns {number}
+     */
+    get maxDistance()
+    {
+        return this._maxDistance;
+    }
+
+    /**
+     * Maximum accepted distance
+     * @param {number} value
+     */
+    set maxDistance(value)
+    {
+        this._maxDistance = Math.max(0, +value);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const set0 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('first').read() );
+        const set1 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('second').read() );
+        const maxDistance = this._maxDistance;
+
+        // validate shapes
+        if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalOperationError(`The distance filter requires two compatible shapes of keypoint streams`);
+
+        // calculate the shape of the output
+        const outputTexture = this._tex[0];
+        const encoderLength = Math.max(set0.encoderLength, set1.encoderLength);
+        const descriptorSize = set0.descriptorSize;
+        const extraSize = set0.extraSize;
+
+        // apply the distance filter
+        (gpu.programs.keypoints.distanceFilter
+            .outputs(encoderLength, encoderLength, outputTexture)
+        )(set0.encodedKeypoints, set0.encoderLength, set1.encodedKeypoints, set1.encoderLength, descriptorSize, extraSize, encoderLength, maxDistance);
+
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -12156,7 +12302,8 @@ const applyHomography = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.impo
 const clipBorder = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/clip-border.glsl')
                   .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-
+const distanceFilter = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/distance-filter.glsl')
+                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'maxDistance');
 
 
 /**
@@ -12317,6 +12464,7 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             // Keypoint filters
             //
             .declare('clipBorder', clipBorder)
+            .declare('distanceFilter', distanceFilter)
         ;
     }
 }
@@ -13514,6 +13662,7 @@ var map = {
 	"./keypoints/allocate-extra.glsl": "./src/gpu/shaders/keypoints/allocate-extra.glsl",
 	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
 	"./keypoints/clip-border.glsl": "./src/gpu/shaders/keypoints/clip-border.glsl",
+	"./keypoints/distance-filter.glsl": "./src/gpu/shaders/keypoints/distance-filter.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
@@ -17122,7 +17271,7 @@ const FIX_RESOLUTION = 1 << FIX_BITS; // float(2^(FIX_BITS))
 // -----------------------------------------------------------------
 
 /** @type {number} Maximum texture length (width, height) */
-const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // must be 2^n - 2 due to keypoint encoding
+const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 1; // must be 2^n - 1 due to keypoint encoding
 
 
 
@@ -18356,7 +18505,7 @@ module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(ve
   \************************************************/
 /***/ ((module) => {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_INFINITY = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)\n#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(encodedProperties.g);\nkeypoint.score = decodeKeypointScore(encodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_DISCARDED = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isDiscardedKeypoint(keypoint) ((((keypoint).flags) & KPF_DISCARDED) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define sizeofEncodedKeypointHeader() sizeofEncodedKeypoint(0,0)\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 rawEncodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(rawEncodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g);\nkeypoint.score = decodeKeypointScore(rawEncodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_DISCARDED * uint(isDiscarded);\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
 
 /***/ }),
 
@@ -18396,7 +18545,7 @@ module.exports = "#ifndef _SUBPIXEL_GLSL\n#define _SUBPIXEL_GLSL\n#define subpix
   \*************************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nconst vec4 EMPTY_DESCRIPTOR = vec4(0.0f);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nint addressOffset = myAddress.offset;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isDescriptor ? EMPTY_DESCRIPTOR : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nconst vec4 EMPTY_DESCRIPTOR = vec4(0.0f);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nint addressOffset = myAddress.offset;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isDescriptor ? EMPTY_DESCRIPTOR : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -18406,7 +18555,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKey
   \*******************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nbool isHead = (myAddress.offset < headerSize / 4);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nbool isExtra = (!isHead && !isDescriptor);\nint numberOfExtraPixels = outputExtraSize / 4;\nint addressOffset = myAddress.offset - int(isDescriptor) * numberOfExtraPixels;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isExtra ? vec4(0.0f) : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nbool isHead = (myAddress.offset < headerSize / 4);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nbool isExtra = (!isHead && !isDescriptor);\nint numberOfExtraPixels = outputExtraSize / 4;\nint addressOffset = myAddress.offset - int(isDescriptor) * numberOfExtraPixels;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isExtra ? vec4(0.0f) : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -18427,6 +18576,16 @@ module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform int imageWidth;\nuniform int imageHeight;\nuniform int borderTop;\nuniform int borderRight;\nuniform int borderBottom;\nuniform int borderLeft;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nvec2 p = keypoint.position;\nbool withinBorder = any(lessThan(\nvec4(p.x, p.y, -p.x, -p.y),\nvec4(borderLeft, borderTop, borderRight - (imageWidth - 1), borderBottom - (imageHeight - 1))\n));\nvec4 pixel = threadPixel(encodedKeypoints);\nvec4 nullPixel = encodeNullKeypoint();\ncolor = withinBorder ? nullPixel : pixel;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/distance-filter.glsl":
+/*!********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/distance-filter.glsl ***!
+  \********************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform float maxDistance;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nvec2 delta = keypointA.position - keypointB.position;\nbool shouldKeep = (dot(delta, delta) <= maxDistance * maxDistance);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
@@ -18476,7 +18635,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nunifo
   \*********************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform mediump usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint rasterIndex = address.base + address.offset;\nint numberOfPixels = encoderLength * encoderLength;\nint numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);\nint maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= min(encoderCapacity, maxEncoderCapacity))\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform mediump usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint rasterIndex = address.base + address.offset;\nint numberOfPixels = encoderLength * encoderLength;\nint numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);\nint maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= min(encoderCapacity, maxEncoderCapacity))\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
 
 /***/ }),
 
@@ -18666,7 +18825,7 @@ module.exports = "@include \"keypoints.glsl\"\n#if !defined(STAGE)\n#error Undef
   \************************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\n#if !defined(METHOD)\n#error Must define METHOD\n#endif\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxIterations;\nuniform float epsilon;\nconst int PATCH_RADIUS = 1;\nconst int PATCH_SIZE = 2 * PATCH_RADIUS + 1;\nconst int PATCH_SIZE_SQUARED = PATCH_SIZE * PATCH_SIZE;\nconst int LARGE_PATCH_RADIUS = PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE = 2 * LARGE_PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE_SQUARED = LARGE_PATCH_SIZE * LARGE_PATCH_SIZE;\nconst int LARGER_PATCH_RADIUS = LARGE_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE = 2 * LARGER_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE_SQUARED = LARGER_PATCH_SIZE * LARGER_PATCH_SIZE;\nconst float EPS = 1e-5;\nfloat smoothPixelBuffer[LARGER_PATCH_SIZE_SQUARED];\nvec2 derivativesBuffer[LARGE_PATCH_SIZE_SQUARED];\nfloat responseBuffer[PATCH_SIZE_SQUARED];\n#define patchPixelAt(u,v) smoothPixelBuffer[((v) + LARGER_PATCH_RADIUS) * LARGER_PATCH_SIZE + ((u) + LARGER_PATCH_RADIUS)]\n#define derivativesAt(u,v) derivativesBuffer[((v) + LARGE_PATCH_RADIUS) * LARGE_PATCH_SIZE + ((u) + LARGE_PATCH_RADIUS)]\n#define responseAt(u,v) responseBuffer[((v) + PATCH_RADIUS) * PATCH_SIZE + ((u) + PATCH_RADIUS)]\nvoid readPixels(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint u, v;\nfor(int j = 0; j < LARGER_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGER_PATCH_SIZE; i++) {\nu = i - LARGER_PATCH_RADIUS;\nv = j - LARGER_PATCH_RADIUS;\npatchPixelAt(u,v) = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2(u,v), pyrBaseSize).g;\n}\n}\n}\nvoid computeDerivatives()\n{\nconst mat3 dx = mat3(\n-1, 0, 1,\n-2, 0, 2,\n-1, 0, 1\n);\nconst mat3 dy = mat3(\n1, 2, 1,\n0, 0, 0,\n-1,-2,-1\n);\nint u, v;\nmat3 pix, convX, convY;\nconst vec3 ones = vec3(1.0f);\nfor(int j = 0; j < LARGE_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGE_PATCH_SIZE; i++) {\nu = i - LARGE_PATCH_RADIUS;\nv = j - LARGE_PATCH_RADIUS;\npix = mat3(\npatchPixelAt(u+1,v+1), patchPixelAt(u+0,v+1), patchPixelAt(u-1,v+1),\npatchPixelAt(u+1,v+0), patchPixelAt(u+0,v+0), patchPixelAt(u-1,v+0),\npatchPixelAt(u+1,v-1), patchPixelAt(u+0,v-1), patchPixelAt(u-1,v-1)\n);\nconvX = matrixCompMult(dx, pix);\nconvY = matrixCompMult(dy, pix);\nderivativesAt(u,v) = vec2(\ndot(ones, vec3(\ndot(convX[0], ones),\ndot(convX[1], ones),\ndot(convX[2], ones)\n)),\ndot(ones, vec3(\ndot(convY[0], ones),\ndot(convY[1], ones),\ndot(convY[2], ones)\n))\n);\n}\n}\n}\nvec2 computeResponseMap()\n{\nfloat patchArea = float(PATCH_SIZE * PATCH_SIZE);\nvec3 h; vec2 d, c = vec2(0.0f);\nconst vec3 ones = vec3(1.0f);\nfloat response, sum = 0.0f;\nint u, v;\n#define H(r,s) d = derivativesAt((r),(s)); h += vec3(d.x * d.x, d.x * d.y, d.y * d.y)\nfor(int j = 0; j < PATCH_SIZE; j++) {\nfor(int i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nh = vec3(0.0f);\nH(u-1,v-1); H(u+0,v-1); H(u+1,v-1);\nH(u-1,v+0); H(u+0,v+0); H(u+1,v+0);\nH(u-1,v+1); H(u+0,v+1); H(u+1,v+1);\nresponse = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));\nresponse /= patchArea;\nresponseAt(u,v) = response;\nc += vec2(u,v) * response;\nsum += response;\n}\n}\nreturn abs(sum) > EPS ? c / sum : vec2(0.0f);\n}\n#if METHOD == 0\nvec2 quadratic1d()\n{\nfloat a = 0.5f * (responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0));\nfloat b = 0.5f * (responseAt(1,0) - responseAt(-1,0));\nfloat c = responseAt(0,0);\nfloat d = 0.5f * (responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1));\nfloat e = 0.5f * (responseAt(0,1) - responseAt(0,-1));\nfloat f = responseAt(0,0);\nbool hasMax = a < -EPS && d < -EPS;\nreturn hasMax ? -0.5f * vec2(b / a, e / d) : vec2(0.0f);\n}\n#endif\n#if METHOD == 1\nvec2 taylor2d()\n{\nfloat dx = (-responseAt(-1,0) + responseAt(1,0)) * 0.5f;\nfloat dy = (-responseAt(0,-1) + responseAt(0,1)) * 0.5f;\nfloat dxx = responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0);\nfloat dyy = responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1);\nfloat dxy = (responseAt(-1,-1) + responseAt(1,1) - responseAt(1,-1) - responseAt(-1,1)) * 0.25f;\nfloat det = dxx * dyy - dxy * dxy;\nmat2 inv = mat2(dyy, -dxy, -dxy, dxx);\nbool hasMax = det > EPS && dxx < 0.0f;\nreturn hasMax ? inv * vec2(dx, dy) / (-det) : vec2(0.0f);\n}\n#endif\n#if METHOD == 2\nvoid bilinearUpsample(ivec2 patchOffset, vec4 pixelsOfPatch)\n{\nint u, v, i, j;\nvec2 frc, ifrc; vec4 sub;\nconst vec4 ones = vec4(1.0f);\nfloat s = 1.0f / float(PATCH_SIZE - 1);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nfrc = vec2(i, j) * s;\nifrc = vec2(1.0f) - frc;\nsub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\npatchPixelAt(u+xoff,v+yoff) = dot(sub*pixelsOfPatch, ones);\n}\n}\n}\n#endif\n#if METHOD == 3\nvoid bicubicUpsample(ivec2 patchOffset, vec4 pixelsOfPatch, vec4 dx, vec4 dy, vec4 dxy)\n{\nfloat x, y, s = 1.0f / float(PATCH_SIZE - 1);\nint u, v, i, j;\nfloat f00 = pixelsOfPatch.x;\nfloat f10 = pixelsOfPatch.y;\nfloat f01 = pixelsOfPatch.z;\nfloat f11 = pixelsOfPatch.w;\nfloat fx00 = dx.x;\nfloat fx10 = dx.y;\nfloat fx01 = dx.z;\nfloat fx11 = dx.w;\nfloat fy00 = dy.x;\nfloat fy10 = dy.y;\nfloat fy01 = dy.z;\nfloat fy11 = dy.w;\nfloat fxy00 = dxy.x;\nfloat fxy10 = dxy.y;\nfloat fxy01 = dxy.z;\nfloat fxy11 = dxy.w;\nmat4 bicubic = mat4(\n1, 0, -3, 2,\n0, 0, 3, -2,\n0, 1, -2, 1,\n0, 0, -1, 1\n) * mat4(\nf00, f10, fx00, fx10,\nf01, f11, fx01, fx11,\nfy00, fy10, fxy00, fxy10,\nfy01, fy11, fxy01, fxy11\n) * mat4(\n1, 0, 0, 0,\n0, 0, 1, 0,\n-3, 3, -2, -1,\n2, -2, 1, 1\n);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nx = float(i) * s;\ny = float(j) * s;\npatchPixelAt(u+xoff,v+yoff) = dot(\nvec4(1, x, x*x, x*x*x),\nbicubic * vec4(1, y, y*y, y*y*y)\n);\n}\n}\n}\n#endif\n#if METHOD == 2 || METHOD == 3\nvoid upsamplePatch(int left, int top, int right, int bottom)\n{\nint x, y, k;\nvec4 ptch[9];\nvec2 d00, d10, d01, d11;\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\nptch[k] = vec4(\npatchPixelAt(left+x, top+y),\npatchPixelAt(right+x, top+y),\npatchPixelAt(left+x, bottom+y),\npatchPixelAt(right+x, bottom+y)\n);\n}\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\n#if METHOD == 2\nbilinearUpsample(ivec2(x, y), ptch[k]);\n#elif METHOD == 3\nd00 = derivativesAt(left+x, top+y);\nd10 = derivativesAt(right+x, top+y);\nd01 = derivativesAt(left+x, bottom+y);\nd11 = derivativesAt(right+x, bottom+y);\nbicubicUpsample(ivec2(x, y), ptch[k],\nvec4(d00.x, d10.x, d01.x, d11.x),\nvec4(d00.y, d10.y, d01.y, d11.y),\n0.25f * vec4(\n(patchPixelAt(left+x + 1,top+y + 1) + patchPixelAt(left+x - 1, top+y - 1)) - (patchPixelAt(left+x + 1, top+y - 1) + patchPixelAt(left+x - 1, top+y + 1)),\n(patchPixelAt(right+x + 1,top+y + 1) + patchPixelAt(right+x - 1, top+y - 1)) - (patchPixelAt(right+x + 1, top+y - 1) + patchPixelAt(right+x - 1, top+y + 1)),\n(patchPixelAt(left+x + 1,bottom+y + 1) + patchPixelAt(left+x - 1, bottom+y - 1)) - (patchPixelAt(left+x + 1, bottom+y - 1) + patchPixelAt(left+x - 1, bottom+y + 1)),\n(patchPixelAt(right+x + 1,bottom+y + 1) + patchPixelAt(right+x - 1, bottom+y - 1)) - (patchPixelAt(right+x + 1, bottom+y - 1) + patchPixelAt(right+x - 1, bottom+y + 1))\n)\n);\n#endif\n}\n}\nvec2 upsampleResponseMap(int left, int top, int right, int bottom)\n{\nupsamplePatch(left, top, right, bottom);\ncomputeDerivatives();\nreturn computeResponseMap();\n}\nvec2 iterativeUpsample(vec2 initialGuess)\n{\nint refine = 1;\nfloat scale = 0.5f;\nfloat eps2 = epsilon * epsilon;\nvec2 guess = initialGuess, localGuess = initialGuess;\nfor(int k = 0; k < maxIterations; k++) {\nivec4 quad = ivec4(floor(localGuess.x), floor(localGuess.y), ceil(localGuess.x), ceil(localGuess.y));\nvec2 response = (refine != 0) ? upsampleResponseMap(quad.x, quad.y, quad.z, quad.w) : vec2(0.0f);\nlocalGuess = response * scale;\nguess += localGuess;\nscale *= 0.5f;\nrefine *= int(dot(localGuess, localGuess) >= eps2);\n}\nreturn guess;\n}\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint));\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nreadPixels(keypoint.position, keypoint.lod);\ncomputeDerivatives();\nvec2 offset = computeResponseMap();\n#if METHOD == 0\noffset = quadratic1d();\n#elif METHOD == 1\noffset = taylor2d();\n#elif METHOD == 2 || METHOD == 3\noffset = iterativeUpsample(offset);\n#else\n#error Unknown METHOD\n#endif\nfloat pot = exp2(keypoint.lod);\ncolor = encodePairOfFloat16(offset * pot);\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\n#if !defined(METHOD)\n#error Must define METHOD\n#endif\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxIterations;\nuniform float epsilon;\nconst int PATCH_RADIUS = 1;\nconst int PATCH_SIZE = 2 * PATCH_RADIUS + 1;\nconst int PATCH_SIZE_SQUARED = PATCH_SIZE * PATCH_SIZE;\nconst int LARGE_PATCH_RADIUS = PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE = 2 * LARGE_PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE_SQUARED = LARGE_PATCH_SIZE * LARGE_PATCH_SIZE;\nconst int LARGER_PATCH_RADIUS = LARGE_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE = 2 * LARGER_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE_SQUARED = LARGER_PATCH_SIZE * LARGER_PATCH_SIZE;\nconst float EPS = 1e-5;\nfloat smoothPixelBuffer[LARGER_PATCH_SIZE_SQUARED];\nvec2 derivativesBuffer[LARGE_PATCH_SIZE_SQUARED];\nfloat responseBuffer[PATCH_SIZE_SQUARED];\n#define patchPixelAt(u,v) smoothPixelBuffer[((v) + LARGER_PATCH_RADIUS) * LARGER_PATCH_SIZE + ((u) + LARGER_PATCH_RADIUS)]\n#define derivativesAt(u,v) derivativesBuffer[((v) + LARGE_PATCH_RADIUS) * LARGE_PATCH_SIZE + ((u) + LARGE_PATCH_RADIUS)]\n#define responseAt(u,v) responseBuffer[((v) + PATCH_RADIUS) * PATCH_SIZE + ((u) + PATCH_RADIUS)]\nvoid readPixels(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint u, v;\nfor(int j = 0; j < LARGER_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGER_PATCH_SIZE; i++) {\nu = i - LARGER_PATCH_RADIUS;\nv = j - LARGER_PATCH_RADIUS;\npatchPixelAt(u,v) = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2(u,v), pyrBaseSize).g;\n}\n}\n}\nvoid computeDerivatives()\n{\nconst mat3 dx = mat3(\n-1, 0, 1,\n-2, 0, 2,\n-1, 0, 1\n);\nconst mat3 dy = mat3(\n1, 2, 1,\n0, 0, 0,\n-1,-2,-1\n);\nint u, v;\nmat3 pix, convX, convY;\nconst vec3 ones = vec3(1.0f);\nfor(int j = 0; j < LARGE_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGE_PATCH_SIZE; i++) {\nu = i - LARGE_PATCH_RADIUS;\nv = j - LARGE_PATCH_RADIUS;\npix = mat3(\npatchPixelAt(u+1,v+1), patchPixelAt(u+0,v+1), patchPixelAt(u-1,v+1),\npatchPixelAt(u+1,v+0), patchPixelAt(u+0,v+0), patchPixelAt(u-1,v+0),\npatchPixelAt(u+1,v-1), patchPixelAt(u+0,v-1), patchPixelAt(u-1,v-1)\n);\nconvX = matrixCompMult(dx, pix);\nconvY = matrixCompMult(dy, pix);\nderivativesAt(u,v) = vec2(\ndot(ones, vec3(\ndot(convX[0], ones),\ndot(convX[1], ones),\ndot(convX[2], ones)\n)),\ndot(ones, vec3(\ndot(convY[0], ones),\ndot(convY[1], ones),\ndot(convY[2], ones)\n))\n);\n}\n}\n}\nvec2 computeResponseMap()\n{\nfloat patchArea = float(PATCH_SIZE * PATCH_SIZE);\nvec3 h; vec2 d, c = vec2(0.0f);\nconst vec3 ones = vec3(1.0f);\nfloat response, sum = 0.0f;\nint u, v;\n#define H(r,s) d = derivativesAt((r),(s)); h += vec3(d.x * d.x, d.x * d.y, d.y * d.y)\nfor(int j = 0; j < PATCH_SIZE; j++) {\nfor(int i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nh = vec3(0.0f);\nH(u-1,v-1); H(u+0,v-1); H(u+1,v-1);\nH(u-1,v+0); H(u+0,v+0); H(u+1,v+0);\nH(u-1,v+1); H(u+0,v+1); H(u+1,v+1);\nresponse = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));\nresponse /= patchArea;\nresponseAt(u,v) = response;\nc += vec2(u,v) * response;\nsum += response;\n}\n}\nreturn abs(sum) > EPS ? c / sum : vec2(0.0f);\n}\n#if METHOD == 0\nvec2 quadratic1d()\n{\nfloat a = 0.5f * (responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0));\nfloat b = 0.5f * (responseAt(1,0) - responseAt(-1,0));\nfloat c = responseAt(0,0);\nfloat d = 0.5f * (responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1));\nfloat e = 0.5f * (responseAt(0,1) - responseAt(0,-1));\nfloat f = responseAt(0,0);\nbool hasMax = a < -EPS && d < -EPS;\nreturn hasMax ? -0.5f * vec2(b / a, e / d) : vec2(0.0f);\n}\n#endif\n#if METHOD == 1\nvec2 taylor2d()\n{\nfloat dx = (-responseAt(-1,0) + responseAt(1,0)) * 0.5f;\nfloat dy = (-responseAt(0,-1) + responseAt(0,1)) * 0.5f;\nfloat dxx = responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0);\nfloat dyy = responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1);\nfloat dxy = (responseAt(-1,-1) + responseAt(1,1) - responseAt(1,-1) - responseAt(-1,1)) * 0.25f;\nfloat det = dxx * dyy - dxy * dxy;\nmat2 inv = mat2(dyy, -dxy, -dxy, dxx);\nbool hasMax = det > EPS && dxx < 0.0f;\nreturn hasMax ? inv * vec2(dx, dy) / (-det) : vec2(0.0f);\n}\n#endif\n#if METHOD == 2\nvoid bilinearUpsample(ivec2 patchOffset, vec4 pixelsOfPatch)\n{\nint u, v, i, j;\nvec2 frc, ifrc; vec4 sub;\nconst vec4 ones = vec4(1.0f);\nfloat s = 1.0f / float(PATCH_SIZE - 1);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nfrc = vec2(i, j) * s;\nifrc = vec2(1.0f) - frc;\nsub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\npatchPixelAt(u+xoff,v+yoff) = dot(sub*pixelsOfPatch, ones);\n}\n}\n}\n#endif\n#if METHOD == 3\nvoid bicubicUpsample(ivec2 patchOffset, vec4 pixelsOfPatch, vec4 dx, vec4 dy, vec4 dxy)\n{\nfloat x, y, s = 1.0f / float(PATCH_SIZE - 1);\nint u, v, i, j;\nfloat f00 = pixelsOfPatch.x;\nfloat f10 = pixelsOfPatch.y;\nfloat f01 = pixelsOfPatch.z;\nfloat f11 = pixelsOfPatch.w;\nfloat fx00 = dx.x;\nfloat fx10 = dx.y;\nfloat fx01 = dx.z;\nfloat fx11 = dx.w;\nfloat fy00 = dy.x;\nfloat fy10 = dy.y;\nfloat fy01 = dy.z;\nfloat fy11 = dy.w;\nfloat fxy00 = dxy.x;\nfloat fxy10 = dxy.y;\nfloat fxy01 = dxy.z;\nfloat fxy11 = dxy.w;\nmat4 bicubic = mat4(\n1, 0, -3, 2,\n0, 0, 3, -2,\n0, 1, -2, 1,\n0, 0, -1, 1\n) * mat4(\nf00, f10, fx00, fx10,\nf01, f11, fx01, fx11,\nfy00, fy10, fxy00, fxy10,\nfy01, fy11, fxy01, fxy11\n) * mat4(\n1, 0, 0, 0,\n0, 0, 1, 0,\n-3, 3, -2, -1,\n2, -2, 1, 1\n);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nx = float(i) * s;\ny = float(j) * s;\npatchPixelAt(u+xoff,v+yoff) = dot(\nvec4(1, x, x*x, x*x*x),\nbicubic * vec4(1, y, y*y, y*y*y)\n);\n}\n}\n}\n#endif\n#if METHOD == 2 || METHOD == 3\nvoid upsamplePatch(int left, int top, int right, int bottom)\n{\nint x, y, k;\nvec4 ptch[9];\nvec2 d00, d10, d01, d11;\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\nptch[k] = vec4(\npatchPixelAt(left+x, top+y),\npatchPixelAt(right+x, top+y),\npatchPixelAt(left+x, bottom+y),\npatchPixelAt(right+x, bottom+y)\n);\n}\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\n#if METHOD == 2\nbilinearUpsample(ivec2(x, y), ptch[k]);\n#elif METHOD == 3\nd00 = derivativesAt(left+x, top+y);\nd10 = derivativesAt(right+x, top+y);\nd01 = derivativesAt(left+x, bottom+y);\nd11 = derivativesAt(right+x, bottom+y);\nbicubicUpsample(ivec2(x, y), ptch[k],\nvec4(d00.x, d10.x, d01.x, d11.x),\nvec4(d00.y, d10.y, d01.y, d11.y),\n0.25f * vec4(\n(patchPixelAt(left+x + 1,top+y + 1) + patchPixelAt(left+x - 1, top+y - 1)) - (patchPixelAt(left+x + 1, top+y - 1) + patchPixelAt(left+x - 1, top+y + 1)),\n(patchPixelAt(right+x + 1,top+y + 1) + patchPixelAt(right+x - 1, top+y - 1)) - (patchPixelAt(right+x + 1, top+y - 1) + patchPixelAt(right+x - 1, top+y + 1)),\n(patchPixelAt(left+x + 1,bottom+y + 1) + patchPixelAt(left+x - 1, bottom+y - 1)) - (patchPixelAt(left+x + 1, bottom+y - 1) + patchPixelAt(left+x - 1, bottom+y + 1)),\n(patchPixelAt(right+x + 1,bottom+y + 1) + patchPixelAt(right+x - 1, bottom+y - 1)) - (patchPixelAt(right+x + 1, bottom+y - 1) + patchPixelAt(right+x - 1, bottom+y + 1))\n)\n);\n#endif\n}\n}\nvec2 upsampleResponseMap(int left, int top, int right, int bottom)\n{\nupsamplePatch(left, top, right, bottom);\ncomputeDerivatives();\nreturn computeResponseMap();\n}\nvec2 iterativeUpsample(vec2 initialGuess)\n{\nint refine = 1;\nfloat scale = 0.5f;\nfloat eps2 = epsilon * epsilon;\nvec2 guess = initialGuess, localGuess = initialGuess;\nfor(int k = 0; k < maxIterations; k++) {\nivec4 quad = ivec4(floor(localGuess.x), floor(localGuess.y), ceil(localGuess.x), ceil(localGuess.y));\nvec2 response = (refine != 0) ? upsampleResponseMap(quad.x, quad.y, quad.z, quad.w) : vec2(0.0f);\nlocalGuess = response * scale;\nguess += localGuess;\nscale *= 0.5f;\nrefine *= int(dot(localGuess, localGuess) >= eps2);\n}\nreturn guess;\n}\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nreadPixels(keypoint.position, keypoint.lod);\ncomputeDerivatives();\nvec2 offset = computeResponseMap();\n#if METHOD == 0\noffset = quadratic1d();\n#elif METHOD == 1\noffset = taylor2d();\n#elif METHOD == 2 || METHOD == 3\noffset = iterativeUpsample(offset);\n#else\n#error Unknown METHOD\n#endif\nfloat pot = exp2(keypoint.lod);\ncolor = encodePairOfFloat16(offset * pot);\n}"
 
 /***/ }),
 
@@ -18696,7 +18855,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedOrientat
   \**********************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedData;\nuniform int strideOfEncodedData;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec4 readEncodedData(sampler2D encodedData, int strideOfEncodedData, int elementId, int pixelsPerElement, int pixelOffset)\n{\nint rasterIndex = elementId * pixelsPerElement + pixelOffset;\nivec2 pos = ivec2(rasterIndex % strideOfEncodedData, rasterIndex / strideOfEncodedData);\nreturn texelFetch(encodedData, pos, 0);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nint extraCell = myAddress.offset - headerSize / 4;\nint numberOfExtraCells = extraSize / 4;\ncolor = threadPixel(encodedKeypoints);\nif(extraCell < 0 || extraCell >= numberOfExtraCells)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nif(isBadKeypoint(keypoint))\nreturn;\ncolor = readEncodedData(encodedData, strideOfEncodedData, myIndex, numberOfExtraCells, extraCell);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedData;\nuniform int strideOfEncodedData;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec4 readEncodedData(sampler2D encodedData, int strideOfEncodedData, int elementId, int pixelsPerElement, int pixelOffset)\n{\nint rasterIndex = elementId * pixelsPerElement + pixelOffset;\nivec2 pos = ivec2(rasterIndex % strideOfEncodedData, rasterIndex / strideOfEncodedData);\nreturn texelFetch(encodedData, pos, 0);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nint extraCell = myAddress.offset - headerSize / 4;\nint numberOfExtraCells = extraSize / 4;\ncolor = threadPixel(encodedKeypoints);\nif(extraCell < 0 || extraCell >= numberOfExtraCells)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nif(isBadKeypoint(keypoint))\nreturn;\ncolor = readEncodedData(encodedData, strideOfEncodedData, myIndex, numberOfExtraCells, extraCell);\n}"
 
 /***/ }),
 
