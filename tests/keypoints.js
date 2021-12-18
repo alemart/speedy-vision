@@ -261,7 +261,7 @@ describe('Keypoint routines', function() {
             return pipeline;
         };
 
-        const numPoints = 10;
+        const numPoints = 100;
         const points = [], otherPoints = [];
         for(let i = 0; i < numPoints; i++) {
             const x = Math.round(Math.random() * 1000);
