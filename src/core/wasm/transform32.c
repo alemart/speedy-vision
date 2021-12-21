@@ -61,3 +61,35 @@ WASM_EXPORT const Mat32* Mat32_transform_perspective(const Mat32* dest, const Ma
 
     return dest;
 }
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ * @param dest 2 x n output matrix
+ * @param src 2 x n input points (xi, yi)
+ * @param transform 2x3 affine transformation
+ * @returns dest
+ */
+WASM_EXPORT const Mat32* Mat32_transform_affine(const Mat32* dest, const Mat32* src, const Mat32* transform)
+{
+    assert(
+        dest->rows == 2 && src->rows == 2 && dest->columns == src->columns &&
+        transform->rows == 2 && transform->columns == 3
+    );
+
+    int n = src->columns;
+    float m00 = Mat32_at(transform, 0, 0), m01 = Mat32_at(transform, 0, 1), m02 = Mat32_at(transform, 0, 2),
+          m10 = Mat32_at(transform, 1, 0), m11 = Mat32_at(transform, 1, 1), m12 = Mat32_at(transform, 1, 2);
+
+    for(int i = 0; i < n; i++) {
+        float srcX = Mat32_at(src, 0, i);
+        float srcY = Mat32_at(src, 1, i);
+
+        float x = m00 * srcX + m01 * srcY + m02;
+        float y = m10 * srcX + m11 * srcY + m12;
+
+        Mat32_at(dest, 0, i) = x;
+        Mat32_at(dest, 1, i) = y;
+    }
+
+    return dest;
+}

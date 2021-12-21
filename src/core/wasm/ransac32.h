@@ -25,5 +25,6 @@
 #include "base.h"
 
 const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat32* mask, const Mat32* src, const Mat32* dest, int numberOfHypotheses, int bundleSize, float reprojectionError);
+const Mat32* Mat32_pransac_affine(const Mat32* result, const Mat32* mask, const Mat32* src, const Mat32* dest, int numberOfHypotheses, int bundleSize, float reprojectionError);
 
 #endif

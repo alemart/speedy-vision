@@ -15,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * transform32.h
- * Transformations
+ * affine32.h
+ * Affine transform
  */
 
-#ifndef _TRANSFORM32_H
-#define _TRANSFORM32_H
+#ifndef _AFFINE32_H
+#define _AFFINE32_H
 
 #include "base.h"
 
-const Mat32* Mat32_transform_perspective(const Mat32* dest, const Mat32* src, const Mat32* transform);
-const Mat32* Mat32_transform_affine(const Mat32* dest, const Mat32* src, const Mat32* transform);
+const Mat32* Mat32_affine_dlt3(const Mat32* result, const Mat32* src, const Mat32* dest);
+const Mat32* Mat32_affine_dlt(const Mat32* result, const Mat32* src, const Mat32* dest);
 
 #endif

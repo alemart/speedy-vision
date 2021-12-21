@@ -16,6 +16,7 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Soon
 * Geometric transformations
   * Homography matrix
+  * Affine transform
 * Image processing
   * Convert to greyscale
   * Convolution
@@ -2066,8 +2067,8 @@ Compute a `homography` matrix using four correspondences of points.
 ###### Arguments
 
 * `homography: SpeedyMatrix`. A 3x3 output matrix.
-* `src: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the source quadrilateral.
-* `dest: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the destination quadrilateral.
+* `src: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the source space.
+* `dest: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the destination space.
 
 ###### Returns
 
@@ -2105,8 +2106,8 @@ Compute a `homography` matrix using a set of *n* >= 4 correspondences of points,
 ###### Arguments
 
 * `homography: SpeedyMatrix`. A 3x3 output matrix.
-* `src: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the source quadrilateral.
-* `dest: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the destination quadrilateral.
+* `src: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the source space.
+* `dest: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the destination space.
 * `options: object, optional`. A configuration object.
     * `method: string`. The method to be employed to compute the homography (see the table of methods below).
 
@@ -2176,6 +2177,119 @@ const chkCoords = Speedy.Matrix.Zeros(2, 5);
 await Speedy.Matrix.perspectiveTransform(chkCoords, tstCoords, homography);
 console.log(chkCoords.toString());
 ```
+
+
+#### Affine transformation
+
+##### Speedy.Matrix.applyAffineTransform()
+
+`Speedy.Matrix.applyAffineTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>`
+
+Apply an affine `transform` to a set of 2D points described by `src` and store the results in `dest`.
+
+###### Arguments
+
+* `dest: SpeedyMatrix`. A 2 x *n* output matrix.
+* `src: SpeedyMatrix`. A 2 x *n* matrix encoding a set of *n* points, one per column.
+* `transform: SpeedyMatrix`. A 2x3 affine transformation matrix.
+
+###### Returns
+
+A `SpeedyPromise` that resolves to `dest`.
+
+###### Example
+
+```js
+const transform = Speedy.Matrix(2, 3, [
+    3, 0, // first column
+    0, 2, // second column
+    2, 1, // third column
+]);
+
+const src = Speedy.Matrix(2, 4, [
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1,
+]);
+
+const dest = Speedy.Matrix.Zeros(src.rows, src.columns);
+await Speedy.Matrix.applyAffineTransform(dest, src, transform);
+console.log(dest.toString());
+
+//
+// Result:
+// [ 2  5  5  2 ]
+// [ 1  1  3  3 ]
+//
+```
+
+##### Speedy.Matrix.affine()
+
+`Speedy.Matrix.affine(transform: SpeedyMatrix, src: SpeedyMatrix, dest: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>`
+
+Compute an `affine` transform using three correspondences of points.
+
+###### Arguments
+
+* `transform: SpeedyMatrix`. A 2x3 output matrix.
+* `src: SpeedyMatrix`. A 2x3 matrix with the coordinates of three points (one per column) representing the corners of the source space.
+* `dest: SpeedyMatrix`. A 2x3 matrix with the coordinates of three points (one per column) representing the corners of the destination space.
+
+###### Returns
+
+A `SpeedyPromise` that resolves to `transform`.
+
+###### Example
+
+```js
+const src = Speedy.Matrix(2, 3, [
+    0, 0, // first point
+    1, 0, // second point
+    1, 1, // third point
+]);
+
+const dest = Speedy.Matrix(2, 3, [
+    0, 0,
+    3, 0,
+    3, 2,
+]);
+
+const transform = Speedy.Matrix.Zeros(2, 3);
+await Speedy.Matrix.affine(transform, src, dest);
+
+console.log(transform.toString());
+```
+
+##### Speedy.Matrix.findAffineTransform()
+
+`Speedy.Matrix.findAffineTransform(transform: SpeedyMatrix, src: SpeedyMatrix, dest: SpeedyMatrix, options?: object): SpeedyPromise<SpeedyMatrix>`
+
+Compute an affine `transform` using a set of *n* >= 3 correspondences of points, possibly with noise.
+
+###### Arguments
+
+* `transform: SpeedyMatrix`. A 2x3 output matrix.
+* `src: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the source space.
+* `dest: SpeedyMatrix`. A 2 x *n* matrix with the coordinates of *n* points (one per column) representing the corners of the destination space.
+* `options: object, optional`. A configuration object.
+    * `method: string`. The method to be employed to compute the affine transform (see the table of methods below).
+
+Table of methods:
+
+
+| Method            | Description |
+|-------------------|-------------|
+| `"dlt"` | Direct Linear Transform (DLT). All points will be used to estimate the affine transform. Use this method if your data set is **not** polluted with outliers. This is the default method. |
+| `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. |
+
+Table of parameters:
+
+* for methods `"dlt"` and `"pransac"`: the same as [Speedy.Matrix.findHomography()](#speedymatrixfindhomography).
+
+###### Returns
+
+A `SpeedyPromise` that resolves to `transform`.
 
 
 

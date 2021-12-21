@@ -284,8 +284,8 @@ export class SpeedyMatrixFactory extends Function
         method = 'dlt',
         mask = null,
         reprojectionError = 3,
-        numberOfHypotheses = 500,
-        bundleSize = 100,
+        numberOfHypotheses = 512,
+        bundleSize = 128,
     } = {})
     {
         // validate shapes
@@ -356,16 +356,16 @@ export class SpeedyMatrixFactory extends Function
 
         return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
             // allocate matrices
-            const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
+            const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
             const destptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, dest);
 
             // copy input matrices to WASM memory
             SpeedyMatrixWASM.copyToMat32(wasm, memory, srcptr, src);
-            SpeedyMatrixWASM.copyToMat32(wasm, memory, homptr, transform);
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, matptr, transform);
 
             // run the WASM routine
-            wasm.exports.Mat32_transform_perspective(destptr, srcptr, homptr);
+            wasm.exports.Mat32_transform_perspective(destptr, srcptr, matptr);
 
             // copy output matrix from WASM memory
             SpeedyMatrixWASM.copyFromMat32(wasm, memory, destptr, dest);
@@ -373,7 +373,163 @@ export class SpeedyMatrixFactory extends Function
             // deallocate matrices
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, destptr);
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, srcptr);
-            SpeedyMatrixWASM.deallocateMat32(wasm, memory, homptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, matptr);
+
+            // done!
+            return dest;
+        });
+    }
+
+    /**
+     * Compute an affine transform using 3 correspondences of points
+     * @param {SpeedyMatrix} transform 2x3 output - affine transform
+     * @param {SpeedyMatrix} src 2x3 input points - source coordinates
+     * @param {SpeedyMatrix} dest 2x3 input points - destination coordinates
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
+     */
+    affine(transform, src, dest)
+    {
+        // validate shapes
+        if(src.rows != 2 || src.columns != 3 || dest.rows != 2 || dest.columns != 3)
+            throw new IllegalArgumentError(`You need two 2x3 input matrices to compute an affine transform`);
+        else if(transform.rows != 2 || transform.columns != 3)
+            throw new IllegalArgumentError(`The output of affine() is a 2x3 matrix`);
+
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
+            const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
+            const destptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, dest);
+
+            // copy input matrices to WASM memory
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, srcptr, src);
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, destptr, dest);
+
+            // run the WASM routine
+            wasm.exports.Mat32_affine_dlt3(matptr, srcptr, destptr); // FIXME use normalized version
+            //wasm.exports.Mat32_affine_ndlt3(matptr, srcptr, destptr);
+
+            // copy output matrix from WASM memory
+            SpeedyMatrixWASM.copyFromMat32(wasm, memory, matptr, transform);
+
+            // deallocate matrices
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, destptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, srcptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, matptr);
+
+            // done!
+            return transform;
+        });
+    }
+
+    /**
+     * Compute an affine transformation using n >= 3 correspondences of points
+     * @param {SpeedyMatrix} transform 2x3 output - affine transform
+     * @param {SpeedyMatrix} src 2 x n input points - source coordinates
+     * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
+     * @param {object} [options]
+     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
+     * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
+     * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
+     * @param {number} [options.bundleSize] (pransac) how many points should we check before reducing the number of viable hypotheses (e.g., 128)
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to an affine transform
+     */
+    findAffineTransform(transform, src, dest, {
+        method = 'dlt',
+        mask = null,
+        reprojectionError = 3,
+        numberOfHypotheses = 512,
+        bundleSize = 128,
+    } = {})
+    {
+        // validate shapes
+        if(src.rows != 2 || src.columns < 3 || dest.rows != 2 || dest.columns != src.columns)
+            throw new IllegalArgumentError(`You need two 2 x n (n >= 3) input matrices to compute an affine transform`);
+        else if(transform.rows != 2 || transform.columns != 3)
+            throw new IllegalArgumentError(`The output of findAffineTransform() is a 2x3 matrix`);
+        else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
+            throw new IllegalArgumentError(`Invalid shape of the inliers mask`);
+
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
+            const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
+            const destptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, dest);
+            const maskptr = mask != null ? SpeedyMatrixWASM.allocateMat32(wasm, memory, mask) : 0;
+
+            // copy input matrices to WASM memory
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, srcptr, src);
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, destptr, dest);
+
+            // run the WASM routine
+            switch(method) {
+                case 'pransac':
+                    Utils.assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
+                    wasm.exports.Mat32_pransac_affine(matptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
+                    break;
+
+                case 'dlt':
+                    wasm.exports.Mat32_affine_dlt(matptr, srcptr, destptr);
+                    //wasm.exports.Mat32_affine_ndlt(matptr, srcptr, destptr);
+                    break;
+
+                default:
+                    throw new IllegalArgumentError(`Illegal method for findAffineTransform(): "${method}"`);
+            }
+
+            // copy output matrices from WASM memory
+            SpeedyMatrixWASM.copyFromMat32(wasm, memory, matptr, transform);
+            if(mask != null)
+                SpeedyMatrixWASM.copyFromMat32(wasm, memory, maskptr, mask);
+
+            // deallocate matrices
+            if(mask != null)
+                SpeedyMatrixWASM.deallocateMat32(wasm, memory, maskptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, destptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, srcptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, matptr);
+
+            // done!
+            return transform;
+        });
+    }
+
+    /**
+     * Apply an affine transformation to a set of 2D points
+     * @param {SpeedyMatrix} dest 2 x n output matrix
+     * @param {SpeedyMatrix} src 2 x n input matrix (a set of points)
+     * @param {SpeedyMatrix} transform 2x3 affine transform
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
+     */
+    applyAffineTransform(dest, src, transform)
+    {
+        // validate shapes
+        if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
+            throw new IllegalArgumentError(`Invalid shapes`);
+        else if(transform.rows != 2 || transform.columns != 3)
+            throw new IllegalArgumentError(`The affine transformation must be a 2x3 matrix`);
+
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
+            const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
+            const destptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, dest);
+
+            // copy input matrices to WASM memory
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, srcptr, src);
+            SpeedyMatrixWASM.copyToMat32(wasm, memory, matptr, transform);
+
+            // run the WASM routine
+            wasm.exports.Mat32_transform_affine(destptr, srcptr, matptr);
+
+            // copy output matrix from WASM memory
+            SpeedyMatrixWASM.copyFromMat32(wasm, memory, destptr, dest);
+
+            // deallocate matrices
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, destptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, srcptr);
+            SpeedyMatrixWASM.deallocateMat32(wasm, memory, matptr);
 
             // done!
             return dest;

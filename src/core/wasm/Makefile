@@ -19,7 +19,7 @@
 # WebAssembly-related makefile
 #
 
-OBJS32 = mat32.o arithmetic32.o qr32.o homography32.o ransac32.o transform32.o
+OBJS32 = mat32.o arithmetic32.o qr32.o homography32.o affine32.o ransac32.o transform32.o
 OBJS = base.o memory.o utils.o xoroshiro128plus.o ${OBJS32}
 
 CC = clang
