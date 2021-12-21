@@ -108,6 +108,42 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
      */
     perspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
+    /**
+     * Compute an affine transform using 3 correspondences of points
+     * @param {SpeedyMatrix} transform 2x3 output - affine transform
+     * @param {SpeedyMatrix} src 2x3 input points - source coordinates
+     * @param {SpeedyMatrix} dest 2x3 input points - destination coordinates
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
+     */
+    affine(transform: SpeedyMatrix, src: SpeedyMatrix, dest: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
+    /**
+     * Compute an affine transformation using n >= 3 correspondences of points
+     * @param {SpeedyMatrix} transform 2x3 output - affine transform
+     * @param {SpeedyMatrix} src 2 x n input points - source coordinates
+     * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
+     * @param {object} [options]
+     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
+     * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
+     * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
+     * @param {number} [options.bundleSize] (pransac) how many points should we check before reducing the number of viable hypotheses (e.g., 128)
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to an affine transform
+     */
+    findAffineTransform(transform: SpeedyMatrix, src: SpeedyMatrix, dest: SpeedyMatrix, { method, mask, reprojectionError, numberOfHypotheses, bundleSize, }?: {
+        method?: "dlt" | "pransac" | undefined;
+        mask?: SpeedyMatrix | null | undefined;
+        reprojectionError?: number | undefined;
+        numberOfHypotheses?: number | undefined;
+        bundleSize?: number | undefined;
+    } | undefined): SpeedyPromise<SpeedyMatrix>;
+    /**
+     * Apply an affine transformation to a set of 2D points
+     * @param {SpeedyMatrix} dest 2 x n output matrix
+     * @param {SpeedyMatrix} src 2 x n input matrix (a set of points)
+     * @param {SpeedyMatrix} transform 2x3 affine transform
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
+     */
+    applyAffineTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
 }
 import { SpeedyMatrix } from "./speedy-matrix";
 import { SpeedyPromise } from "../utils/speedy-promise";
