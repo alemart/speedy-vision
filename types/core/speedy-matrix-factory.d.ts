@@ -107,7 +107,7 @@ export class SpeedyMatrixFactory extends Function {
      * @param {SpeedyMatrix} transform 3x3 homography matrix
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
      */
-    perspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
+    applyPerspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
     /**
      * Compute an affine transform using 3 correspondences of points
      * @param {SpeedyMatrix} transform 2x3 output - affine transform

@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-12-21T03:43:55.822Z
+ * Date: 2021-12-21T03:46:13.448Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9704,7 +9704,7 @@ class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} transform 3x3 homography matrix
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
      */
-    perspectiveTransform(dest, src, transform)
+    applyPerspectiveTransform(dest, src, transform)
     {
         // validate shapes
         if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
