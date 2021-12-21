@@ -346,7 +346,7 @@ export class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} transform 3x3 homography matrix
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
      */
-    perspectiveTransform(dest, src, transform)
+    applyPerspectiveTransform(dest, src, transform)
     {
         // validate shapes
         if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)

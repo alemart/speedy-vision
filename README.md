@@ -2015,9 +2015,9 @@ console.log(QR.toString());
 
 #### Perspective transformation
 
-##### Speedy.Matrix.perspectiveTransform()
+##### Speedy.Matrix.applyPerspectiveTransform()
 
-`Speedy.Matrix.perspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>`
+`Speedy.Matrix.applyPerspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>`
 
 Apply a perspective `transform` to a set of 2D points described by `src` and store the results in `dest`.
 
@@ -2048,7 +2048,7 @@ const src = Speedy.Matrix(2, 4, [
 ]);
 
 const dest = Speedy.Matrix.Zeros(src.rows, src.columns);
-await Speedy.Matrix.perspectiveTransform(dest, src, transform);
+await Speedy.Matrix.applyPerspectiveTransform(dest, src, transform);
 console.log(dest.toString());
 
 //
@@ -2174,7 +2174,7 @@ const tstCoords = Speedy.Matrix(2, 5, [
 ]);
 
 const chkCoords = Speedy.Matrix.Zeros(2, 5);
-await Speedy.Matrix.perspectiveTransform(chkCoords, tstCoords, homography);
+await Speedy.Matrix.applyPerspectiveTransform(chkCoords, tstCoords, homography);
 console.log(chkCoords.toString());
 ```
 

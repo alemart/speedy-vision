@@ -186,7 +186,7 @@ window.onload = async function()
         ]);
 
         const dest = Speedy.Matrix.Zeros(2, 4);
-        await Speedy.Matrix.perspectiveTransform(dest, src, homography);
+        await Speedy.Matrix.applyPerspectiveTransform(dest, src, homography);
 
         for(let i = 0; i < dest.columns; i++) {
             vertices[i].x = dest.at(0, i);
