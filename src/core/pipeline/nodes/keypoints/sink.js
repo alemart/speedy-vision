@@ -64,7 +64,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
     {
         super(name, texCount + 2, portBuilders);
 
-        /** @type {T[]} keypoints (output) */
+        /** @type {Array<T|null>} keypoints (output) */
         this._keypoints = [];
 
         /** @type {SpeedyTextureReader} texture reader */
@@ -75,6 +75,9 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
 
         /** @type {boolean} accelerate GPU-CPU transfers */
         this._turbo = false;
+
+        /** @type {boolean} should discarded keypoints be exported as null or dropped altogether? */
+        this._includeDiscarded = false;
     }
 
     /**
@@ -93,6 +96,24 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
     set turbo(value)
     {
         this._turbo = Boolean(value);
+    }
+
+    /**
+     * Should discarded keypoints be exported as null or dropped altogether?
+     * @returns {boolean}
+     */
+    get includeDiscarded()
+    {
+        return this._includeDiscarded;
+    }
+
+    /**
+     * Should discarded keypoints be exported as null or dropped altogether?
+     * @param {boolean} value
+     */
+    set includeDiscarded(value)
+    {
+        this._includeDiscarded = Boolean(value);
     }
 
     /**
@@ -117,7 +138,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
 
     /**
      * Export data from this node to the user
-     * @returns {SpeedyPromise<T[]>}
+     * @returns {SpeedyPromise<Array<T|null>>}
      */
     export()
     {
@@ -188,14 +209,15 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
      * @param {number} extraSize in bytes
      * @param {number} encoderWidth
      * @param {number} encoderHeight
-     * @returns {T[]} keypoints
+     * @returns {Array<T|null>} keypoints
      */
     _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
         const bytesPerKeypoint = MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
         const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
-        const keypoints = [];
+        const keypoints = /** @type {Array<T|null>} */ ( [] );
+        const includeDiscarded = this._includeDiscarded;
         let descriptorBytes = ZERO_BYTES, extraBytes = ZERO_BYTES;
         let x, y, z, w, lod, rotation, score;
         let keypoint;
@@ -227,19 +249,26 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
                 break;
 
             // the header is zero: discard the keypoint
-            if(x + y + z + w == 0)
+            if(x + y + z + w == 0) {
+                if(includeDiscarded)
+                    keypoints.push(null);
                 continue;
+            }
 
             // extract extra & descriptor bytes
             if(extraSize > 0) {
                 extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
-                if(extraBytes.byteLength < extraSize)
+                if(extraBytes.byteLength < extraSize) {
+                    Utils.warning(`KeypointSink: expected ${extraSize} extra bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${extraBytes.byteLength} instead`);
                     continue; // something is off here; discard
+                }
             }
             if(descriptorSize > 0) {
                 descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-                if(descriptorBytes.byteLength < descriptorSize)
+                if(descriptorBytes.byteLength < descriptorSize) {
+                    Utils.warning(`KeypointSink: expected ${descriptorSize} descriptor bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${descriptorBytes.byteLength} instead`);
                     continue; // something is off here; discard
+                }
             }
 
             // decode position: convert from fixed-point

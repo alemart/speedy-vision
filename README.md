@@ -918,6 +918,7 @@ Creates a sink of keypoints using the specified name. If the name is not specifi
 ###### Parameters
 
 * `turbo: boolean`. Accelerate GPU-CPU transfers. You'll get the data from the previous frame. Defaults to `false`.
+* `includeDiscarded: boolean`. Set discarded keypoints (e.g., by a tracker) to `null` in the exported set. Defaults to `false`, meaning that discarded keypoints will simply be dropped from the exported set rather than being set to `null`.
 
 ###### Ports
 
