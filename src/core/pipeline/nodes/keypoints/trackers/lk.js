@@ -33,13 +33,23 @@ import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
-const DEFAULT_WINDOW_SIZE = new SpeedySize(11, 11);
+const DEFAULT_WINDOW_SIZE = new SpeedySize(11, 11); // nice on mobile?
 const DEFAULT_DEPTH = Math.min(3, PYRAMID_MAX_LEVELS);
 const DEFAULT_NUMBER_OF_ITERATIONS = 30;
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 const DEFAULT_EPSILON = 0.01;
-const MIN_WINDOW_SIZE = 5;
-const MAX_WINDOW_SIZE = 21;
+const LK_PROGRAM = {
+    3: 'lk3',
+    5: 'lk5',
+    7: 'lk7',
+    9: 'lk9',
+    11: 'lk11',
+    13: 'lk13',
+    15: 'lk15',
+    17: 'lk17',
+    19: 'lk19',
+    21: 'lk21',
+};
 
 
 /**
@@ -98,15 +108,15 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     set windowSize(windowSize)
     {
-        Utils.assert(windowSize.width == windowSize.height && windowSize.area() > 0);
-        Utils.assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
-        this._windowSize = windowSize;
+        if(windowSize.width != windowSize.height) {
+            throw new NotSupportedError(`LK: window ${this._windowSize.toString()} is not square!`);
+        }
+        else if(!Object.prototype.hasOwnProperty.call(LK_PROGRAM, windowSize.width)) {
+            const SUPPORTED_WINDOWS = Object.keys(LK_PROGRAM).sort((a,b) => a-b).map(k => k+'x'+k).join(', ');
+            throw new NotSupportedError(`LK: window of size ${this._windowSize.toString()} is not supported! Supported sizes: ${SUPPORTED_WINDOWS}`);
+        }
 
-        const wsize = this._windowSize.width;
-        if(wsize > MAX_WINDOW_SIZE)
-            throw new NotSupportedError(`LK: window of size ${this._windowSize} is too large!`);
-        else if(wsize < MIN_WINDOW_SIZE)
-            throw new NotSupportedError(`LK: window of size ${this._windowSize} is too small!`);
+        this._windowSize = windowSize;
     }
 
     /**
@@ -212,14 +222,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
             throw new IllegalOperationError(`LK: can't use input images of different size`);
 
         // select the appropriate program
-        const lk = (
-            (wsize <= 7  ? keypoints.lk7  :
-            (wsize <= 9  ? keypoints.lk9  :
-            (wsize <= 11 ? keypoints.lk11 : 
-            (wsize <= 13 ? keypoints.lk13 :
-            (wsize <= 15 ? keypoints.lk15 :
-            (wsize <= 21 ? keypoints.lk21 : null
-        )))))));
+        const lk = keypoints[LK_PROGRAM[wsize]];
 
         // find the dimensions of the flow texture (1 pixel per flow vector)
         const numKeypoints = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
@@ -229,7 +232,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         // compute optical-flow
         let flow = lk.clear();
         for(let lod = levels - 1; lod >= 0; lod--)
-            flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
+            flow = lk(flow, previousKeypoints, nextImage, previousImage, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
         keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);

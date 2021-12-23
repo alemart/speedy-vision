@@ -110,10 +110,10 @@ const laplacian = importShader('keypoints/laplacian.glsl')
                  .withArguments('corners', 'pyramid', 'lodStep', 'lodOffset');
 
 // Keypoint tracking & optical-flow
-const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
+const lk = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21].reduce((obj, win) => ((obj[win] =
                importShader('keypoints/lk.glsl')
-               .withDefines({ 'MAX_WINDOW_SIZE': win })
-               .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
+               .withDefines({ 'WINDOW_SIZE': win })
+               .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            ), obj), {});
 
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
@@ -291,22 +291,34 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             // LK optical-flow
             //
-            .declare('lk21', lk[21], { // up to 21x21 window
+            .declare('lk21', lk[21], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk15', lk[15], { // up to 15x15 window
+            .declare('lk19', lk[19], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk13', lk[13], { // up to 13x13
+            .declare('lk17', lk[17], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk11', lk[11], { // up to 11x11 window (nice on mobile)
+            .declare('lk15', lk[15], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk9', lk[9], { // up to 9x9 window
+            .declare('lk13', lk[13], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk7', lk[7], { // up to 7x7 window (faster)
+            .declare('lk11', lk[11], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk9', lk[9], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk7', lk[7], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk5', lk[5], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk3', lk[3], {
                 ...this.program.usesPingpongRendering()
             })
             .declare('transferFlow', transferFlow)

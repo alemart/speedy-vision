@@ -11,6 +11,7 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * FAST feature detector
   * ORB feature descriptor
 * Feature tracking
+  * KLT feature tracker
   * LK optical flow
 * Feature matching
   * Soon

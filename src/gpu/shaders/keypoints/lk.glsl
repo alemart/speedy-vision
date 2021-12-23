@@ -34,7 +34,6 @@ uniform sampler2D nextPyramid; // image pyramid at time t
 uniform sampler2D prevPyramid; // image pyramid at time t-1
 uniform sampler2D encodedFlow; // encoded flow vectors of tracked keypoints at time t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
-uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform int level; // current level (from depth-1 downto 0)
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
 uniform int numberOfIterations; // maximum number of iterations - default: 5
@@ -44,9 +43,9 @@ uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
 
-// maximum window size
-#ifndef MAX_WINDOW_SIZE
-#error Must define MAX_WINDOW_SIZE // typically 21, 15 or 11 (odd number)
+// window size
+#ifndef WINDOW_SIZE
+#error Undefined WINDOW_SIZE // typically 5, 7, 11, ..., 21 (odd number)
 #endif
 
 // image "enum"
@@ -54,12 +53,12 @@ uniform int encoderLength;
 #define PREV_IMAGE 0
 
 // constants
-const int MAX_WINDOW_SIZE_SQUARED = (MAX_WINDOW_SIZE) * (MAX_WINDOW_SIZE);
-const int MAX_WINDOW_SIZE_PLUS = (MAX_WINDOW_SIZE) + 2; // add slack for the derivatives (both sides)
-const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;
-const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
-const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
-const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
+const int WINDOW_RADIUS = (WINDOW_SIZE - 1) / 2; // size = 2 * radius + 1
+const int WINDOW_SIZE_SQUARED = (WINDOW_SIZE) * (WINDOW_SIZE);
+const int WINDOW_SIZE_PLUS = (WINDOW_SIZE) + 2; // add slack for the derivatives (both sides)
+const int WINDOW_SIZE_PLUS_SQUARED = WINDOW_SIZE_PLUS * WINDOW_SIZE_PLUS;
+const int DBL_WINDOW_SIZE_PLUS_SQUARED = 2 * WINDOW_SIZE_PLUS_SQUARED;
+const int WINDOW_RADIUS_PLUS = (WINDOW_SIZE_PLUS - 1) / 2;
 const highp float FLT_SCALE = 9.5367431640625e-7; // 1 / 2^20, as in OpenCV, for a compatible discardThreshold
 const highp float FLT_EPSILON = 0.00000011920929f;
 
@@ -74,20 +73,17 @@ const highp float FLT_EPSILON = 0.00000011920929f;
  * (2^8 * 2^8 / 2^20)^2 = 2^(-8) = 1/256 = 0.00390625
  */
 
-// convert windowSize to windowRadius (size = 2 * radius + 1)
-#define windowRadius() ((windowSize - 1) / 2)
-
 // pixel storage (greyscale values)
-int pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
+int pixelBuffer[DBL_WINDOW_SIZE_PLUS_SQUARED];
 #define prevPixel(index) pixelBuffer[(index)] // previous image
-#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)] // next image
+#define nextPixel(index) pixelBuffer[WINDOW_SIZE_PLUS_SQUARED + (index)] // next image
 
-// convert offset to index: -MAX_WINDOW_RADIUS_PLUS <= i, j <= MAX_WINDOW_RADIUS_PLUS
-#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))
+// convert offset to index: -WINDOW_RADIUS_PLUS <= i, j <= WINDOW_RADIUS_PLUS
+#define pixelIndex(i, j) (((j) + WINDOW_RADIUS_PLUS) * WINDOW_SIZE_PLUS + ((i) + WINDOW_RADIUS_PLUS))
 
 // storage for derivatives
-ivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];
-#define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]
+ivec2 derivBuffer[WINDOW_SIZE_SQUARED];
+#define derivativesAt(x, y) derivBuffer[((y) + WINDOW_RADIUS) * WINDOW_SIZE + ((x) + WINDOW_RADIUS)]
 
 /**
  * Read neighborhood around center at a specific level-of-detail
@@ -97,9 +93,9 @@ ivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];
  */
 void readWindow(vec2 center, float lod)
 {
+    const int r = WINDOW_RADIUS;
     ivec2 pyrBaseSize = textureSize(prevPyramid, 0);
     float pot = exp2(lod);
-    int r = windowRadius();
     ivec2 offset; int idx;
 
     // define macro to read pixels from both images
@@ -112,8 +108,8 @@ void readWindow(vec2 center, float lod)
     // defining the loops below, so that the compiler MAY unroll them
 
     // read pixels from a (2r + 1) x (2r + 1) window
-    for(int j = 0; j < windowSize; j++) {
-        for(int i = 0; i < windowSize; i++) {
+    for(int j = 0; j < WINDOW_SIZE; j++) {
+        for(int i = 0; i < WINDOW_SIZE; i++) {
             // macro: no do { ... } while(false) wrapping,
             // so this needs to be inside a block (drivers?)
             readPixelsAt(i-r, j-r);
@@ -122,7 +118,7 @@ void readWindow(vec2 center, float lod)
 
     // read additional pixels from a (2r + 3) x (2r + 3) window
     int r1 = r+1;
-    for(int k = 0; k < windowSize; k++) {
+    for(int k = 0; k < WINDOW_SIZE; k++) {
         readPixelsAt(-r1, k-r);
         readPixelsAt( r1, k-r);
         readPixelsAt(k-r,-r1);
@@ -138,7 +134,7 @@ void readWindow(vec2 center, float lod)
  * Compute spatial derivatives of NEXT_IMAGE or PREV_IMAGE
  * at an offset from the center specified in readWindow()
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
+ * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= WINDOW_RADIUS
  * @returns {ivec2} image derivatives at (center+offset)
  */
 ivec2 computeDerivatives(int imageCode, ivec2 offset)
@@ -156,7 +152,7 @@ ivec2 computeDerivatives(int imageCode, ivec2 offset)
     );
 
     // read buffered neighborhood
-    int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
+    int indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;
     mat3 window = mat3(
         pixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],
         pixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],
@@ -185,17 +181,17 @@ ivec2 computeDerivatives(int imageCode, ivec2 offset)
  * Read the pixel intensity at (center+offset)
  * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
+ * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= WINDOW_RADIUS
  * @returns {int} pixel intensity
  */
 int readBufferedPixel(int imageCode, ivec2 offset)
 {
     // Clamp offset
-    int r = windowRadius();
+    const int r = WINDOW_RADIUS;
     offset = clamp(offset, -r, r);
 
     // Read pixel intensity
-    int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
+    int indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;
     return pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];
 }
 
@@ -203,7 +199,7 @@ int readBufferedPixel(int imageCode, ivec2 offset)
  * Read the pixel intensity at (center+offset) with subpixel accuracy
  * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {vec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
+ * @param {vec2} offset such that max(|offset.x|, |offset.y|) <= WINDOW_RADIUS
  * @returns {int} subpixel intensity
  */
 int readBufferedSubpixel(int imageCode, vec2 offset)
@@ -240,22 +236,25 @@ int readBufferedSubpixel(int imageCode, vec2 offset)
  */
 vec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)
 {
+    const int r = WINDOW_RADIUS;
     int timeDerivative;
     ivec2 mismatch = ivec2(0);
-    int x, y, r = windowRadius();
+    int x, y, _x, _y;
     vec2 d = pyrGuess + localGuess;
 
-    for(int _y = 0; _y < windowSize; _y++) {
-        for(int _x = 0; _x < windowSize; _x++) {
-            x = _x - r; y = _y - r;
-
-            timeDerivative = (
-                readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -
-                readBufferedPixel(PREV_IMAGE, ivec2(x, y))
-            );
-
-            mismatch += derivativesAt(x, y) * timeDerivative;
+    #define innerLoop() \
+        for(_x = 0; _x < WINDOW_SIZE; _x++) { \
+            x = _x - r; y = _y - r; \
+            timeDerivative = ( \
+                readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) - \
+                readBufferedPixel(PREV_IMAGE, ivec2(x, y)) \
+            ); \
+            mismatch += derivativesAt(x, y) * timeDerivative; \
         }
+
+    @unroll
+    for(_y = 0; _y < WINDOW_SIZE; _y++) {
+        innerLoop();
     }
 
     return vec2(mismatch) * FLT_SCALE;
@@ -269,7 +268,7 @@ vec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)
 bool isInsideImage(vec2 position)
 {
     vec2 imageSize = vec2(textureSize(nextPyramid, 0));
-    vec2 border = vec2(windowSize);
+    vec2 border = vec2(WINDOW_SIZE);
 
     return all(bvec4(
         greaterThanEqual(position, border),
@@ -282,8 +281,8 @@ void main()
 {
     vec4 pixel = threadPixel(encodedFlow);
     ivec2 thread = threadLocation();
-    float windowArea = float(windowSize * windowSize);
-    int r = windowRadius();
+    float windowArea = float(WINDOW_SIZE * WINDOW_SIZE);
+    const int r = WINDOW_RADIUS;
 
     // find keypoint address & decode the keypoint
     int keypointIndex = thread.x + thread.y * outputSize().x;
@@ -311,8 +310,8 @@ void main()
     // compute matrix of derivatives
     ivec2 derivatives;
     ivec3 harris3i = ivec3(0);
-    for(int j = 0; j < windowSize; j++) {
-        for(int i = 0; i < windowSize; i++) {
+    for(int j = 0; j < WINDOW_SIZE; j++) {
+        for(int i = 0; i < WINDOW_SIZE; i++) {
             derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
             harris3i += ivec3(
                 derivatives.x * derivatives.x,
@@ -348,7 +347,7 @@ void main()
     }
 
     //
-    // * tip: reduce the windowSize, the numberOfIterations and
+    // * tip: reduce the WINDOW_SIZE, the numberOfIterations and
     //        the number of keypoints!
     //
     // ** note: according to the GLSL ES 3.0 spec section 5.9,
