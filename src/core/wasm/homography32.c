@@ -22,6 +22,7 @@
 #include "speedy.h"
 #include "homography32.h"
 #include "arithmetic32.h"
+#include "transform32.h"
 #include "qr32.h"
 
 /*
@@ -59,7 +60,6 @@ will be any better, numerically speaking, than the approach I'm taking.
 
 */
 
-#define SQRT2 1.4142135623730951
 #define EPS 1e-6 // avoid division by small numbers
 
 /**
@@ -220,86 +220,6 @@ static void homography4(const Mat32* result,
     Mat32_at(result, 0, 0) = a; Mat32_at(result, 0, 1) = b; Mat32_at(result, 0, 2) = c;
     Mat32_at(result, 1, 0) = d; Mat32_at(result, 1, 1) = e; Mat32_at(result, 1, 2) = f;
     Mat32_at(result, 2, 0) = g; Mat32_at(result, 2, 1) = h; Mat32_at(result, 2, 2) = i;
-}
-
-/**
- * Given a set of n points (xi, yi) stored in a 2 x n matrix,
- * find normalization and denormalization matrices (3x3) so that
- * the average distance of the normalized points to the origin
- * becomes a small constant. The points will also be normalized.
- * @param normalizedPoints output matrix, 2 x n
- * @param inputPoints input points, a 2 x n matrix
- * @param normalizer output matrix, 3x3
- * @param denormalizer output matrix, 3x3
- */
-static void normalizePoints(const Mat32* normalizedPoints, const Mat32* inputPoints, const Mat32* normalizer, const Mat32* denormalizer)
-{
-    assert(
-        inputPoints->rows == 2 && inputPoints->columns >= 1 &&
-        normalizedPoints->rows == 2 && normalizedPoints->columns == inputPoints->columns &&
-        normalizer->rows == 3 && normalizer->columns == 3 &&
-        denormalizer->rows == 3 && denormalizer->columns == 3
-    );
-
-    int n = inputPoints->columns;
-    float fn = (float)n;
-
-    // find the center of mass (cx,cy)
-    float cx = 0.0f, cy = 0.0f;
-
-    for(int i = 0; i < n; i++) {
-        cx += Mat32_at(inputPoints, 0, i);
-        cy += Mat32_at(inputPoints, 1, i);
-    }
-
-    cx /= fn;
-    cy /= fn;
-
-    // find the RMS distance d to the center of mass
-    float d = 0.0f;
-
-    for(int i = 0; i < n; i++) {
-        float dx = Mat32_at(inputPoints, 0, i) - cx;
-        float dy = Mat32_at(inputPoints, 1, i) - cy;
-        d += dx * dx + dy * dy;
-    }
-
-    d = sqrt(d / fn);
-
-    // not enough points, or they are too close to each other
-    if(fabs(d) < EPS) {
-        // normalizer = denormalizer = identity
-        Mat32_clear(normalizer);
-        Mat32_clear(denormalizer);
-        for(int i = 0; i < 3; i++)
-            Mat32_at(normalizer, i, i) = Mat32_at(denormalizer, i, i) = 1.0f;
-
-        // no need to normalize
-        Mat32_copy(normalizedPoints, inputPoints);
-        return;
-    }
-
-    // find the scale factor s and its inverse z
-    float s = SQRT2 / d;
-    float z = d / SQRT2;
-
-    // normalize the input points
-    for(int i = 0; i < n; i++) {
-        Mat32_at(normalizedPoints, 0, i) = s * (Mat32_at(inputPoints, 0, i) - cx);
-        Mat32_at(normalizedPoints, 1, i) = s * (Mat32_at(inputPoints, 1, i) - cy);
-    }
-
-    // write a normalization matrix M such that
-    // M p = s * (p - c) for some point p
-    Mat32_at(normalizer, 0, 0) = s;    Mat32_at(normalizer, 0, 1) = 0.0f; Mat32_at(normalizer, 0, 2) = -s * cx;
-    Mat32_at(normalizer, 1, 0) = 0.0f; Mat32_at(normalizer, 1, 1) = s;    Mat32_at(normalizer, 1, 2) = -s * cy;
-    Mat32_at(normalizer, 2, 0) = 0.0f; Mat32_at(normalizer, 2, 1) = 0.0f; Mat32_at(normalizer, 2, 2) = 1.0f;
-
-    // write a denormalization matrix W such that
-    // W p = q/s + c for some point p, i.e., W = M^-1
-    Mat32_at(denormalizer, 0, 0) = z;    Mat32_at(denormalizer, 0, 1) = 0.0f; Mat32_at(denormalizer, 0, 2) = cx;
-    Mat32_at(denormalizer, 1, 0) = 0.0f; Mat32_at(denormalizer, 1, 1) = z;    Mat32_at(denormalizer, 1, 2) = cy;
-    Mat32_at(denormalizer, 2, 0) = 0.0f; Mat32_at(denormalizer, 2, 1) = 0.0f; Mat32_at(denormalizer, 2, 2) = 1.0f;
 }
 
 /**
@@ -534,8 +454,8 @@ WASM_EXPORT const Mat32* Mat32_homography_ndlt(const Mat32* result, const Mat32*
     Mat32* tmp = Mat32_zeros(3, 3);
 
     // normalize source & destination points
-    normalizePoints(srcpts, src, srcnorm, tmp); // M: normalize source coordinates
-    normalizePoints(destpts, dest, tmp, destdenorm); // W: denormalize destination coordinates
+    Mat32_transform_normalize(srcpts, src, srcnorm, tmp); // M: normalize source coordinates
+    Mat32_transform_normalize(destpts, dest, tmp, destdenorm); // W: denormalize destination coordinates
 
     // compute the DLT using the normalized points
     Mat32_homography_dlt(hom, srcpts, destpts); // H: homography in normalized space

@@ -22,6 +22,7 @@
 #include "speedy.h"
 #include "affine32.h"
 #include "arithmetic32.h"
+#include "transform32.h"
 #include "qr32.h"
 
 /*
@@ -207,6 +208,63 @@ WASM_EXPORT const Mat32* Mat32_affine_dlt(const Mat32* result, const Mat32* src,
     Mat32_destroy(vecH);
     Mat32_destroy(vecB);
     Mat32_destroy(matA);
+
+    // done!
+    return result;
+}
+
+/**
+ * Find an affine transform using n >= 3 correspondences of points (u,v) to (x,y)
+ * using the normalized Direct Linear Transform (nDLT). The input matrices
+ * are expected to be 2 x n.
+ * @param result a 2x3 output matrix (affine)
+ * @param src a 2 x n input matrix (source coordinates)
+ * @param dest a 2 x n input matrix (destination coordinates)
+ * @returns result
+ */
+WASM_EXPORT const Mat32* Mat32_affine_ndlt(const Mat32* result, const Mat32* src, const Mat32* dest)
+{
+    assert(
+        result->rows == 2 && result->columns == 3 &&
+        src->rows == 2 && src->columns >= 3 &&
+        dest->rows == 2 && dest->columns == src->columns
+    );
+
+    int n = src->columns;
+
+    // allocate matrices
+    Mat32* srcpts = Mat32_zeros(2, n);
+    Mat32* destpts = Mat32_zeros(2, n);
+    Mat32* srcnorm = Mat32_zeros(3, 3);
+    Mat32* destdenorm = Mat32_zeros(3, 3);
+    Mat32* mat3 = Mat32_eye(3, 3);
+    Mat32* mat2 = Mat32_block(Mat32_blank(), mat3, 0, 1, 0, 2);
+    Mat32* tmp = Mat32_zeros(3, 3);
+    Mat32* tmp2 = Mat32_zeros(3, 3);
+    Mat32* tmp3 = Mat32_block(Mat32_blank(), tmp2, 0, 1, 0, 2);
+
+    // normalize source & destination points
+    Mat32_transform_normalize(srcpts, src, srcnorm, tmp); // M: normalize source coordinates
+    Mat32_transform_normalize(destpts, dest, tmp, destdenorm); // W: denormalize destination coordinates
+
+    // compute the DLT using the normalized points
+    Mat32_affine_dlt(mat2, srcpts, destpts); // A: affine transform in normalized space
+
+    // compute the normalized DLT
+    Mat32_multiply3(tmp, mat3, srcnorm); // tmp: A M (3x3)
+    Mat32_multiply3(tmp2, destdenorm, tmp); // tmp2: W A M (3x3) - the 3rd row is [ 0  0  1 ]
+    Mat32_copy(result, tmp3); // result: W A M (2x3)
+
+    // deallocate matrices
+    Mat32_destroy(tmp3);
+    Mat32_destroy(tmp2);
+    Mat32_destroy(tmp);
+    Mat32_destroy(mat2);
+    Mat32_destroy(mat3);
+    Mat32_destroy(destdenorm);
+    Mat32_destroy(srcnorm);
+    Mat32_destroy(destpts);
+    Mat32_destroy(srcpts);
 
     // done!
     return result;

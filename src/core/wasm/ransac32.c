@@ -418,8 +418,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_affine(const Mat32* result, const Mat32* 
                 Mat32_at(idest, 1, i) = Mat32_at(dest, 1, inliers[i]);
             }
 
-            //Mat32_affine_ndlt(result, isrc, idest);
-            Mat32_affine_dlt(result, isrc, idest); // FIXME use normalized version
+            Mat32_affine_ndlt(result, isrc, idest);
 
             // release
             Mat32_destroy(idest);

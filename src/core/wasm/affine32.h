@@ -26,5 +26,6 @@
 
 const Mat32* Mat32_affine_dlt3(const Mat32* result, const Mat32* src, const Mat32* dest);
 const Mat32* Mat32_affine_dlt(const Mat32* result, const Mat32* src, const Mat32* dest);
+const Mat32* Mat32_affine_ndlt(const Mat32* result, const Mat32* src, const Mat32* dest);
 
 #endif

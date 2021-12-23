@@ -27,4 +27,6 @@
 const Mat32* Mat32_transform_perspective(const Mat32* dest, const Mat32* src, const Mat32* transform);
 const Mat32* Mat32_transform_affine(const Mat32* dest, const Mat32* src, const Mat32* transform);
 
+void Mat32_transform_normalize(const Mat32* normalizedPoints, const Mat32* inputPoints, const Mat32* normalizer, const Mat32* denormalizer);
+
 #endif

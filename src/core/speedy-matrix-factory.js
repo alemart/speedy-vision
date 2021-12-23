@@ -470,8 +470,7 @@ export class SpeedyMatrixFactory extends Function
                     break;
 
                 case 'dlt':
-                    wasm.exports.Mat32_affine_dlt(matptr, srcptr, destptr);
-                    //wasm.exports.Mat32_affine_ndlt(matptr, srcptr, destptr);
+                    wasm.exports.Mat32_affine_ndlt(matptr, srcptr, destptr);
                     break;
 
                 default:
