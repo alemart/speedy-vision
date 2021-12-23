@@ -55,7 +55,7 @@ Matrix A is a 2x3 affine transform.
  * @param ui_vi input coordinates
  * @param xj_yj output coordinates
  */
-static void affine3(const Mat32* result,
+static void find_affine3(const Mat32* result,
     double u0, double v0, double u1, double v1, double u2, double v2,
     double x0, double y0, double x1, double y1, double x2, double y2
 )
@@ -103,53 +103,14 @@ static void affine3(const Mat32* result,
 }
 
 /**
- * Find an affine model using 3 correspondences of points. We'll map
- * (u,v) to (x,y). The input matrices are expected to have the form:
- * 
- *       src           dest
- * [ u0  u1  u2 ] [ x0  x1  x2 ]
- * [ v0  v1  v2 ] [ y0  y1  y2 ]
- * 
- * @param result a 2x3 output matrix that will store the affine transform
- * @param src a 2x3 input matrix storing the (u,v) source coordinates
- * @param dest a 2x3 input matrix storing the (x,y) destination coordinates
- * @returns result
- */
-WASM_EXPORT const Mat32* Mat32_affine_dlt3(const Mat32* result, const Mat32* src, const Mat32* dest)
-{
-    assert(
-        result->rows == 2 && result->columns == 3 &&
-        src->rows == 2 && src->columns == 3 &&
-        dest->rows == 2 && dest->columns == 3
-    );
-
-    // Read (ui, vi) - source coordinates
-    float u0 = Mat32_at(src, 0, 0), v0 = Mat32_at(src, 1, 0),
-          u1 = Mat32_at(src, 0, 1), v1 = Mat32_at(src, 1, 1),
-          u2 = Mat32_at(src, 0, 2), v2 = Mat32_at(src, 1, 2);
-
-    // Read (xi, yi) - destination coordinates
-    float x0 = Mat32_at(dest, 0, 0), y0 = Mat32_at(dest, 1, 0),
-          x1 = Mat32_at(dest, 0, 1), y1 = Mat32_at(dest, 1, 1),
-          x2 = Mat32_at(dest, 0, 2), y2 = Mat32_at(dest, 1, 2);
-
-    // Find affine model
-    affine3(result, u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2);
-
-    // done!
-    return result;
-}
-
-/**
- * Find an affine model using n >= 3 correspondences of points (u,v) to (x,y)
- * using the Direct Linear Transform (DLT). No normalization takes place.
- * The input matrices are expected to be 2 x n.
+ * Find an affine model using n >= 3 correspondences of points (u,v) to (x,y).
+ * No normalization takes place before computing the model.
  * @param result a 2x3 output matrix (affine transform)
  * @param src a 2 x n input matrix (source coordinates)
  * @param dest a 2 x n input matrix (destination coordinates)
  * @returns result
  */
-WASM_EXPORT const Mat32* Mat32_affine_dlt(const Mat32* result, const Mat32* src, const Mat32* dest)
+const Mat32* find_affine(const Mat32* result, const Mat32* src, const Mat32* dest)
 {
     assert(
         result->rows == 2 && result->columns == 3 &&
@@ -214,15 +175,52 @@ WASM_EXPORT const Mat32* Mat32_affine_dlt(const Mat32* result, const Mat32* src,
 }
 
 /**
- * Find an affine transform using n >= 3 correspondences of points (u,v) to (x,y)
- * using the normalized Direct Linear Transform (nDLT). The input matrices
- * are expected to be 2 x n.
+ * Find an affine model using 3 correspondences of points. We'll map
+ * (u,v) to (x,y). The input matrices are expected to have the form:
+ *
+ *       src           dest
+ * [ u0  u1  u2 ] [ x0  x1  x2 ]
+ * [ v0  v1  v2 ] [ y0  y1  y2 ]
+ *
+ * @param result a 2x3 output matrix that will store the affine transform
+ * @param src a 2x3 input matrix storing the (u,v) source coordinates
+ * @param dest a 2x3 input matrix storing the (x,y) destination coordinates
+ * @returns result
+ */
+WASM_EXPORT const Mat32* Mat32_affine_direct3(const Mat32* result, const Mat32* src, const Mat32* dest)
+{
+    assert(
+        result->rows == 2 && result->columns == 3 &&
+        src->rows == 2 && src->columns == 3 &&
+        dest->rows == 2 && dest->columns == 3
+    );
+
+    // Read (ui, vi) - source coordinates
+    float u0 = Mat32_at(src, 0, 0), v0 = Mat32_at(src, 1, 0),
+          u1 = Mat32_at(src, 0, 1), v1 = Mat32_at(src, 1, 1),
+          u2 = Mat32_at(src, 0, 2), v2 = Mat32_at(src, 1, 2);
+
+    // Read (xi, yi) - destination coordinates
+    float x0 = Mat32_at(dest, 0, 0), y0 = Mat32_at(dest, 1, 0),
+          x1 = Mat32_at(dest, 0, 1), y1 = Mat32_at(dest, 1, 1),
+          x2 = Mat32_at(dest, 0, 2), y2 = Mat32_at(dest, 1, 2);
+
+    // Find affine model
+    find_affine3(result, u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2);
+
+    // done!
+    return result;
+}
+
+/**
+ * Find an affine transform using n >= 3 correspondences of points (u,v) to (x,y).
+ * A normalization takes place before computing the model.
  * @param result a 2x3 output matrix (affine)
  * @param src a 2 x n input matrix (source coordinates)
  * @param dest a 2 x n input matrix (destination coordinates)
  * @returns result
  */
-WASM_EXPORT const Mat32* Mat32_affine_ndlt(const Mat32* result, const Mat32* src, const Mat32* dest)
+WASM_EXPORT const Mat32* Mat32_affine_direct(const Mat32* result, const Mat32* src, const Mat32* dest)
 {
     assert(
         result->rows == 2 && result->columns == 3 &&
@@ -247,10 +245,10 @@ WASM_EXPORT const Mat32* Mat32_affine_ndlt(const Mat32* result, const Mat32* src
     Mat32_transform_normalize(srcpts, src, srcnorm, tmp); // M: normalize source coordinates
     Mat32_transform_normalize(destpts, dest, tmp, destdenorm); // W: denormalize destination coordinates
 
-    // compute the DLT using the normalized points
-    Mat32_affine_dlt(mat2, srcpts, destpts); // A: affine transform in normalized space
+    // compute the model using the normalized points
+    find_affine(mat2, srcpts, destpts); // A: affine transform in normalized space
 
-    // compute the normalized DLT
+    // compute the normalized model
     Mat32_multiply3(tmp, mat3, srcnorm); // tmp: A M (3x3)
     Mat32_multiply3(tmp2, destdenorm, tmp); // tmp2: W A M (3x3) - the 3rd row is [ 0  0  1 ]
     Mat32_copy(result, tmp3); // result: W A M (2x3)

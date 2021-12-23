@@ -327,8 +327,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_affine(const Mat32* result, const Mat32* 
         hypothesis[h].score = 0;
 
         // compute the model (must be fast)
-        Mat32_affine_dlt3(hypothesis[h].model, src3, dest3);
-        //Mat32_affine_ndlt3(hypothesis[h].homography, src3, dest3); // the points should already be normalized when invoking RANSAC
+        Mat32_affine_direct3(hypothesis[h].model, src3, dest3);
 
         // got an invalid model?
         if(isnan(Mat32_at(hypothesis[h].model, 0, 0))) {
@@ -406,7 +405,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_affine(const Mat32* result, const Mat32* 
             }
         }
 
-        // compute a new model via normalized DLT using only the inliers
+        // recompute the model using the inliers
         if(numberOfInliers >= 3) {
             Mat32* isrc = Mat32_zeros(2, numberOfInliers);
             Mat32* idest = Mat32_zeros(2, numberOfInliers);
@@ -418,7 +417,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_affine(const Mat32* result, const Mat32* 
                 Mat32_at(idest, 1, i) = Mat32_at(dest, 1, inliers[i]);
             }
 
-            Mat32_affine_ndlt(result, isrc, idest);
+            Mat32_affine_direct(result, isrc, idest);
 
             // release
             Mat32_destroy(idest);

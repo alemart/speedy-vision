@@ -740,7 +740,7 @@ describe('Geometric transformations', function() {
 
     });
 
-    describe('Planar homography with DLT', function() {
+    describe('Planar homography with the default method (normalized DLT)', function() {
 
         it('computes a planar homography using 4 correspondences', async function() {
 
@@ -760,7 +760,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', srcQuad);
             printm('To:', dstQuad);
@@ -792,7 +792,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', srcQuad);
             printm('To:', dstQuad);
@@ -830,7 +830,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', srcQuad);
             printm('To:', dstQuad);
@@ -861,7 +861,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             })).toThrow();
 
         });
@@ -884,7 +884,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', srcQuad);
             printm('To:', dstQuad);
@@ -901,7 +901,7 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
-                method: 'dlt',
+                method: 'default',
             });
 
             printm('From:', srcQuad);
@@ -1142,7 +1142,7 @@ describe('Geometric transformations', function() {
 
     });
 
-    describe('Affine transform with DLT', function() {
+    describe('Affine transform with the default method', function() {
 
         it('computes an affine transform using 3 correspondences', async function() {
 
@@ -1160,7 +1160,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             await Speedy.Matrix.findAffineTransform(transform, srcTrig, dstTrig, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', srcTrig);
             printm('To:', dstTrig);
@@ -1192,7 +1192,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             await Speedy.Matrix.findAffineTransform(transform, src, dst, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', src);
             printm('To:', dst);
@@ -1230,7 +1230,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             await Speedy.Matrix.findAffineTransform(transform, src, dst, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', src);
             printm('To:', dst);
@@ -1259,7 +1259,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             expect(() => Speedy.Matrix.findAffineTransform(transform, src, dst, {
-                method: 'dlt',
+                method: 'default',
             })).toThrow();
 
         });
@@ -1280,7 +1280,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             await Speedy.Matrix.findAffineTransform(transform, src, dst, {
-                method: 'dlt',
+                method: 'default',
             });
             printm('From:', src);
             printm('To:', dst);
@@ -1297,7 +1297,7 @@ describe('Geometric transformations', function() {
 
             const transform = Speedy.Matrix.Zeros(2, 3);
             await Speedy.Matrix.findAffineTransform(transform, src, dst, {
-                method: 'dlt',
+                method: 'default',
             });
 
             printm('From:', src);

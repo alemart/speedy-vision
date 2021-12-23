@@ -235,7 +235,7 @@ static void homography4(const Mat32* result,
  * @param dest a 2x4 input matrix storing the (x,y) destination coordinates
  * @returns result
  */
-WASM_EXPORT const Mat32* Mat32_homography_dlt4(const Mat32* result, const Mat32* src, const Mat32* dest)
+const Mat32* Mat32_homography_dlt4(const Mat32* result, const Mat32* src, const Mat32* dest)
 {
     assert(
         result->rows == 3 && result->columns == 3 &&
@@ -257,6 +257,86 @@ WASM_EXPORT const Mat32* Mat32_homography_dlt4(const Mat32* result, const Mat32*
 
     // Find homography
     homography4(result, u0, v0, u1, v1, u2, v2, u3, v3, x0, y0, x1, y1, x2, y2, x3, y3);
+
+    // done!
+    return result;
+}
+
+/**
+ * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
+ * using the Direct Linear Transform (DLT). No normalization takes place.
+ * The input matrices are expected to be 2 x n.
+ * @param result a 3x3 output matrix (homography)
+ * @param src a 2 x n input matrix (source coordinates)
+ * @param dest a 2 x n input matrix (destination coordinates)
+ * @returns result
+ */
+const Mat32* Mat32_homography_dlt(const Mat32* result, const Mat32* src, const Mat32* dest)
+{
+    assert(
+        result->rows == 3 && result->columns == 3 &&
+        src->rows == 2 && src->columns >= 4 &&
+        dest->rows == 2 && dest->columns == src->columns
+    );
+
+    int n = src->columns;
+
+    // allocate matrices
+    Mat32* matA = Mat32_zeros(2*n, 8);
+    Mat32* vecB = Mat32_zeros(2*n, 1);
+    Mat32* vecH = Mat32_zeros(8, 1);
+
+    //
+    // create a system of linear equations Ah = b
+    //
+    // [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
+    // [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
+    //
+    for(int i = 0, j = 0; j < n; j++, i += 2) {
+        float uj = Mat32_at(src, 0, j);
+        float vj = Mat32_at(src, 1, j);
+        float xj = Mat32_at(dest, 0, j);
+        float yj = Mat32_at(dest, 1, j);
+
+        Mat32_at(matA, i, 0) = uj;
+        Mat32_at(matA, i, 1) = vj;
+        Mat32_at(matA, i, 2) = 1.0f;
+
+        Mat32_at(matA, i+1, 3) = uj;
+        Mat32_at(matA, i+1, 4) = vj;
+        Mat32_at(matA, i+1, 5) = 1.0f;
+
+        Mat32_at(matA, i, 6) = -uj * xj;
+        Mat32_at(matA, i+1, 6) = -uj * yj;
+        Mat32_at(matA, i, 7) = -vj * xj;
+        Mat32_at(matA, i+1, 7) = -vj * yj;
+
+        Mat32_at(vecB, i, 0) = xj;
+        Mat32_at(vecB, i+1, 0) = yj;
+    }
+
+    // solve Ah = b for h
+    Mat32_qr_ols(vecH, matA, vecB, 3);
+
+    // read the homography
+    float a = Mat32_at(vecH, 0, 0), b = Mat32_at(vecH, 1, 0), c = Mat32_at(vecH, 2, 0),
+          d = Mat32_at(vecH, 3, 0), e = Mat32_at(vecH, 4, 0), f = Mat32_at(vecH, 5, 0),
+          g = Mat32_at(vecH, 6, 0), h = Mat32_at(vecH, 7, 0), i = 1.0f;
+
+    // bad homography?
+    float det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
+    if(isnan(det) || fabs(det) < EPS)
+        a = b = c = d = e = f = g = h = i = NAN;
+
+    // write the homography to the output
+    Mat32_at(result, 0, 0) = a; Mat32_at(result, 0, 1) = b; Mat32_at(result, 0, 2) = c;
+    Mat32_at(result, 1, 0) = d; Mat32_at(result, 1, 1) = e; Mat32_at(result, 1, 2) = f;
+    Mat32_at(result, 2, 0) = g; Mat32_at(result, 2, 1) = h; Mat32_at(result, 2, 2) = i;
+
+    // deallocate matrices
+    Mat32_destroy(vecH);
+    Mat32_destroy(vecB);
+    Mat32_destroy(matA);
 
     // done!
     return result;
@@ -341,86 +421,6 @@ WASM_EXPORT const Mat32* Mat32_homography_ndlt4(const Mat32* result, const Mat32
     Mat32_at(result, 0, 2) = dcx * tmp + z * (h02 - s * (scx * h00 + scy * h01));
     Mat32_at(result, 1, 2) = dcy * tmp + z * (h12 - s * (scx * h10 + scy * h11));
     Mat32_at(result, 2, 2) = tmp;
-
-    // done!
-    return result;
-}
-
-/**
- * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
- * using the Direct Linear Transform (DLT). No normalization takes place.
- * The input matrices are expected to be 2 x n.
- * @param result a 3x3 output matrix (homography)
- * @param src a 2 x n input matrix (source coordinates)
- * @param dest a 2 x n input matrix (destination coordinates)
- * @returns result
- */
-WASM_EXPORT const Mat32* Mat32_homography_dlt(const Mat32* result, const Mat32* src, const Mat32* dest)
-{
-    assert(
-        result->rows == 3 && result->columns == 3 &&
-        src->rows == 2 && src->columns >= 4 &&
-        dest->rows == 2 && dest->columns == src->columns
-    );
-
-    int n = src->columns;
-
-    // allocate matrices
-    Mat32* matA = Mat32_zeros(2*n, 8);
-    Mat32* vecB = Mat32_zeros(2*n, 1);
-    Mat32* vecH = Mat32_zeros(8, 1);
-
-    //
-    // create a system of linear equations Ah = b
-    //
-    // [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
-    // [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
-    //
-    for(int i = 0, j = 0; j < n; j++, i += 2) {
-        float uj = Mat32_at(src, 0, j);
-        float vj = Mat32_at(src, 1, j);
-        float xj = Mat32_at(dest, 0, j);
-        float yj = Mat32_at(dest, 1, j);
-
-        Mat32_at(matA, i, 0) = uj;
-        Mat32_at(matA, i, 1) = vj;
-        Mat32_at(matA, i, 2) = 1.0f;
-
-        Mat32_at(matA, i+1, 3) = uj;
-        Mat32_at(matA, i+1, 4) = vj;
-        Mat32_at(matA, i+1, 5) = 1.0f;
-
-        Mat32_at(matA, i, 6) = -uj * xj;
-        Mat32_at(matA, i+1, 6) = -uj * yj;
-        Mat32_at(matA, i, 7) = -vj * xj;
-        Mat32_at(matA, i+1, 7) = -vj * yj;
-
-        Mat32_at(vecB, i, 0) = xj;
-        Mat32_at(vecB, i+1, 0) = yj;
-    }
-
-    // solve Ah = b for h
-    Mat32_qr_ols(vecH, matA, vecB, 3);
-
-    // read the homography
-    float a = Mat32_at(vecH, 0, 0), b = Mat32_at(vecH, 1, 0), c = Mat32_at(vecH, 2, 0),
-          d = Mat32_at(vecH, 3, 0), e = Mat32_at(vecH, 4, 0), f = Mat32_at(vecH, 5, 0),
-          g = Mat32_at(vecH, 6, 0), h = Mat32_at(vecH, 7, 0), i = 1.0f;
-
-    // bad homography?
-    float det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
-    if(isnan(det) || fabs(det) < EPS)
-        a = b = c = d = e = f = g = h = i = NAN;
-
-    // write the homography to the output
-    Mat32_at(result, 0, 0) = a; Mat32_at(result, 0, 1) = b; Mat32_at(result, 0, 2) = c;
-    Mat32_at(result, 1, 0) = d; Mat32_at(result, 1, 1) = e; Mat32_at(result, 1, 2) = f;
-    Mat32_at(result, 2, 0) = g; Mat32_at(result, 2, 1) = h; Mat32_at(result, 2, 2) = i;
-
-    // deallocate matrices
-    Mat32_destroy(vecH);
-    Mat32_destroy(vecB);
-    Mat32_destroy(matA);
 
     // done!
     return result;

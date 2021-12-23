@@ -2117,7 +2117,7 @@ Table of methods:
 
 | Method            | Description |
 |-------------------|-------------|
-| `"dlt"` | Normalized Direct Linear Transform (DLT). All points will be used to estimate the homography. Use this method if your data set is **not** polluted with outliers. This is the default method. |
+| `"default"` | Normalized Direct Linear Transform (DLT). All points will be used to estimate the homography. Use this method if your data set is **not** polluted with outliers.
 | `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. |
 
 Table of parameters:
@@ -2279,15 +2279,11 @@ Compute an affine `transform` using a set of *n* >= 3 correspondences of points,
 
 Table of methods:
 
-
-| Method            | Description |
-|-------------------|-------------|
-| `"dlt"` | Direct Linear Transform (DLT). All points will be used to estimate the affine transform. Use this method if your data set is **not** polluted with outliers. This is the default method. |
-| `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. |
+* the same as [Speedy.Matrix.findHomography()](#speedymatrixfindhomography).
 
 Table of parameters:
 
-* for methods `"dlt"` and `"pransac"`: the same as [Speedy.Matrix.findHomography()](#speedymatrixfindhomography).
+* the same as [Speedy.Matrix.findHomography()](#speedymatrixfindhomography).
 
 ###### Returns
 

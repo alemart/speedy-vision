@@ -273,7 +273,7 @@ export class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {'default'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -281,7 +281,7 @@ export class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
      */
     findHomography(homography, src, dest, {
-        method = 'dlt',
+        method = 'default',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 512,
@@ -314,7 +314,8 @@ export class SpeedyMatrixFactory extends Function
                     wasm.exports.Mat32_pransac_homography(homptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
-                case 'dlt':
+                case 'default':
+                case 'dlt': // obsolete
                     wasm.exports.Mat32_homography_ndlt(homptr, srcptr, destptr);
                     break;
 
@@ -406,8 +407,7 @@ export class SpeedyMatrixFactory extends Function
             SpeedyMatrixWASM.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
-            wasm.exports.Mat32_affine_dlt3(matptr, srcptr, destptr); // FIXME use normalized version
-            //wasm.exports.Mat32_affine_ndlt3(matptr, srcptr, destptr);
+            wasm.exports.Mat32_affine_direct3(matptr, srcptr, destptr);
 
             // copy output matrix from WASM memory
             SpeedyMatrixWASM.copyFromMat32(wasm, memory, matptr, transform);
@@ -428,7 +428,7 @@ export class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {'default'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -436,7 +436,7 @@ export class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to an affine transform
      */
     findAffineTransform(transform, src, dest, {
-        method = 'dlt',
+        method = 'default',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 512,
@@ -469,8 +469,8 @@ export class SpeedyMatrixFactory extends Function
                     wasm.exports.Mat32_pransac_affine(matptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
-                case 'dlt':
-                    wasm.exports.Mat32_affine_ndlt(matptr, srcptr, destptr);
+                case 'default':
+                    wasm.exports.Mat32_affine_direct(matptr, srcptr, destptr);
                     break;
 
                 default:
