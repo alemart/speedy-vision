@@ -20,6 +20,7 @@
  */
 
 import { SpeedyKeypointDescriptor } from './speedy-keypoint-descriptor';
+import { SpeedyKeypointMatch } from './speedy-keypoint-match';
 import { SpeedyPoint2 } from './speedy-point';
 import { SpeedyVector2 } from './speedy-vector';
 
@@ -167,5 +168,38 @@ export class SpeedyTrackedKeypoint extends SpeedyKeypoint
     get flow()
     {
         return this._flow;
+    }
+}
+
+/**
+ * Represents a matched keypoint
+ */
+export class SpeedyMatchedKeypoint extends SpeedyKeypoint
+{
+    /**
+     * Constructor
+     * @param {number} x X position
+     * @param {number} y Y position
+     * @param {number} [lod] Level-of-detail
+     * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
+     * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
+     * @param {SpeedyKeypointMatch[]} [matches] Keypoint matches, if any
+     */
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, matches = [])
+    {
+        super(x, y, lod, rotation, score, descriptor);
+
+        /** @type {SpeedyKeypointMatch[]} keypoint matches */
+        this._matches = matches;
+    }
+
+    /**
+     * Keypoint matches
+     * @returns {SpeedyKeypointMatch[]}
+     */
+    get matches()
+    {
+        return this._matches;
     }
 }

@@ -94,6 +94,13 @@ export class Utils {
      */
     static range(n: number): number[];
     /**
+     * Shuffle in-place
+     * @template T
+     * @param {T[]} arr
+     * @returns {T} arr
+     */
+    static shuffle<T>(arr: T[]): T;
+    /**
      * Flatten an array (1 level only)
      * @template U
      * @param {U[]} array

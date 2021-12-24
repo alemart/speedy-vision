@@ -90,6 +90,7 @@ struct KeypointAddress
  * Keypoint Constants
  */
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
+const int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@); // in bytes
 const uint KPF_NONE = 0u; // no flags
 const uint KPF_NULL = 1u; // "null" keypoint (end of list)
 const uint KPF_DISCARDED = 2u; // discarded keypoint

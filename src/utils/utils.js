@@ -330,6 +330,31 @@ export class Utils
     }
 
     /**
+     * Shuffle in-place
+     * @template T
+     * @param {T[]} arr
+     * @returns {T} arr
+     */
+    static shuffle(arr)
+    {
+        const len = arr.length;
+        const m = len - 1;
+
+        // Fisher-Yattes
+        for(let i = 0; i < m; i++) {
+            const j = i + ((Math.random() * (len - i)) | 0); // i <= j < arr.length
+
+            if(i !== j) {
+                const t = arr[i];
+                arr[i] = arr[j];
+                arr[j] = t;
+            }
+        }
+
+        return arr;
+    }
+
+    /**
      * Flatten an array (1 level only)
      * @template U
      * @param {U[]} array

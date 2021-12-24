@@ -331,7 +331,7 @@ export class SpeedyPipelineNode
 }
 
 /**
- * Source node (located at the beginning of a pipeline)
+ * Source node (a node with no input ports)
  * @abstract
  */
 export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
@@ -359,7 +359,7 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
 }
 
 /**
- * Sink node (located at the end of a pipeline)
+ * Sink node (a node with no output ports)
  * @abstract
  */
 export class SpeedyPipelineSinkNode extends SpeedyPipelineNode

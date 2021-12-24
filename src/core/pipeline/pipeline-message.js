@@ -23,6 +23,7 @@ import { Utils } from '../../utils/utils';
 import { ImageFormat } from '../../utils/types';
 import { AbstractMethodError } from '../../utils/errors';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../gpu/speedy-texture';
+import { SpeedyLSH } from '../../gpu/speedy-lsh';
 
 /**
  * Types of messages
@@ -33,6 +34,8 @@ export const SpeedyPipelineMessageType = Object.freeze({
     Image: Symbol('Image'),
     Keypoints: Symbol('Keypoints'),
     Vector2: Symbol('Vector2'),
+    LSHTables: Symbol('LSHTables'),
+    KeypointMatches: Symbol('KeypointMatches'),
 });
 
 /**
@@ -278,7 +281,7 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 }
 
-/**
+/*
  * A message transporting a set of 2D vectors
  */
 export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
@@ -318,6 +321,102 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
     }
 }
 
+/**
+ * A message transporting LSH tables
+ */
+export class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.LSHTables);
+
+        /** @type {SpeedyLSH} LSH data structure */
+        this._lsh = null;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyLSH} lsh
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(lsh)
+    {
+        // set parameters
+        this._lsh = lsh;
+
+        // done!
+        return this;
+    }
+
+    /**
+     * LSH data structure
+     * @returns {SpeedyLSH}
+     */
+    get lsh()
+    {
+        return this._lsh;
+    }
+}
+
+/*
+ * A message transporting a set of keypoint matches
+ */
+export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.KeypointMatches);
+
+        /** @type {SpeedyDrawableTexture} keypoint matches (note: 1 pixel encodes 1 match) */
+        this._encodedMatches = null;
+
+        /** @type {number} number of matches per keypoint */
+        this._matchesPerKeypoint = 1;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} encodedMatches
+     * @param {number} matchesPerKeypoint
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(encodedMatches, matchesPerKeypoint)
+    {
+        // set parameters
+        this._encodedMatches = encodedMatches;
+        this._matchesPerKeypoint = matchesPerKeypoint | 0;
+
+        // validate
+        Utils.assert(this._matchesPerKeypoint > 0);
+
+        // done!
+        return this;
+    }
+
+    /**
+     * The matches
+     * @returns {SpeedyDrawableTexture}
+     */
+    get encodedMatches()
+    {
+        return this._encodedMatches;
+    }
+
+    /**
+     * Number of matches per keypoint
+     * @returns {number}
+     */
+    get matchesPerKeypoint()
+    {
+        return this._matchesPerKeypoint;
+    }
+}
 
 
 
@@ -336,6 +435,8 @@ const MESSAGE_CLASS = Object.freeze({
     [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
     [SpeedyPipelineMessageType.Keypoints]: SpeedyPipelineMessageWithKeypoints,
     [SpeedyPipelineMessageType.Vector2]: SpeedyPipelineMessageWith2DVectors,
+    [SpeedyPipelineMessageType.LSHTables]: SpeedyPipelineMessageWithLSHTables,
+    [SpeedyPipelineMessageType.KeypointMatches]: SpeedyPipelineMessageWithKeypointMatches,
 });
 
 /**

@@ -22,6 +22,7 @@
 import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
+import { LSH_SEQUENCE_COUNT, LSH_SEQUENCE_MAXLEN, LSH_ACCEPTABLE_DESCRIPTOR_SIZES, LSH_ACCEPTABLE_HASH_SIZES } from '../speedy-lsh';
 import { importShader } from '../shader-declaration';
 
 
@@ -118,6 +119,22 @@ const lk = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21].reduce((obj, win) => ((obj[win] 
 
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+// LSH-based KNN matching
+const lshKnnInitCandidates = importShader('keypoints/lsh-knn-init.glsl')
+                            .withDefines({ 'ENCODE_FILTERS': 0 });
+
+const lshKnnInitFilters = importShader('keypoints/lsh-knn-init.glsl')
+                         .withDefines({ 'ENCODE_FILTERS': 1 });
+
+const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => ((obj[descriptorSize] = LSH_ACCEPTABLE_HASH_SIZES.reduce((obj, hashSize) => ((obj[hashSize] = [0, 1, 2].reduce((obj, level) => ((obj[level] =
+                  importShader('keypoints/lsh-knn.glsl')
+                  .withDefines({ 'DESCRIPTOR_SIZE': descriptorSize, 'HASH_SIZE': hashSize, 'LEVEL': level, 'SEQUENCE_MAXLEN': LSH_SEQUENCE_MAXLEN, 'SEQUENCE_COUNT': LSH_SEQUENCE_COUNT })
+                  .withArguments('candidates', 'filters', 'matcherLength', 'tables', 'descriptorDB', 'tableIndex', 'bucketCapacity', 'bucketsPerTable', 'tablesStride', 'descriptorDBStride', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength')
+              ), obj), {})), obj), {})), obj), {});
+
+const lshKnnTransfer = importShader('keypoints/lsh-knn-transfer.glsl')
+                       .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
 // Keypoint sorting
 const sortCreatePermutation = importShader('keypoints/sort-keypoints.glsl')
@@ -324,6 +341,15 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('transferFlow', transferFlow)
 
             //
+            // LSH-based KNN matching
+            //
+            .declare('lshKnnInitCandidates', lshKnnInitCandidates)
+            .declare('lshKnnInitFilters', lshKnnInitFilters)
+            .declare('lshKnnTransfer', lshKnnTransfer, {
+                ...this.program.usesPingpongRendering()
+            })
+
+            //
             // Keypoint sorting
             //
             .declare('sortCreatePermutation', sortCreatePermutation)
@@ -382,5 +408,19 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('clipBorder', clipBorder)
             .declare('distanceFilter', distanceFilter)
         ;
+
+        //
+        // LSH-based KNN matching
+        //
+        for(const descriptorSize of Object.keys(lshKnn)) {
+            for(const hashSize of Object.keys(lshKnn[descriptorSize])) {
+                for(const level of Object.keys(lshKnn[descriptorSize][hashSize])) {
+                    const name = `lshKnn${descriptorSize}h${hashSize}lv${level}`;
+                    this.declare(name, lshKnn[descriptorSize][hashSize][level], {
+                        ...this.program.usesPingpongRendering()
+                    });
+                }
+            }
+        }
     }
 }

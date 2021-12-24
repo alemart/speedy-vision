@@ -18,5 +18,17 @@ export const MIN_ENCODER_LENGTH: number;
 export const MAX_ENCODER_CAPACITY: number;
 /** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
 export const DEFAULT_ENCODER_CAPACITY: number;
+/** @type {number} log2 of the maximum size of a keypoint descriptor, in bytes */
+export const LOG2_MAX_DESCRIPTOR_SIZE: number;
+/** @type {number} maximum size of a keypoint descriptor, in bytes */
+export const MAX_DESCRIPTOR_SIZE: number;
+/** @type {number} How many bits will we use when encoding the index of a keypoint match? */
+export const MATCH_INDEX_BITS: number;
+/** @type {number} Bitwise mask to extract a keypoint index from an encoded match */
+export const MATCH_INDEX_MASK: number;
+/** @type {number} Maximum size of the database of keypoints for matching */
+export const MATCH_MAX_INDEX: number;
+/** @type {number} The maximum distance that can be stored in a match */
+export const MATCH_MAX_DISTANCE: number;
 /** @type {boolean} Are we in a little-endian machine? */
 export const LITTLE_ENDIAN: boolean;

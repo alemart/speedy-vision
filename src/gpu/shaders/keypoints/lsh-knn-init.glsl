@@ -15,33 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * int32.glsl
- * Encode 32-bit integers into RGBA tuples
+ * lsh-knn-init.glsl
+ * Initialize the LSH-based KNN candidates
  */
 
-#ifndef _INT32_GLSL
-#define _INT32_GLSL
+@include "keypoint-matches.glsl"
 
-/**
- * Convert a RGBA tuple into a uint32 using little-endian
- * @param {vec4} rgba in [0,1]^4
- * @returns {uint} 32-bit unsigned integer
- */
-uint decodeUint32(vec4 rgba)
+void main()
 {
-    uvec4 v = uvec4(rgba * 255.0f) & 255u;
-    return v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);
-}
-
-/**
- * Convert a uint32 into a RGBA tuple using little-endian
- * @param {uint} value
- * @returns {vec4} RGBA tuple
- */
-vec4 encodeUint32(uint value)
-{
-    uvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;
-    return vec4(v) / 255.0f;
-}
-
+#if ENCODE_FILTERS != 0
+    // initial filters: invalid index, zero distance
+    KeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, 0);
+#else
+    // initial candidates: max. distance
+    KeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);
 #endif
+
+    color = encodeKeypointMatch(initial);
+}

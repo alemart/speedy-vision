@@ -11,6 +11,8 @@ export const SpeedyPipelineMessageType: Readonly<{
     Image: symbol;
     Keypoints: symbol;
     Vector2: symbol;
+    LSHTables: symbol;
+    KeypointMatches: symbol;
 }>;
 /**
  * A message that is shared between nodes of a pipeline
@@ -128,9 +130,6 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage {
      */
     get encoderLength(): number;
 }
-/**
- * A message transporting a set of 2D vectors
- */
 export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage {
     /**
      * Constructor
@@ -144,5 +143,42 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage {
      */
     get vectors(): SpeedyDrawableTexture;
 }
+/**
+ * A message transporting LSH tables
+ */
+export class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage {
+    /**
+     * Constructor
+     */
+    constructor();
+    /** @type {SpeedyLSH} LSH data structure */
+    _lsh: SpeedyLSH;
+    /**
+     * LSH data structure
+     * @returns {SpeedyLSH}
+     */
+    get lsh(): SpeedyLSH;
+}
+export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage {
+    /**
+     * Constructor
+     */
+    constructor();
+    /** @type {SpeedyDrawableTexture} keypoint matches (note: 1 pixel encodes 1 match) */
+    _encodedMatches: SpeedyDrawableTexture;
+    /** @type {number} number of matches per keypoint */
+    _matchesPerKeypoint: number;
+    /**
+     * The matches
+     * @returns {SpeedyDrawableTexture}
+     */
+    get encodedMatches(): SpeedyDrawableTexture;
+    /**
+     * Number of matches per keypoint
+     * @returns {number}
+     */
+    get matchesPerKeypoint(): number;
+}
 import { SpeedyDrawableTexture } from "../../gpu/speedy-texture";
 import { ImageFormat } from "../../utils/types";
+import { SpeedyLSH } from "../../gpu/speedy-lsh";

@@ -35,6 +35,11 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      */
     static get Tracker(): typeof SpeedyPipelineKeypointTrackerFactory;
     /**
+     * Keypoint matchers
+     * @returns {typeof SpeedyPipelineKeypointMatcherFactory}
+     */
+    static get Matcher(): typeof SpeedyPipelineKeypointMatcherFactory;
+    /**
      * Keypoint Portals
      * @returns {typeof SpeedyPipelineKeypointPortalFactory}
      */
@@ -57,6 +62,12 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeTrackedKeypointSink}
      */
     static SinkOfTrackedKeypoints(name?: string | undefined): SpeedyPipelineNodeTrackedKeypointSink;
+    /**
+     * Create a sink of matched keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeMatchedKeypointSink}
+     */
+    static SinkOfMatchedKeypoints(name?: string | undefined): SpeedyPipelineNodeMatchedKeypointSink;
     /**
      * Keypoint clipper
      * @param {string} [name]
@@ -148,9 +159,27 @@ declare class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace {
      */
     static DistanceFilter(name?: string | undefined): any;
 }
+/**
+ * Keypoint matchers
+ */
+declare class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace {
+    /**
+     * Static LSH tables
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeStaticLSHTables}
+     */
+    static StaticLSHTables(name?: string | undefined): SpeedyPipelineNodeStaticLSHTables;
+    /**
+     * LSH-based K-approximate nearest neighbors
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeLSHKNNMatcher}
+     */
+    static LSHKNN(name?: string | undefined): SpeedyPipelineNodeLSHKNNMatcher;
+}
 import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
 import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";
 import { SpeedyPipelineNodeTrackedKeypointSink } from "../nodes/keypoints/sink";
+import { SpeedyPipelineNodeMatchedKeypointSink } from "../nodes/keypoints/sink";
 import { SpeedyPipelineNodeKeypointClipper } from "../nodes/keypoints/clipper";
 import { SpeedyPipelineNodeKeypointBorderClipper } from "../nodes/keypoints/border-clipper";
 import { SpeedyPipelineNodeKeypointBuffer } from "../nodes/keypoints/buffer";
@@ -162,4 +191,6 @@ import { SpeedyPipelineNodeFASTKeypointDetector } from "../nodes/keypoints/detec
 import { SpeedyPipelineNodeHarrisKeypointDetector } from "../nodes/keypoints/detectors/harris";
 import { SpeedyPipelineNodeORBKeypointDescriptor } from "../nodes/keypoints/descriptors/orb";
 import { SpeedyPipelineNodeLKKeypointTracker } from "../nodes/keypoints/trackers/lk";
+import { SpeedyPipelineNodeStaticLSHTables } from "../nodes/keypoints/matchers/lsh-static-tables";
+import { SpeedyPipelineNodeLSHKNNMatcher } from "../nodes/keypoints/matchers/lsh-knn";
 export {};

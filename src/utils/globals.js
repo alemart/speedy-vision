@@ -71,6 +71,24 @@ export const MAX_ENCODER_CAPACITY = 8192;
 /** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
 export const DEFAULT_ENCODER_CAPACITY = 2048;
 
+/** @type {number} log2 of the maximum size of a keypoint descriptor, in bytes */
+export const LOG2_MAX_DESCRIPTOR_SIZE = 6;
+
+/** @type {number} maximum size of a keypoint descriptor, in bytes */
+export const MAX_DESCRIPTOR_SIZE = 1 << LOG2_MAX_DESCRIPTOR_SIZE;
+
+/** @type {number} How many bits will we use when encoding the index of a keypoint match? */
+export const MATCH_INDEX_BITS = 32 - (LOG2_MAX_DESCRIPTOR_SIZE + 3);
+
+/** @type {number} Bitwise mask to extract a keypoint index from an encoded match */
+export const MATCH_INDEX_MASK = (1 << MATCH_INDEX_BITS) - 1;
+
+/** @type {number} Maximum size of the database of keypoints for matching */
+export const MATCH_MAX_INDEX = (1 << MATCH_INDEX_BITS) - 1;
+
+/** @type {number} The maximum distance that can be stored in a match */
+export const MATCH_MAX_DISTANCE = (1 << (32 - MATCH_INDEX_BITS)) - 1;
+
 
 
 // -----------------------------------------------------------------

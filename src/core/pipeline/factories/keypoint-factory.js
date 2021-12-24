@@ -21,7 +21,7 @@
 
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeKeypointSource } from '../nodes/keypoints/source';
-import { SpeedyPipelineNodeKeypointSink, SpeedyPipelineNodeTrackedKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeKeypointSink, SpeedyPipelineNodeTrackedKeypointSink, SpeedyPipelineNodeMatchedKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeKeypointBorderClipper } from '../nodes/keypoints/border-clipper';
 import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
@@ -33,6 +33,8 @@ import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detec
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
+import { SpeedyPipelineNodeStaticLSHTables } from '../nodes/keypoints/matchers/lsh-static-tables';
+import { SpeedyPipelineNodeLSHKNNMatcher } from '../nodes/keypoints/matchers/lsh-knn';
 import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/trackers/distance-filter';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
@@ -105,6 +107,32 @@ class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
 }
 
 /**
+ * Keypoint matchers
+ */
+class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace
+{
+    /**
+     * Static LSH tables
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeStaticLSHTables}
+     */
+    static StaticLSHTables(name = undefined)
+    {
+        return new SpeedyPipelineNodeStaticLSHTables(name);
+    }
+
+    /**
+     * LSH-based K-approximate nearest neighbors
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeLSHKNNMatcher}
+     */
+    static LSHKNN(name = undefined)
+    {
+        return new SpeedyPipelineNodeLSHKNNMatcher(name);
+    }
+}
+
+/**
  * Portal nodes
  */
 export class SpeedyPipelineKeypointPortalFactory extends SpeedyNamespace
@@ -163,6 +191,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     }
 
     /**
+     * Keypoint matchers
+     * @returns {typeof SpeedyPipelineKeypointMatcherFactory}
+     */
+    static get Matcher()
+    {
+        return SpeedyPipelineKeypointMatcherFactory;
+    }
+
+    /**
      * Keypoint Portals
      * @returns {typeof SpeedyPipelineKeypointPortalFactory}
      */
@@ -199,6 +236,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static SinkOfTrackedKeypoints(name = undefined)
     {
         return new SpeedyPipelineNodeTrackedKeypointSink(name);
+    }
+
+    /**
+     * Create a sink of matched keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeMatchedKeypointSink}
+     */
+    static SinkOfMatchedKeypoints(name = undefined)
+    {
+        return new SpeedyPipelineNodeMatchedKeypointSink(name);
     }
 
     /**

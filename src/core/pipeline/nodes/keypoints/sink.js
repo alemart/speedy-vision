@@ -21,7 +21,7 @@
 
 import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWith2DVectors } from '../../pipeline-message';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWith2DVectors, SpeedyPipelineMessageWithKeypointMatches } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
@@ -31,13 +31,15 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
-import { SpeedyKeypoint, SpeedyTrackedKeypoint } from '../../../speedy-keypoint';
+import { SpeedyKeypoint, SpeedyTrackedKeypoint, SpeedyMatchedKeypoint } from '../../../speedy-keypoint';
 import { SpeedyKeypointDescriptor } from '../../../speedy-keypoint-descriptor';
+import { SpeedyKeypointMatch } from '../../../speedy-keypoint-match';
 import { SpeedyVector2 } from '../../../speedy-vector';
 import {
     MIN_KEYPOINT_SIZE,
     FIX_RESOLUTION,
     LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
+    MATCH_INDEX_BITS, MATCH_INDEX_MASK,
 } from '../../../../utils/globals';
 
 /** next power of 2 */
@@ -450,5 +452,86 @@ export class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbs
 
         // create keypoint
         return new SpeedyTrackedKeypoint(x, y, lod, rotation, score, descriptor, flow);
+    }
+}
+
+/**
+ * Gets matched keypoints out of the pipeline
+ * @extends SpeedyPipelineNodeAbstractKeypointSink<SpeedyMatchedKeypoint>
+ */
+export class SpeedyPipelineNodeMatchedKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+     {
+        super(name, 2, [
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.extraSize == 0
+            ),
+            InputPort('matches').expects(SpeedyPipelineMessageType.KeypointMatches)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const { encodedMatches, matchesPerKeypoint } = /** @type {SpeedyPipelineMessageWithKeypointMatches} */ ( this.input('matches').read() );
+
+        // allocate space for the matches
+        const newDescriptorSize = descriptorSize;
+        const newExtraSize = matchesPerKeypoint * 4; // 4 bytes per pixel
+        const encodedKeypointsWithExtraSpace = this._allocateExtra(gpu, this._tex[0], encodedKeypoints, descriptorSize, extraSize, newDescriptorSize, newExtraSize);
+
+        // transfer matches to a new texture
+        const newEncoderLength = encodedKeypointsWithExtraSpace.width;
+        const newEncodedKeypoints = (gpu.programs.keypoints.transferToExtra
+            .outputs(newEncoderLength, newEncoderLength, this._tex[1])
+        )(encodedMatches, encodedMatches.width, encodedKeypointsWithExtraSpace, newDescriptorSize, newExtraSize, newEncoderLength);
+
+        // done!
+        return this._download(gpu, newEncodedKeypoints, newDescriptorSize, newExtraSize, newEncoderLength);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyMatchedKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+        const extraSize = extraBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // decode matches
+        const matchesPerKeypoint = extraSize / 4;
+        const matches = /** @type {SpeedyKeypointMatch[]} */ ( new Array(matchesPerKeypoint) );
+        for(let matchIndex = 0; matchIndex < matchesPerKeypoint; matchIndex++) {
+            const base = matchIndex * 4;
+            const u32 = extraBytes[base] | (extraBytes[base+1] << 8) | (extraBytes[base+2] << 16) | (extraBytes[base+3] << 24);
+            const match = new SpeedyKeypointMatch(u32 & MATCH_INDEX_MASK, u32 >>> MATCH_INDEX_BITS);
+
+            matches[matchIndex] = match;
+        }
+
+        // done!
+        return new SpeedyMatchedKeypoint(x, y, lod, rotation, score, descriptor, matches);
     }
 }
