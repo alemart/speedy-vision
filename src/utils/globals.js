@@ -24,13 +24,13 @@
 // -----------------------------------------------------------------
 
 /** @type {number} The maximum number of levels in a pyramid, considering a scale factor of 2x between levels */
-export const PYRAMID_MAX_LEVELS = 8; // i.e., maximum number of octaves
-
-/** @type {number} The maximum supported scale for a pyramid level */
-export const PYRAMID_MAX_SCALE = 1; // preferably a power of 2 (image scale can go up to this value)
+export const PYRAMID_MAX_LEVELS = 8;
 
 /** @type {number} The base-2 logarithm of PYRAMID_MAX_SCALE */
-export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
+export const LOG2_PYRAMID_MAX_SCALE = 0;
+
+/** @type {number} The maximum supported scale for a pyramid level */
+export const PYRAMID_MAX_SCALE = 1 << LOG2_PYRAMID_MAX_SCALE;
 
 
 
