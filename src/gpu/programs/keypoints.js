@@ -226,6 +226,13 @@ const clipBorder = importShader('keypoints/clip-border.glsl')
 const distanceFilter = importShader('keypoints/distance-filter.glsl')
                       .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'maxDistance');
 
+const hammingDistanceFilter32 = importShader('keypoints/hamming-distance-filter.glsl')
+                               .withDefines({ 'DESCRIPTOR_SIZE': 32 })
+                               .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
+
+const hammingDistanceFilter64 = importShader('keypoints/hamming-distance-filter.glsl')
+                               .withDefines({ 'DESCRIPTOR_SIZE': 64 })
+                               .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
 /**
  * SpeedyProgramGroupKeypoints
@@ -407,6 +414,8 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             .declare('clipBorder', clipBorder)
             .declare('distanceFilter', distanceFilter)
+            .declare('hammingDistanceFilter32', hammingDistanceFilter32)
+            .declare('hammingDistanceFilter64', hammingDistanceFilter64)
         ;
 
         //

@@ -979,8 +979,6 @@ Removes all keypoints within a specified border of the edge of an image. The bor
 | `"in"`    | Keypoints | A set of keypoints. |
 | `"out"`   | Keypoints | The clipped set of keypoints. |
 
-
-
 ##### Speedy.Keypoint.Mixer()
 
 `Speedy.Keypoint.Mixer(name?: string): SpeedyPipelineNodeKeypointMixer`
@@ -1082,6 +1080,26 @@ Table of methods:
 | `"keypoints"` | Keypoints | Input set of keypoints. |
 | `"out"`   | Keypoints | Subpixel-refined output set of keypoints. |
 | `"displacements"` | Vector2 | Displacement vectors (output). |
+
+##### Speedy.Keypoint.HammingDistanceFilter()
+
+`Speedy.Keypoint.HammingDistanceFilter(name?: string): SpeedyPipelineNodeKeypointHammingDistanceFilter`
+
+Given a set of pairs of keypoints with descriptors, discard all pairs whose Hamming distance between their descriptors is above a user-defined threshold.
+
+The pairs of keypoints are provided as two separate sets, "in" and "reference". Keypoints that are kept will have their data extracted from the "in" set.
+
+###### Parameters
+
+* `threshold: number`. Distance threshold, an integer.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"` | Keypoints | A set of keypoints. |
+| `"reference"` | Keypoints | A reference set of keypoints. |
+| `"out"` | Keypoints | Filtered set of keypoints. |
 
 
 

@@ -36,6 +36,7 @@ import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers
 import { SpeedyPipelineNodeStaticLSHTables } from '../nodes/keypoints/matchers/lsh-static-tables';
 import { SpeedyPipelineNodeLSHKNNMatcher } from '../nodes/keypoints/matchers/lsh-knn';
 import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/trackers/distance-filter';
+import { SpeedyPipelineNodeKeypointHammingDistanceFilter } from '../nodes/keypoints/hamming-distance-filter';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
 /**
@@ -316,5 +317,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static SubpixelRefiner(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointSubpixelRefiner(name);
+    }
+
+    /**
+     * Hamming distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeHammingDistanceFilter}
+     */
+    static HammingDistanceFilter(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointHammingDistanceFilter(name);
     }
 }
