@@ -146,9 +146,9 @@ function display(source, title = '')
 }
 
 // Displays a SpeedyMedia with features
-function displayFeatures(source, features = [], title = '', color = 'red')
+function displayFeatures(mediaOrCanvas, features = [], title = '', color = 'red')
 {
-    const canvas = display(source, title);
+    const canvas = (mediaOrCanvas instanceof HTMLCanvasElement) ? mediaOrCanvas : display(mediaOrCanvas, title);
     const context = canvas.getContext('2d');
     const size = 2;
     
