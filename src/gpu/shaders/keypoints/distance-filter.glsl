@@ -31,7 +31,7 @@ uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength; // output
 
-uniform float maxDistance;
+uniform float threshold; // max Euclidean distance, given in pixels
 
 void main()
 {
@@ -71,6 +71,6 @@ void main()
     // both keypoints are neither null nor discarded
     // let's check their distance to decide whether or not to discard them
     vec2 delta = keypointA.position - keypointB.position;
-    bool shouldKeep = (dot(delta, delta) <= maxDistance * maxDistance);
+    bool shouldKeep = (dot(delta, delta) <= threshold * threshold);
     color = shouldKeep ? data : encodeDiscardedKeypoint();
 }

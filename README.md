@@ -1081,6 +1081,26 @@ Table of methods:
 | `"out"`   | Keypoints | Subpixel-refined output set of keypoints. |
 | `"displacements"` | Vector2 | Displacement vectors (output). |
 
+##### Speedy.Keypoint.DistanceFilter()
+
+`Speedy.Keypoint.DistanceFilter(name?: string): SpeedyPipelineNodeKeypointDistanceFilter`
+
+Given a set of pairs of keypoints, discard all pairs whose distance is above a user-defined threshold. This is useful for implementing bidirectional optical-flow.
+
+The pairs of keypoints are provided as two separate sets, "in" and "reference". Keypoints that are kept will have their data extracted from the "in" set.
+
+###### Parameters
+
+* `threshold: number`. Distance threshold, given in pixels.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"` | Keypoints | A set of keypoints. |
+| `"reference"` | Keypoints | A reference set of keypoints. |
+| `"out"` | Keypoints | Filtered set of keypoints. |
+
 ##### Speedy.Keypoint.HammingDistanceFilter()
 
 `Speedy.Keypoint.HammingDistanceFilter(name?: string): SpeedyPipelineNodeKeypointHammingDistanceFilter`
@@ -1246,26 +1266,6 @@ Pyramid-based LK optical-flow.
 | `"flow"` | Vector2 | Flow vectors (output) at time *t*. |
 
 **Note**: you need to provide pyramids as input if `levels > 1`.
-
-##### Speedy.Keypoint.Tracker.DistanceFilter()
-
-`Speedy.Keypoint.Tracker.DistanceFilter(name?: string): SpeedyPipelineNodeKeypointDistanceFilter`
-
-Given a set of pairs of keypoints, discard all pairs whose distance is above a user-defined threshold. This is useful for implementing bidirectional optical-flow.
-
-The pairs of keypoints are provided as two separate sets, "first" and "second". Keypoints that are kept will have their data extracted from the first set.
-
-###### Parameters
-
-* `maxDistance: number`. Distance threshold, given in pixels.
-
-###### Ports
-
-| Port name | Data type | Description |
-|-----------|-----------|-------------|
-| `"first"` | Keypoints | First set of keypoints. |
-| `"second"` | Keypoints | Second set of keypoints. |
-| `"out"` | Keypoints | Filtered set of keypoints. |
 
 #### Keypoint matching
 

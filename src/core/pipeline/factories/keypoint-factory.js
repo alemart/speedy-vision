@@ -35,7 +35,7 @@ import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/desc
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
 import { SpeedyPipelineNodeStaticLSHTables } from '../nodes/keypoints/matchers/lsh-static-tables';
 import { SpeedyPipelineNodeLSHKNNMatcher } from '../nodes/keypoints/matchers/lsh-knn';
-import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/trackers/distance-filter';
+import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/distance-filter';
 import { SpeedyPipelineNodeKeypointHammingDistanceFilter } from '../nodes/keypoints/hamming-distance-filter';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
@@ -94,16 +94,6 @@ class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
     static LK(name = undefined)
     {
         return new SpeedyPipelineNodeLKKeypointTracker(name);
-    }
-
-    /**
-     * Distance filter
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDistanceFilter}
-     */
-    static DistanceFilter(name = undefined)
-    {
-        return new SpeedyPipelineNodeKeypointDistanceFilter(name);
     }
 }
 
@@ -317,6 +307,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static SubpixelRefiner(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointSubpixelRefiner(name);
+    }
+
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointDistanceFilter(name);
     }
 
     /**

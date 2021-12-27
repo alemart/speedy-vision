@@ -224,7 +224,7 @@ const clipBorder = importShader('keypoints/clip-border.glsl')
                   .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 const distanceFilter = importShader('keypoints/distance-filter.glsl')
-                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'maxDistance');
+                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
 const hammingDistanceFilter32 = importShader('keypoints/hamming-distance-filter.glsl')
                                .withDefines({ 'DESCRIPTOR_SIZE': 32 })
