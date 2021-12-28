@@ -206,29 +206,4 @@ export class SpeedyPipelineNodeLSHKNNMatcher extends SpeedyPipelineNode
         console.log(debug.join(','));
         */
     }
-
-    /**
-     * Allocate space for keypoint matches
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputEncodedKeypoints input with no matches
-     * @param {number} inputDescriptorSize in bytes, must be positive
-     * @param {number} inputExtraSize must be 0
-     * @param {number} outputDescriptorSize must be inputDescriptorSize
-     * @param {number} outputExtraSize in bytes, must be positive and a multiple of 4
-     * @returns {SpeedyDrawableTexture} encodedKeypoints with space for the matches
-     */
-    _allocateMatches(gpu, tex, inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize)
-    {
-        Utils.assert(inputDescriptorSize > 0 && inputExtraSize === 0);
-        Utils.assert(outputDescriptorSize === inputDescriptorSize && outputExtraSize > 0 && outputExtraSize % 4 === 0);
-
-        const inputEncoderLength = inputEncodedKeypoints.width;
-        const inputEncoderCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
-        const outputEncoderCapacity = inputEncoderCapacity;
-        const outputEncoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(outputEncoderCapacity, outputDescriptorSize, outputExtraSize);
-
-        return (gpu.programs.keypoints.allocateExtra
-            .outputs(outputEncoderLength, outputEncoderLength, tex)
-        )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
-    }
 }
