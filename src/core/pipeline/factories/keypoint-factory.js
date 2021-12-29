@@ -35,6 +35,7 @@ import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/desc
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
 import { SpeedyPipelineNodeStaticLSHTables } from '../nodes/keypoints/matchers/lsh-static-tables';
 import { SpeedyPipelineNodeLSHKNNMatcher } from '../nodes/keypoints/matchers/lsh-knn';
+import { SpeedyPipelineNodeBruteForceKNNKeypointMatcher } from '../nodes/keypoints/matchers/bf-knn';
 import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/distance-filter';
 import { SpeedyPipelineNodeKeypointHammingDistanceFilter } from '../nodes/keypoints/hamming-distance-filter';
 import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
@@ -120,6 +121,16 @@ class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace
     static LSHKNN(name = undefined)
     {
         return new SpeedyPipelineNodeLSHKNNMatcher(name);
+    }
+
+    /**
+     * Brute-force K-nearest neighbors keypoint matcher
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeBruteForceKNNKeypointMatcher}
+     */
+    static BFKNN(name = undefined)
+    {
+        return new SpeedyPipelineNodeBruteForceKNNKeypointMatcher(name);
     }
 }
 

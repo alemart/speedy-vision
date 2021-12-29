@@ -120,11 +120,29 @@ const lk = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21].reduce((obj, win) => ((obj[win] 
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// Brute-force matching
+const bfMatcherInitCandidates = importShader('keypoints/knn-init.glsl')
+                               .withDefines({ 'ENCODE_FILTERS': 0 });
+
+const bfMatcherInitFilters = importShader('keypoints/knn-init.glsl')
+                            .withDefines({ 'ENCODE_FILTERS': 1 });
+
+const bfMatcherTransfer = importShader('keypoints/knn-transfer.glsl')
+                         .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
+
+const bfMatcher32 = importShader('keypoints/bf-knn.glsl')
+                    .withDefines({ 'DESCRIPTOR_SIZE': 32 })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+
+const bfMatcher64 = importShader('keypoints/bf-knn.glsl')
+                    .withDefines({ 'DESCRIPTOR_SIZE': 64 })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+
 // LSH-based KNN matching
-const lshKnnInitCandidates = importShader('keypoints/lsh-knn-init.glsl')
+const lshKnnInitCandidates = importShader('keypoints/knn-init.glsl')
                             .withDefines({ 'ENCODE_FILTERS': 0 });
 
-const lshKnnInitFilters = importShader('keypoints/lsh-knn-init.glsl')
+const lshKnnInitFilters = importShader('keypoints/knn-init.glsl')
                          .withDefines({ 'ENCODE_FILTERS': 1 });
 
 const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => ((obj[descriptorSize] = LSH_ACCEPTABLE_HASH_SIZES.reduce((obj, hashSize) => ((obj[hashSize] = [0, 1, 2].reduce((obj, level) => ((obj[level] =
@@ -133,7 +151,7 @@ const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => (
                   .withArguments('candidates', 'filters', 'matcherLength', 'tables', 'descriptorDB', 'tableIndex', 'bucketCapacity', 'bucketsPerTable', 'tablesStride', 'descriptorDBStride', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength')
               ), obj), {})), obj), {})), obj), {});
 
-const lshKnnTransfer = importShader('keypoints/lsh-knn-transfer.glsl')
+const lshKnnTransfer = importShader('keypoints/knn-transfer.glsl')
                        .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
 // Keypoint sorting
@@ -346,6 +364,21 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('transferFlow', transferFlow)
+
+            //
+            // Brute-force KNN matching
+            //
+            .declare('bfMatcherInitCandidates', bfMatcherInitCandidates)
+            .declare('bfMatcherInitFilters', bfMatcherInitFilters)
+            .declare('bfMatcherTransfer', bfMatcherTransfer, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('bfMatcher32', bfMatcher32, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('bfMatcher64', bfMatcher64, {
+                ...this.program.usesPingpongRendering()
+            })
 
             //
             // LSH-based KNN matching

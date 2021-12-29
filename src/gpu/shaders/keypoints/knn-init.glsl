@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * lsh-knn-init.glsl
- * Initialize the LSH-based KNN candidates
+ * knn-init.glsl
+ * Initialize KNN candidates and filters
  */
 
 @include "keypoint-matches.glsl"
