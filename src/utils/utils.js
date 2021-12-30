@@ -333,7 +333,7 @@ export class Utils
      * Shuffle in-place
      * @template T
      * @param {T[]} arr
-     * @returns {T} arr
+     * @returns {T[]} arr
      */
     static shuffle(arr)
     {
