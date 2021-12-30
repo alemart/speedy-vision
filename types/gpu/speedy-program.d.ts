@@ -57,6 +57,8 @@ export class SpeedyProgram extends Function {
     _textureIndex: number | undefined;
     /** @type {Map<string,UniformVariable>} uniform variables */
     _uniform: Map<string, UniformVariable> | undefined;
+    /** @type {ShaderDeclaration} shader declaration */
+    _shaderdecl: ShaderDeclaration | undefined;
     /**
      * Run the SpeedyProgram
      * @param  {...SpeedyProgramUniformValue} args
@@ -100,6 +102,12 @@ export class SpeedyProgram extends Function {
      * @returns {null}
      */
     release(): null;
+    /**
+     * A constant #defined in the shader declaration
+     * @param {string} name
+     * @returns {number}
+     */
+    definedConstant(name: string): number;
     /**
      * Helper method for pingpong rendering: alternates
      * the texture index from 0 to 1 and vice-versa

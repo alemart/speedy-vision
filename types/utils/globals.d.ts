@@ -1,9 +1,9 @@
 /** @type {number} The maximum number of levels in a pyramid, considering a scale factor of 2x between levels */
 export const PYRAMID_MAX_LEVELS: number;
-/** @type {number} The maximum supported scale for a pyramid level */
-export const PYRAMID_MAX_SCALE: number;
 /** @type {number} The base-2 logarithm of PYRAMID_MAX_SCALE */
 export const LOG2_PYRAMID_MAX_SCALE: number;
+/** @type {number} The maximum supported scale for a pyramid level */
+export const PYRAMID_MAX_SCALE: number;
 /** @type {number} How many bits do we use to store fractional data? */
 export const FIX_BITS: number;
 /** @type {number} Fixed-point resolution */
@@ -18,7 +18,7 @@ export const MIN_ENCODER_LENGTH: number;
 export const MAX_ENCODER_CAPACITY: number;
 /** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
 export const DEFAULT_ENCODER_CAPACITY: number;
-/** @type {number} log2 of the maximum size of a keypoint descriptor, in bytes */
+/** @type {number} log2 of MAX_DESCRIPTOR_SIZE */
 export const LOG2_MAX_DESCRIPTOR_SIZE: number;
 /** @type {number} maximum size of a keypoint descriptor, in bytes */
 export const MAX_DESCRIPTOR_SIZE: number;

@@ -1,12 +1,12 @@
 /*!
- * speedy-vision v0.8.3-wip
+ * speedy-vision v0.9.0-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision
  *
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-12-21T03:46:13.448Z
+ * Date: 2021-12-30T03:22:04.495Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -320,15 +320,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_border_clipper__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/border-clipper */ "./src/core/pipeline/nodes/keypoints/border-clipper.js");
 /* harmony import */ var _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/buffer */ "./src/core/pipeline/nodes/keypoints/buffer.js");
 /* harmony import */ var _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/mixer */ "./src/core/pipeline/nodes/keypoints/mixer.js");
-/* harmony import */ var _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/multiplexer */ "./src/core/pipeline/nodes/keypoints/multiplexer.js");
-/* harmony import */ var _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/transformer */ "./src/core/pipeline/nodes/keypoints/transformer.js");
-/* harmony import */ var _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/subpixel */ "./src/core/pipeline/nodes/keypoints/subpixel.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
-/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
-/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
-/* harmony import */ var _nodes_keypoints_trackers_distance_filter__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/trackers/distance-filter */ "./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js");
-/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
+/* harmony import */ var _nodes_keypoints_shuffler__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/shuffler */ "./src/core/pipeline/nodes/keypoints/shuffler.js");
+/* harmony import */ var _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/multiplexer */ "./src/core/pipeline/nodes/keypoints/multiplexer.js");
+/* harmony import */ var _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/transformer */ "./src/core/pipeline/nodes/keypoints/transformer.js");
+/* harmony import */ var _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/subpixel */ "./src/core/pipeline/nodes/keypoints/subpixel.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
+/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
+/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_matchers_lsh_static_tables__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../nodes/keypoints/matchers/lsh-static-tables */ "./src/core/pipeline/nodes/keypoints/matchers/lsh-static-tables.js");
+/* harmony import */ var _nodes_keypoints_matchers_lsh_knn__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../nodes/keypoints/matchers/lsh-knn */ "./src/core/pipeline/nodes/keypoints/matchers/lsh-knn.js");
+/* harmony import */ var _nodes_keypoints_matchers_bf_knn__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../nodes/keypoints/matchers/bf-knn */ "./src/core/pipeline/nodes/keypoints/matchers/bf-knn.js");
+/* harmony import */ var _nodes_keypoints_distance_filter__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../nodes/keypoints/distance-filter */ "./src/core/pipeline/nodes/keypoints/distance-filter.js");
+/* harmony import */ var _nodes_keypoints_hamming_distance_filter__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../nodes/keypoints/hamming-distance-filter */ "./src/core/pipeline/nodes/keypoints/hamming-distance-filter.js");
+/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -367,6 +372,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
+
+
 /**
  * Keypoint detectors
  */
@@ -379,7 +389,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineNodeFASTKeypointDetector(name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineNodeFASTKeypointDetector(name);
     }
 
     /**
@@ -389,7 +399,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static Harris(name = undefined)
     {
-        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineNodeHarrisKeypointDetector(name);
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeHarrisKeypointDetector(name);
     }
 }
 
@@ -405,7 +415,7 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
      */
     static ORB(name = undefined)
     {
-        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineNodeORBKeypointDescriptor(name);
+        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeORBKeypointDescriptor(name);
     }
 }
 
@@ -421,17 +431,43 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
      */
     static LK(name = undefined)
     {
-        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineNodeLKKeypointTracker(name);
+        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeLKKeypointTracker(name);
+    }
+}
+
+/**
+ * Keypoint matchers
+ */
+class SpeedyPipelineKeypointMatcherFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__.SpeedyNamespace
+{
+    /**
+     * Static LSH tables
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeStaticLSHTables}
+     */
+    static StaticLSHTables(name = undefined)
+    {
+        return new _nodes_keypoints_matchers_lsh_static_tables__WEBPACK_IMPORTED_MODULE_15__.SpeedyPipelineNodeStaticLSHTables(name);
     }
 
     /**
-     * Distance filter
+     * LSH-based K-approximate nearest neighbors
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDistanceFilter}
+     * @returns {SpeedyPipelineNodeLSHKNNMatcher}
      */
-    static DistanceFilter(name = undefined)
+    static LSHKNN(name = undefined)
     {
-        return new _nodes_keypoints_trackers_distance_filter__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineNodeKeypointDistanceFilter(name);
+        return new _nodes_keypoints_matchers_lsh_knn__WEBPACK_IMPORTED_MODULE_16__.SpeedyPipelineNodeLSHKNNMatcher(name);
+    }
+
+    /**
+     * Brute-force K-nearest neighbors keypoint matcher
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeBruteForceKNNKeypointMatcher}
+     */
+    static BFKNN(name = undefined)
+    {
+        return new _nodes_keypoints_matchers_bf_knn__WEBPACK_IMPORTED_MODULE_17__.SpeedyPipelineNodeBruteForceKNNKeypointMatcher(name);
     }
 }
 
@@ -447,7 +483,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Source(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__.SpeedyPipelineNodeKeypointPortalSource(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_20__.SpeedyPipelineNodeKeypointPortalSource(name);
     }
 
     /**
@@ -457,7 +493,7 @@ class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMP
      */
     static Sink(name = undefined)
     {
-        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_15__.SpeedyPipelineNodeKeypointPortalSink(name);
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_20__.SpeedyPipelineNodeKeypointPortalSink(name);
     }
 }
 
@@ -491,6 +527,15 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static get Tracker()
     {
         return SpeedyPipelineKeypointTrackerFactory;
+    }
+
+    /**
+     * Keypoint matchers
+     * @returns {typeof SpeedyPipelineKeypointMatcherFactory}
+     */
+    static get Matcher()
+    {
+        return SpeedyPipelineKeypointMatcherFactory;
     }
 
     /**
@@ -530,6 +575,16 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static SinkOfTrackedKeypoints(name = undefined)
     {
         return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineNodeTrackedKeypointSink(name);
+    }
+
+    /**
+     * Create a sink of matched keypoints
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeMatchedKeypointSink}
+     */
+    static SinkOfMatchedKeypoints(name = undefined)
+    {
+        return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineNodeMatchedKeypointSink(name);
     }
 
     /**
@@ -573,13 +628,23 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     }
 
     /**
+     * Create a keypoint shuffler
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointShuffler}
+     */
+    static Shuffler(name = undefined)
+    {
+        return new _nodes_keypoints_shuffler__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineNodeKeypointShuffler(name);
+    }
+
+    /**
      * Create a keypoint multiplexer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointMultiplexer}
      */
     static Multiplexer(name = undefined)
     {
-        return new _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipelineNodeKeypointMultiplexer(name);
+        return new _nodes_keypoints_multiplexer__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineNodeKeypointMultiplexer(name);
     }
 
     /**
@@ -589,7 +654,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static Transformer(name = undefined)
     {
-        return new _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineNodeKeypointTransformer(name);
+        return new _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineNodeKeypointTransformer(name);
     }
 
     /**
@@ -599,7 +664,27 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
      */
     static SubpixelRefiner(name = undefined)
     {
-        return new _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineNodeKeypointSubpixelRefiner(name);
+        return new _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineNodeKeypointSubpixelRefiner(name);
+    }
+
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name = undefined)
+    {
+        return new _nodes_keypoints_distance_filter__WEBPACK_IMPORTED_MODULE_18__.SpeedyPipelineNodeKeypointDistanceFilter(name);
+    }
+
+    /**
+     * Hamming distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeHammingDistanceFilter}
+     */
+    static HammingDistanceFilter(name = undefined)
+    {
+        return new _nodes_keypoints_hamming_distance_filter__WEBPACK_IMPORTED_MODULE_19__.SpeedyPipelineNodeKeypointHammingDistanceFilter(name);
     }
 }
 
@@ -4363,6 +4448,903 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
 
 /***/ }),
 
+/***/ "./src/core/pipeline/nodes/keypoints/distance-filter.js":
+/*!**************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/distance-filter.js ***!
+  \**************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeKeypointDistanceFilter": () => (/* binding */ SpeedyPipelineNodeKeypointDistanceFilter)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * distance-filter.js
+ * Given a set of pairs of keypoints, discard all pairs whose distance is
+ * above a user-defined threshold. Useful for bidirectional optical-flow.
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Given a set of pairs of keypoints, discard all pairs whose distance is
+ * above a user-defined threshold. Useful for bidirectional optical-flow.
+ * 
+ * The pairs of keypoints are provided as two separate sets, "in" and
+ * "reference". Keypoints that are kept will have their data extracted
+ * from the "in" set.
+ */
+class SpeedyPipelineNodeKeypointDistanceFilter extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('in').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('reference').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+
+        /** @type {number} maximum accepted distance */
+        this._threshold = _utils_globals__WEBPACK_IMPORTED_MODULE_9__.MAX_TEXTURE_LENGTH + 1;
+    }
+
+    /**
+     * Maximum accepted distance
+     * @returns {number}
+     */
+    get threshold()
+    {
+        return this._threshold;
+    }
+
+    /**
+     * Maximum accepted distance
+     * @param {number} value
+     */
+    set threshold(value)
+    {
+        this._threshold = Math.max(0, +value);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const set0 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('in').read() );
+        const set1 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('reference').read() );
+        const threshold = this._threshold;
+
+        // validate shapes
+        if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalOperationError(`The distance filter requires two compatible shapes of keypoint streams`);
+
+        // calculate the shape of the output
+        const outputTexture = this._tex[0];
+        const encoderLength = Math.max(set0.encoderLength, set1.encoderLength);
+        const descriptorSize = set0.descriptorSize;
+        const extraSize = set0.extraSize;
+
+        // apply the distance filter
+        (gpu.programs.keypoints.distanceFilter
+            .outputs(encoderLength, encoderLength, outputTexture)
+        )(set0.encodedKeypoints, set0.encoderLength, set1.encodedKeypoints, set1.encoderLength, descriptorSize, extraSize, encoderLength, threshold);
+
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/hamming-distance-filter.js":
+/*!**********************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/hamming-distance-filter.js ***!
+  \**********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeKeypointHammingDistanceFilter": () => (/* binding */ SpeedyPipelineNodeKeypointHammingDistanceFilter)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * hamming-distance-filter.js
+ * Given a set of pairs of keypoints, discard all pairs whose hamming
+ * distance (of descriptor) is above a user-defined threshold
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/** @type {Object<number,string>} Program names */
+const PROGRAM_NAME = {
+    32: 'hammingDistanceFilter32',
+    64: 'hammingDistanceFilter64',
+};
+
+
+/**
+ * Given a set of pairs of keypoints, discard all pairs whose hamming
+ * distance (of descriptor) is above a user-defined threshold
+ * 
+ * The pairs of keypoints are provided as two separate sets, "in" and
+ * "reference". Keypoints that are kept will have their data extracted
+ * from the "in" set.
+ */
+class SpeedyPipelineNodeKeypointHammingDistanceFilter extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('in').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('reference').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+
+        /** @type {number} distance threshold, an integer */
+        this._threshold = _utils_globals__WEBPACK_IMPORTED_MODULE_9__.MAX_DESCRIPTOR_SIZE * 8; // convert from bytes to bits
+    }
+
+    /**
+     * Distance threshold, an integer
+     * @returns {number}
+     */
+    get threshold()
+    {
+        return this._threshold;
+    }
+
+    /**
+     * Distance threshold, an integer
+     * @param {number} value
+     */
+    set threshold(value)
+    {
+        this._threshold = Math.max(0, value | 0);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const set0 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('in').read() );
+        const set1 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('reference').read() );
+        const threshold = this._threshold;
+
+        // validate shapes
+        if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalOperationError(`The Hamming distance filter requires two compatible shapes of keypoint streams`);
+
+        // validate descriptor size
+        if(!Object.prototype.hasOwnProperty.call(PROGRAM_NAME, set0.descriptorSize))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.NotSupportedError(`Hamming distance filter - invalid descriptor size: ${set0.descriptorSize}`);
+
+        // calculate the shape of the output
+        const outputTexture = this._tex[0];
+        const encoderLength = Math.max(set0.encoderLength, set1.encoderLength);
+        const descriptorSize = set0.descriptorSize;
+        const extraSize = set0.extraSize;
+
+        // apply the distance filter
+        const program = PROGRAM_NAME[set0.descriptorSize];
+        (gpu.programs.keypoints[program]
+            .outputs(encoderLength, encoderLength, outputTexture)
+        )(set0.encodedKeypoints, set0.encoderLength, set1.encodedKeypoints, set1.encoderLength, descriptorSize, extraSize, encoderLength, threshold);
+
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/matchers/bf-knn.js":
+/*!**************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/matchers/bf-knn.js ***!
+  \**************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeBruteForceKNNKeypointMatcher": () => (/* binding */ SpeedyPipelineNodeBruteForceKNNKeypointMatcher)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * bf-knn.js
+ * Brute Force KNN Keypoint Matcher
+ */
+
+
+
+
+
+
+
+
+
+
+
+/** @type {Object<number,string>} program name indexed by descriptor size */
+const PROGRAM_NAME = {
+    32: 'bfMatcher32',
+    64: 'bfMatcher64',
+};
+
+/** @type {Object<number,number>} how many (database) keypoints we analyze in each pass, indexed by descriptor size */
+const NUMBER_OF_KEYPOINTS_PER_PASS = {
+    32: 12, // this number is based on the number of texture reads performed by the shader
+    64: 8,
+};
+
+/**
+ * Brute Force KNN Keypoint Matcher. Make sure to use a Keypoint Clipper before
+ * invoking this (use a database of 50 keypoints or so - your mileage may vary)
+ */
+class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 6, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('keypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('database').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.KeypointMatches),
+        ]);
+
+        /** @type {number} number of matches per keypoint (the "k" of knn) */
+        this._matchesPerKeypoint = 1;
+    }
+
+    /**
+     * Number of matches per keypoint
+     * @returns {number}
+     */
+    get k()
+    {
+        return this._matchesPerKeypoint;
+    }
+
+    /**
+     * Number of matches per keypoint
+     * @param {number} value
+     */
+    set k(value)
+    {
+        this._matchesPerKeypoint = Math.max(1, value | 0);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
+        const database = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('database').read() );
+        const keypoints = gpu.programs.keypoints;
+        const candidatesA = this._tex[0];
+        const candidatesB = this._tex[1];
+        const candidatesC = this._tex[2];
+        const encodedFiltersA = this._tex[3];
+        const encodedMatchesA = this._tex[4];
+        const encodedMatchesB = this._tex[5];
+        const matchesPerKeypoint = this._matchesPerKeypoint;
+
+        // validate parameters
+        if(descriptorSize !== database.descriptorSize)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalArgumentError(`Incompatible descriptors in ${this.fullName}`);
+        else if(!Object.prototype.hasOwnProperty.call(PROGRAM_NAME, descriptorSize))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.NotSupportedError(`Unsupported descriptor size (${descriptorSize}) in ${this.fullName}`);
+
+        // prepare the brute force matching
+        const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_3__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const dbCapacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_3__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(database.descriptorSize, database.extraSize, database.encoderLength);
+        const numberOfKeypointsPerPass = NUMBER_OF_KEYPOINTS_PER_PASS[descriptorSize];
+        const numberOfPasses = Math.ceil(dbCapacity / numberOfKeypointsPerPass);
+        const partialMatcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
+        const matcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity * matchesPerKeypoint)));
+        const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
+        keypoints.bfMatcherTransfer.outputs(matcherLength, matcherLength, encodedMatchesA, encodedMatchesB);
+        keypoints.bfMatcherInitCandidates.outputs(partialMatcherLength, partialMatcherLength, candidatesC);
+        keypoints.bfMatcherInitFilters.outputs(partialMatcherLength, partialMatcherLength, encodedFiltersA);
+        bfMatcher.outputs(partialMatcherLength, partialMatcherLength, candidatesA, candidatesB);
+
+        // match keypoints
+        let encodedMatches = encodedMatchesB.clear(); // will hold all best matches
+        let encodedFilters = keypoints.bfMatcherInitFilters();
+        for(let k = 0; k < matchesPerKeypoint; k++) {
+            let encodedPartialMatches = keypoints.bfMatcherInitCandidates(); // hold the (k+1)-th best matches
+
+            // find the (k+1)-th best match
+            for(let passId = 0; passId < numberOfPasses; passId++) {
+                encodedPartialMatches = bfMatcher(
+                    encodedPartialMatches, encodedFilters, partialMatcherLength,
+                    database.encodedKeypoints, database.descriptorSize, database.extraSize, database.encoderLength,
+                    encodedKeypoints, descriptorSize, extraSize, encoderLength,
+                    passId, numberOfKeypointsPerPass
+                );
+            }
+            gpu.gl.flush();
+
+            // copy the (k+1)-th best match to the filter
+            encodedPartialMatches.copyTo(encodedFilters);
+
+            // aggregate matches
+            encodedMatches = keypoints.bfMatcherTransfer(
+                encodedMatches, encodedPartialMatches, matchesPerKeypoint, k
+            );
+        }
+
+        // done!
+        this.output().swrite(encodedMatches, matchesPerKeypoint);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/matchers/lsh-knn.js":
+/*!***************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/matchers/lsh-knn.js ***!
+  \***************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeLSHKNNMatcher": () => (/* binding */ SpeedyPipelineNodeLSHKNNMatcher)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-lsh */ "./src/gpu/speedy-lsh.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * lsh-knn.js
+ * K approximate nearest neighbors matcher
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/** @typedef {'fastest' | 'default' | 'demanding'} LSHKNNQualityLevel quality of the approximate matching */
+
+/** @type {number} how many neighbors to search for, by default */
+const DEFAULT_K = 1;
+
+/** @type {LSHKNNQualityLevel} default quality level */
+const DEFAULT_QUALITY = 'default';
+
+/** @type {{ [key in LSHKNNQualityLevel]: number }} maps quality level to bit swaps */
+const NUMBER_OF_BIT_SWAPS = {
+    'fastest': 0,
+    'default': 1,
+    'demanding': 2,
+};
+
+/** @type {object} program names indexed as LSH_KNN[descriptorSize][hashSize][level] */
+const LSH_KNN = (fd => _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_5__.LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((o,d) => ((o[d] = fd(d)), o), {}))(
+    d => ((fh => _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_5__.LSH_ACCEPTABLE_HASH_SIZES.reduce((o,h) => ((o[h] = fh(h)), o), {}))(
+        h => ((fl => [0,1,2].reduce((o,l) => ((o[l] = fl(l)), o), {}))(
+            l => `lshKnn${d}h${h}lv${l}`
+        ))
+    ))
+);
+
+
+
+/**
+ * K approximate nearest neighbors matcher
+ */
+class SpeedyPipelineNodeLSHKNNMatcher extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 6, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('keypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.descriptorSize > 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('lsh').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.LSHTables),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.KeypointMatches),
+        ]);
+
+        /** @type {number} how many neighbors do you want? */
+        this._k = DEFAULT_K;
+
+        /** @type {LSHKNNQualityLevel} quality of the matching */
+        this._quality = DEFAULT_QUALITY;
+    }
+
+    /**
+     * How many neighbors do you want?
+     * @returns {number}
+     */
+    get k()
+    {
+        return this._k;
+    }
+
+    /**
+     * How many neighbors do you want?
+     * @param {number} k number of neighbors
+     */
+    set k(k)
+    {
+        this._k = Math.max(1, k | 0);
+    }
+
+    /**
+     * Quality of the matching
+     * @returns {LSHKNNQualityLevel}
+     */
+    get quality()
+    {
+        return this._quality;
+    }
+
+    /**
+     * Quality of the matching
+     * @param {LSHKNNQualityLevel} quality
+     */
+    set quality(quality)
+    {
+        if(!Object.prototype.hasOwnProperty.call(NUMBER_OF_BIT_SWAPS, quality))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalArgumentError(`Invalid quality level: "${quality}"`);
+
+        this._quality = quality;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
+        /** @type {SpeedyLSH} */ const lsh = this.input('lsh').read().lsh;
+        const keypoints = gpu.programs.keypoints;
+        const tables = lsh.tables;
+        const descriptorDB = lsh.descriptorDB;
+        const tablesStride = tables.width;
+        const descriptorDBStride = descriptorDB.width;
+        const tableCount = lsh.tableCount;
+        const hashSize = lsh.hashSize;
+        const bucketCapacity = lsh.bucketCapacity;
+        const bucketsPerTable = lsh.bucketsPerTable;
+        const sequences = lsh.sequences;
+        const candidatesA = this._tex[0];
+        const candidatesB = this._tex[1];
+        const candidatesC = this._tex[2];
+        const filters = this._tex[3];
+        const transferA = this._tex[4];
+        const transferB = this._tex[5];
+        const level = NUMBER_OF_BIT_SWAPS[this._quality];
+        const matchesPerKeypoint = this._k;
+
+        // validate parameters
+        if(descriptorSize !== lsh.descriptorSize)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalArgumentError(`Can't match different types of descriptors in ${this.fullName}`);
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.assert(LSH_KNN[descriptorSize] != undefined);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.assert(LSH_KNN[descriptorSize][hashSize] != undefined);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__.Utils.assert(LSH_KNN[descriptorSize][hashSize][level] != undefined);
+
+        // configure the output texture
+        const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_3__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const matcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity * matchesPerKeypoint)));
+        let encodedMatches = transferB;
+        keypoints.lshKnnTransfer.outputs(matcherLength, matcherLength, transferA, transferB);
+
+        // prepare the LSH matching
+        const kthMatcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
+        keypoints.lshKnnInitCandidates.outputs(kthMatcherLength, kthMatcherLength, candidatesA);
+        keypoints.lshKnnInitFilters.outputs(kthMatcherLength, kthMatcherLength, filters);
+
+        const lshKnn = keypoints[LSH_KNN[descriptorSize][hashSize][level]];
+        lshKnn.outputs(kthMatcherLength, kthMatcherLength, candidatesB, candidatesC);
+        lshKnn.setUBO('LSHSequences', sequences);
+
+        // match keypoints
+        encodedMatches.clear();
+        keypoints.lshKnnInitFilters();
+        for(let i = 0; i < matchesPerKeypoint; i++) {
+            // find the (i+1)-th best match
+            let candidates = keypoints.lshKnnInitCandidates();
+            for(let tableIndex = 0; tableIndex < tableCount; tableIndex++) {
+                candidates = lshKnn(candidates, filters, kthMatcherLength, tables, descriptorDB, tableIndex, bucketCapacity, bucketsPerTable, tablesStride, descriptorDBStride, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+                gpu.gl.flush();
+            }
+            candidates.copyTo(filters);
+
+            // transfer matches to an encoded matches texture
+            encodedMatches = keypoints.lshKnnTransfer(encodedMatches, candidates, matchesPerKeypoint, i);
+        }
+
+        // done
+        this.output().swrite(encodedMatches, matchesPerKeypoint);
+
+        /*
+        // debug
+        let data = this._inspect32(filters), debug = [];
+        for(let i = 0; i < data.length; i++) {
+            const bits = MATCH_INDEX_BITS;
+            const mask = (1 << bits) - 1;
+            const u32 = data[i];
+            const index = u32 & mask, distance = u32 >>> bits;
+            //debug.push('|'+[ u32 ].toString());
+            debug.push('|'+[ index, distance ].toString());
+        }
+        console.log(debug.join(','));
+        */
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/matchers/lsh-static-tables.js":
+/*!*************************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/matchers/lsh-static-tables.js ***!
+  \*************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeStaticLSHTables": () => (/* binding */ SpeedyPipelineNodeStaticLSHTables)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
+/* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../gpu/speedy-lsh */ "./src/gpu/speedy-lsh.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * lsh-static-tables.js
+ * Static LSH tables
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Static LSH tables
+ */
+class SpeedyPipelineNodeStaticLSHTables extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineSourceNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 2, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.LSHTables)
+        ]);
+
+        /** @type {SpeedyKeypoint[]} "training" keypoints */
+        this._keypoints = [];
+
+        /** @type {SpeedyKeypoint[]} internal copy of the "training" keypoints */
+        this._keypointsCopy = [];
+
+        /** @type {number} number of tables in the LSH data structure */
+        this._numberOfTables = _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_DEFAULT_NUMBER_OF_TABLES;
+
+        /** @type {number} number of bits of a hash */
+        this._hashSize = _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_DEFAULT_HASH_SIZE;
+
+        /** @type {SpeedyLSH|null} LSH data structure */
+        this._lsh = null;
+    }
+
+    /**
+     * "Training" keypoints
+     * @returns {SpeedyKeypoint[]}
+     */
+    get keypoints()
+    {
+        return this._keypoints;
+    }
+
+    /**
+     * "Training" keypoints
+     * @param {SpeedyKeypoint[]} keypoints
+     */
+    set keypoints(keypoints)
+    {
+        if(!Array.isArray(keypoints) || keypoints.find(keypoint => !(keypoint instanceof _speedy_keypoint__WEBPACK_IMPORTED_MODULE_3__.SpeedyKeypoint)))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalArgumentError(`Static LSH tables: an invalid set of keypoints has been provided`);
+
+        if(this._keypoints !== keypoints) {
+            this._keypoints = keypoints; // update internal pointer
+            this._keypointsCopy = keypoints.slice(0); // clone the array, so it won't be modified externally
+            this._lsh = null; // (re)train the model
+        }
+    }
+
+    /**
+     * Number of tables in the LSH data structure
+     * @returns {number}
+     */
+    get numberOfTables()
+    {
+        return this._numberOfTables;
+    }
+
+    /**
+     * Number of tables in the LSH data structure
+     * @param {number} n
+     */
+    set numberOfTables(n)
+    {
+        if(!_gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_ACCEPTABLE_NUMBER_OF_TABLES.includes(n))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalArgumentError(`Invalid number of tables: ${n}. Acceptable values: ${_gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_ACCEPTABLE_NUMBER_OF_TABLES.join(', ')}`);
+
+        if(n !== this._numberOfTables) {
+            this._numberOfTables = n | 0;
+            this._lsh = null; // need to retrain the model
+        }
+    }
+
+    /**
+     * Number of bits of a hash
+     * @returns {number}
+     */
+    get hashSize()
+    {
+        return this._hashSize;
+    }
+
+    /**
+     * Number of bits of a hash
+     * @param {number} h
+     */
+    set hashSize(h)
+    {
+        if(!_gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_ACCEPTABLE_HASH_SIZES.includes(h))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalArgumentError(`Invalid hash size: ${h}. Acceptable values: ${_gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.LSH_ACCEPTABLE_HASH_SIZES.join(', ')}`);
+
+        if(h !== this._hashSize) {
+            this._hashSize = h | 0;
+            this._lsh = null; // need to retrain the model
+        }
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        // Need to train the model?
+        if(this._lsh == null) {
+            // internal work textures are only available after initialization,
+            // i.e., after calling this._init()
+            this._lsh = this._train();
+        }
+
+        // Pass it forward
+        this.output().swrite(this._lsh);
+    }
+
+    /**
+     * Train the model
+     * @returns {SpeedyLSH}
+     */
+    _train()
+    {
+        const keypoints = this._keypointsCopy;
+        const numberOfTables = this._numberOfTables;
+        const hashSize = this._hashSize;
+
+        if(keypoints.find(keypoint => keypoint.descriptor == null))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalOperationError(`Static LSH tables: can't train the model with no keypoint descriptors!`);
+
+        const descriptors = keypoints.map(keypoint => keypoint.descriptor.data);
+        const lshTables = this._tex[0];
+        const descriptorDB = this._tex[1];
+
+        return new _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__.SpeedyLSH(lshTables, descriptorDB, descriptors, numberOfTables, hashSize);
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/nodes/keypoints/mixer.js":
 /*!****************************************************!*\
   !*** ./src/core/pipeline/nodes/keypoints/mixer.js ***!
@@ -4845,6 +5827,148 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
 
 /***/ }),
 
+/***/ "./src/core/pipeline/nodes/keypoints/shuffler.js":
+/*!*******************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/shuffler.js ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPipelineNodeKeypointShuffler": () => (/* binding */ SpeedyPipelineNodeKeypointShuffler)
+/* harmony export */ });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * shuffler.js
+ * Keypoint Shuffler
+ */
+
+
+
+
+
+
+
+
+
+
+/**
+ * The Keypoint Shuffler shuffles a list of keypoints
+ */
+class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 2, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints)
+        ]);
+
+        /** @type {number} maximum number of keypoints */
+        this._maxKeypoints = Number.NaN;
+    }
+
+    /**
+     * Maximum number of keypoints (optional)
+     * @returns {number}
+     */
+    get maxKeypoints()
+    {
+        return this._maxKeypoints;
+    }
+
+    /**
+     * Maximum number of keypoints (optional)
+     * @param {number} value
+     */
+    set maxKeypoints(value)
+    {
+        this._maxKeypoints = Math.max(0, Math.floor(value)); // accepts NaN
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        let { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const maxKeypoints = this._maxKeypoints;
+        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
+        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
+
+        // shuffle the keypoints
+        const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
+        const permutation = this._generatePermutation(permutationLength);
+        shuffle.setUBO('Permutation', new Int32Array(permutation));
+        encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // clip the output?
+        if(!Number.isNaN(maxKeypoints) && maxKeypoints < capacity) {
+            encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize);
+            encodedKeypoints = (gpu.programs.keypoints.clip
+                .outputs(encoderLength, encoderLength, this._tex[1])
+            )(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        }
+
+        // done!
+        this.output().swrite(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
+     * @param {number} n positive integer
+     * @returns {number[]} permutation
+     */
+    _generatePermutation(n)
+    {
+        const p = (new Array(n)).fill(-1);
+        const q = _utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.range(n));
+        const s = new Set(); // excluded numbers
+
+        for(let i = 0, j = 0; i < n; i++) {
+            if(p[i] < 0) {
+                do { p[i] = q[j++]; } while(s.has(p[i]));
+                p[p[i]] = i;
+                s.add(p[i]).add(i);
+            }
+        }
+
+        return p;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/nodes/keypoints/sink.js":
 /*!***************************************************!*\
   !*** ./src/core/pipeline/nodes/keypoints/sink.js ***!
@@ -4855,7 +5979,8 @@ class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMP
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "SpeedyPipelineNodeKeypointSink": () => (/* binding */ SpeedyPipelineNodeKeypointSink),
-/* harmony export */   "SpeedyPipelineNodeTrackedKeypointSink": () => (/* binding */ SpeedyPipelineNodeTrackedKeypointSink)
+/* harmony export */   "SpeedyPipelineNodeTrackedKeypointSink": () => (/* binding */ SpeedyPipelineNodeTrackedKeypointSink),
+/* harmony export */   "SpeedyPipelineNodeMatchedKeypointSink": () => (/* binding */ SpeedyPipelineNodeMatchedKeypointSink)
 /* harmony export */ });
 /* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
 /* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
@@ -4871,8 +5996,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
 /* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../../../speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
-/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _speedy_keypoint_match__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../speedy-keypoint-match */ "./src/core/speedy-keypoint-match.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4893,6 +6019,7 @@ __webpack_require__.r(__webpack_exports__);
  * sink.js
  * Gets keypoints out of the pipeline
  */
+
 
 
 
@@ -4935,7 +6062,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
     {
         super(name, texCount + 2, portBuilders);
 
-        /** @type {T[]} keypoints (output) */
+        /** @type {Array<T|null>} keypoints (output) */
         this._keypoints = [];
 
         /** @type {SpeedyTextureReader} texture reader */
@@ -4946,6 +6073,9 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
 
         /** @type {boolean} accelerate GPU-CPU transfers */
         this._turbo = false;
+
+        /** @type {boolean} should discarded keypoints be exported as null or dropped altogether? */
+        this._includeDiscarded = false;
     }
 
     /**
@@ -4964,6 +6094,24 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
     set turbo(value)
     {
         this._turbo = Boolean(value);
+    }
+
+    /**
+     * Should discarded keypoints be exported as null or dropped altogether?
+     * @returns {boolean}
+     */
+    get includeDiscarded()
+    {
+        return this._includeDiscarded;
+    }
+
+    /**
+     * Should discarded keypoints be exported as null or dropped altogether?
+     * @param {boolean} value
+     */
+    set includeDiscarded(value)
+    {
+        this._includeDiscarded = Boolean(value);
     }
 
     /**
@@ -4988,7 +6136,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
 
     /**
      * Export data from this node to the user
-     * @returns {SpeedyPromise<T[]>}
+     * @returns {SpeedyPromise<Array<T|null>>}
      */
     export()
     {
@@ -5059,14 +6207,15 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
      * @param {number} extraSize in bytes
      * @param {number} encoderWidth
      * @param {number} encoderHeight
-     * @returns {T[]} keypoints
+     * @returns {Array<T|null>} keypoints
      */
     _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
-        const bytesPerKeypoint = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
-        const m = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.LOG2_PYRAMID_MAX_SCALE, h = _utils_globals__WEBPACK_IMPORTED_MODULE_15__.PYRAMID_MAX_LEVELS;
+        const bytesPerKeypoint = _utils_globals__WEBPACK_IMPORTED_MODULE_16__.MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
+        const m = _utils_globals__WEBPACK_IMPORTED_MODULE_16__.LOG2_PYRAMID_MAX_SCALE, h = _utils_globals__WEBPACK_IMPORTED_MODULE_16__.PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
-        const keypoints = [];
+        const keypoints = /** @type {Array<T|null>} */ ( [] );
+        const includeDiscarded = this._includeDiscarded;
         let descriptorBytes = ZERO_BYTES, extraBytes = ZERO_BYTES;
         let x, y, z, w, lod, rotation, score;
         let keypoint;
@@ -5098,24 +6247,31 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
                 break;
 
             // the header is zero: discard the keypoint
-            if(x + y + z + w == 0)
+            if(x + y + z + w == 0) {
+                if(includeDiscarded)
+                    keypoints.push(null);
                 continue;
+            }
 
             // extract extra & descriptor bytes
             if(extraSize > 0) {
                 extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
-                if(extraBytes.byteLength < extraSize)
+                if(extraBytes.byteLength < extraSize) {
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.warning(`KeypointSink: expected ${extraSize} extra bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${extraBytes.byteLength} instead`);
                     continue; // something is off here; discard
+                }
             }
             if(descriptorSize > 0) {
                 descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-                if(descriptorBytes.byteLength < descriptorSize)
+                if(descriptorBytes.byteLength < descriptorSize) {
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.warning(`KeypointSink: expected ${descriptorSize} descriptor bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${descriptorBytes.byteLength} instead`);
                     continue; // something is off here; discard
+                }
             }
 
             // decode position: convert from fixed-point
-            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_15__.FIX_RESOLUTION;
-            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_15__.FIX_RESOLUTION;
+            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_16__.FIX_RESOLUTION;
+            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_16__.FIX_RESOLUTION;
 
             // decode level-of-detail
             lod = (pixels[i+4] < 255) ? -m + ((m + h) * pixels[i+4]) / 255.0 : 0.0;
@@ -5288,10 +6444,91 @@ class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbstractKe
         // read flow vector
         const fx = _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.decodeFloat16((extraBytes[1] << 8) | extraBytes[0]);
         const fy = _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.decodeFloat16((extraBytes[3] << 8) | extraBytes[2]);
-        const flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_14__.SpeedyVector2(fx, fy);
+        const flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_15__.SpeedyVector2(fx, fy);
 
         // create keypoint
         return new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__.SpeedyTrackedKeypoint(x, y, lod, rotation, score, descriptor, flow);
+    }
+}
+
+/**
+ * Gets matched keypoints out of the pipeline
+ * @extends SpeedyPipelineNodeAbstractKeypointSink<SpeedyMatchedKeypoint>
+ */
+class SpeedyPipelineNodeMatchedKeypointSink extends SpeedyPipelineNodeAbstractKeypointSink
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'keypoints')
+     {
+        super(name, 2, [
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints).satisfying(
+                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
+                    msg.extraSize == 0
+            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)('matches').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.KeypointMatches)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
+        const { encodedMatches, matchesPerKeypoint } = /** @type {SpeedyPipelineMessageWithKeypointMatches} */ ( this.input('matches').read() );
+
+        // allocate space for the matches
+        const newDescriptorSize = descriptorSize;
+        const newExtraSize = matchesPerKeypoint * 4; // 4 bytes per pixel
+        const encodedKeypointsWithExtraSpace = this._allocateExtra(gpu, this._tex[0], encodedKeypoints, descriptorSize, extraSize, newDescriptorSize, newExtraSize);
+
+        // transfer matches to a new texture
+        const newEncoderLength = encodedKeypointsWithExtraSpace.width;
+        const newEncodedKeypoints = (gpu.programs.keypoints.transferToExtra
+            .outputs(newEncoderLength, newEncoderLength, this._tex[1])
+        )(encodedMatches, encodedMatches.width, encodedKeypointsWithExtraSpace, newDescriptorSize, newExtraSize, newEncoderLength);
+
+        // done!
+        return this._download(gpu, newEncodedKeypoints, newDescriptorSize, newExtraSize, newEncoderLength);
+    }
+
+    /**
+     * Instantiate a new keypoint
+     * @param {number} x
+     * @param {number} y
+     * @param {number} lod
+     * @param {number} rotation
+     * @param {number} score
+     * @param {Uint8Array} descriptorBytes
+     * @param {Uint8Array} extraBytes
+     * @returns {SpeedyMatchedKeypoint}
+     */
+    _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
+    {
+        const descriptorSize = descriptorBytes.byteLength;
+        const extraSize = extraBytes.byteLength;
+
+        // read descriptor, if any
+        const descriptor = descriptorSize > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__.SpeedyKeypointDescriptor(descriptorBytes) : null;
+
+        // decode matches
+        const matchesPerKeypoint = extraSize / 4;
+        const matches = /** @type {SpeedyKeypointMatch[]} */ ( new Array(matchesPerKeypoint) );
+        for(let matchIndex = 0; matchIndex < matchesPerKeypoint; matchIndex++) {
+            const base = matchIndex * 4;
+            const u32 = extraBytes[base] | (extraBytes[base+1] << 8) | (extraBytes[base+2] << 16) | (extraBytes[base+3] << 24);
+            const match = new _speedy_keypoint_match__WEBPACK_IMPORTED_MODULE_14__.SpeedyKeypointMatch(u32 & _utils_globals__WEBPACK_IMPORTED_MODULE_16__.MATCH_INDEX_MASK, u32 >>> _utils_globals__WEBPACK_IMPORTED_MODULE_16__.MATCH_INDEX_BITS);
+
+            matches[matchIndex] = match;
+        }
+
+        // done!
+        return new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__.SpeedyMatchedKeypoint(x, y, lod, rotation, score, descriptor, matches);
     }
 }
 
@@ -5690,136 +6927,6 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends _pipeline_node__WEBPACK_
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js":
-/*!***********************************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/trackers/distance-filter.js ***!
-  \***********************************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyPipelineNodeKeypointDistanceFilter": () => (/* binding */ SpeedyPipelineNodeKeypointDistanceFilter)
-/* harmony export */ });
-/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-matrix */ "./src/core/speedy-matrix.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * distance-filter.js
- * Given a set of pairs of keypoints, discard all pairs whose distance is
- * above a user-defined threshold. Useful for bidirectional optical-flow.
- */
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Given a set of pairs of keypoints, discard all pairs whose distance is
- * above a user-defined threshold. Useful for bidirectional optical-flow.
- * 
- * The pairs of keypoints are provided as two separate sets, "first" and
- * "second". Keypoints that are kept will have their data extracted from
- * the first set.
- */
-class SpeedyPipelineNodeKeypointDistanceFilter extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__.SpeedyPipelineNode
-{
-    /**
-     * Constructor
-     * @param {string} [name] name of the node
-     */
-    constructor(name = undefined)
-    {
-        super(name, 1, [
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('first').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('second').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints)
-        ]);
-
-        /** @type {number} maximum accepted distance */
-        this._maxDistance = 65535; // a large value
-    }
-
-    /**
-     * Maximum accepted distance
-     * @returns {number}
-     */
-    get maxDistance()
-    {
-        return this._maxDistance;
-    }
-
-    /**
-     * Maximum accepted distance
-     * @param {number} value
-     */
-    set maxDistance(value)
-    {
-        this._maxDistance = Math.max(0, +value);
-    }
-
-    /**
-     * Run the specific task of this node
-     * @param {SpeedyGPU} gpu
-     * @returns {void|SpeedyPromise<void>}
-     */
-    _run(gpu)
-    {
-        const set0 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('first').read() );
-        const set1 = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('second').read() );
-        const maxDistance = this._maxDistance;
-
-        // validate shapes
-        if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__.IllegalOperationError(`The distance filter requires two compatible shapes of keypoint streams`);
-
-        // calculate the shape of the output
-        const outputTexture = this._tex[0];
-        const encoderLength = Math.max(set0.encoderLength, set1.encoderLength);
-        const descriptorSize = set0.descriptorSize;
-        const extraSize = set0.extraSize;
-
-        // apply the distance filter
-        (gpu.programs.keypoints.distanceFilter
-            .outputs(encoderLength, encoderLength, outputTexture)
-        )(set0.encodedKeypoints, set0.encoderLength, set1.encodedKeypoints, set1.encoderLength, descriptorSize, extraSize, encoderLength, maxDistance);
-
-        // done!
-        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/pipeline/nodes/keypoints/trackers/lk.js":
 /*!**********************************************************!*\
   !*** ./src/core/pipeline/nodes/keypoints/trackers/lk.js ***!
@@ -5878,13 +6985,23 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const DEFAULT_WINDOW_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(11, 11);
+const DEFAULT_WINDOW_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(11, 11); // nice on mobile?
 const DEFAULT_DEPTH = Math.min(3, _utils_globals__WEBPACK_IMPORTED_MODULE_11__.PYRAMID_MAX_LEVELS);
 const DEFAULT_NUMBER_OF_ITERATIONS = 30;
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 const DEFAULT_EPSILON = 0.01;
-const MIN_WINDOW_SIZE = 5;
-const MAX_WINDOW_SIZE = 21;
+const LK_PROGRAM = {
+    3: 'lk3',
+    5: 'lk5',
+    7: 'lk7',
+    9: 'lk9',
+    11: 'lk11',
+    13: 'lk13',
+    15: 'lk15',
+    17: 'lk17',
+    19: 'lk19',
+    21: 'lk21',
+};
 
 
 /**
@@ -5943,15 +7060,15 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
      */
     set windowSize(windowSize)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.assert(windowSize.width == windowSize.height && windowSize.area() > 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__.Utils.assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
-        this._windowSize = windowSize;
+        if(windowSize.width != windowSize.height) {
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.NotSupportedError(`LK: window ${this._windowSize.toString()} is not square!`);
+        }
+        else if(!Object.prototype.hasOwnProperty.call(LK_PROGRAM, windowSize.width)) {
+            const SUPPORTED_WINDOWS = Object.keys(LK_PROGRAM).sort((a,b) => a-b).map(k => k+'x'+k).join(', ');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.NotSupportedError(`LK: window of size ${this._windowSize.toString()} is not supported! Supported sizes: ${SUPPORTED_WINDOWS}`);
+        }
 
-        const wsize = this._windowSize.width;
-        if(wsize > MAX_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.NotSupportedError(`LK: window of size ${this._windowSize} is too large!`);
-        else if(wsize < MIN_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.NotSupportedError(`LK: window of size ${this._windowSize} is too small!`);
+        this._windowSize = windowSize;
     }
 
     /**
@@ -6057,14 +7174,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__.IllegalOperationError(`LK: can't use input images of different size`);
 
         // select the appropriate program
-        const lk = (
-            (wsize <= 7  ? keypoints.lk7  :
-            (wsize <= 9  ? keypoints.lk9  :
-            (wsize <= 11 ? keypoints.lk11 : 
-            (wsize <= 13 ? keypoints.lk13 :
-            (wsize <= 15 ? keypoints.lk15 :
-            (wsize <= 21 ? keypoints.lk21 : null
-        )))))));
+        const lk = keypoints[LK_PROGRAM[wsize]];
 
         // find the dimensions of the flow texture (1 pixel per flow vector)
         const numKeypoints = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
@@ -6074,7 +7184,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
         // compute optical-flow
         let flow = lk.clear();
         for(let lod = levels - 1; lod >= 0; lod--)
-            flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
+            flow = lk(flow, previousKeypoints, nextImage, previousImage, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
         keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
@@ -6773,12 +7883,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "SpeedyPipelineMessageWithNothing": () => (/* binding */ SpeedyPipelineMessageWithNothing),
 /* harmony export */   "SpeedyPipelineMessageWithImage": () => (/* binding */ SpeedyPipelineMessageWithImage),
 /* harmony export */   "SpeedyPipelineMessageWithKeypoints": () => (/* binding */ SpeedyPipelineMessageWithKeypoints),
-/* harmony export */   "SpeedyPipelineMessageWith2DVectors": () => (/* binding */ SpeedyPipelineMessageWith2DVectors)
+/* harmony export */   "SpeedyPipelineMessageWith2DVectors": () => (/* binding */ SpeedyPipelineMessageWith2DVectors),
+/* harmony export */   "SpeedyPipelineMessageWithLSHTables": () => (/* binding */ SpeedyPipelineMessageWithLSHTables),
+/* harmony export */   "SpeedyPipelineMessageWithKeypointMatches": () => (/* binding */ SpeedyPipelineMessageWithKeypointMatches)
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../gpu/speedy-lsh */ "./src/gpu/speedy-lsh.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6805,6 +7918,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Types of messages
  * @enum {Symbol}
@@ -6814,6 +7928,8 @@ const SpeedyPipelineMessageType = Object.freeze({
     Image: Symbol('Image'),
     Keypoints: Symbol('Keypoints'),
     Vector2: Symbol('Vector2'),
+    LSHTables: Symbol('LSHTables'),
+    KeypointMatches: Symbol('KeypointMatches'),
 });
 
 /**
@@ -7059,7 +8175,7 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 }
 
-/**
+/*
  * A message transporting a set of 2D vectors
  */
 class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
@@ -7099,6 +8215,102 @@ class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
     }
 }
 
+/**
+ * A message transporting LSH tables
+ */
+class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.LSHTables);
+
+        /** @type {SpeedyLSH} LSH data structure */
+        this._lsh = null;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyLSH} lsh
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(lsh)
+    {
+        // set parameters
+        this._lsh = lsh;
+
+        // done!
+        return this;
+    }
+
+    /**
+     * LSH data structure
+     * @returns {SpeedyLSH}
+     */
+    get lsh()
+    {
+        return this._lsh;
+    }
+}
+
+/*
+ * A message transporting a set of keypoint matches
+ */
+class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.KeypointMatches);
+
+        /** @type {SpeedyDrawableTexture} keypoint matches (note: 1 pixel encodes 1 match) */
+        this._encodedMatches = null;
+
+        /** @type {number} number of matches per keypoint */
+        this._matchesPerKeypoint = 1;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} encodedMatches
+     * @param {number} matchesPerKeypoint
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(encodedMatches, matchesPerKeypoint)
+    {
+        // set parameters
+        this._encodedMatches = encodedMatches;
+        this._matchesPerKeypoint = matchesPerKeypoint | 0;
+
+        // validate
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.assert(this._matchesPerKeypoint > 0);
+
+        // done!
+        return this;
+    }
+
+    /**
+     * The matches
+     * @returns {SpeedyDrawableTexture}
+     */
+    get encodedMatches()
+    {
+        return this._encodedMatches;
+    }
+
+    /**
+     * Number of matches per keypoint
+     * @returns {number}
+     */
+    get matchesPerKeypoint()
+    {
+        return this._matchesPerKeypoint;
+    }
+}
 
 
 
@@ -7117,6 +8329,8 @@ const MESSAGE_CLASS = Object.freeze({
     [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
     [SpeedyPipelineMessageType.Keypoints]: SpeedyPipelineMessageWithKeypoints,
     [SpeedyPipelineMessageType.Vector2]: SpeedyPipelineMessageWith2DVectors,
+    [SpeedyPipelineMessageType.LSHTables]: SpeedyPipelineMessageWithLSHTables,
+    [SpeedyPipelineMessageType.KeypointMatches]: SpeedyPipelineMessageWithKeypointMatches,
 });
 
 /**
@@ -7491,7 +8705,7 @@ class SpeedyPipelineNode
 }
 
 /**
- * Source node (located at the beginning of a pipeline)
+ * Source node (a node with no input ports)
  * @abstract
  */
 class SpeedyPipelineSourceNode extends SpeedyPipelineNode
@@ -7519,7 +8733,7 @@ class SpeedyPipelineSourceNode extends SpeedyPipelineNode
 }
 
 /**
- * Sink node (located at the end of a pipeline)
+ * Sink node (a node with no output ports)
  * @abstract
  */
 class SpeedyPipelineSinkNode extends SpeedyPipelineNode
@@ -8552,6 +9766,98 @@ class SpeedyKeypointDescriptor
 
 /***/ }),
 
+/***/ "./src/core/speedy-keypoint-match.js":
+/*!*******************************************!*\
+  !*** ./src/core/speedy-keypoint-match.js ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyKeypointMatch": () => (/* binding */ SpeedyKeypointMatch)
+/* harmony export */ });
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-match.js
+ * A match between two keypoint descriptors
+ */
+
+
+
+// Constants
+const MATCH_NOT_FOUND = -1;
+
+/**
+ * A match between two keypoint descriptors
+ */
+class SpeedyKeypointMatch
+{
+    /**
+     * Constructor
+     * @param {number} index index of the stored keypoint, a non-negative integer
+     * @param {number} distance a measure of the quality of the match, a non-negative number
+     */
+    constructor(index, distance)
+    {
+        const isValid = distance < _utils_globals__WEBPACK_IMPORTED_MODULE_0__.MATCH_MAX_DISTANCE;
+
+        /** @type {number} index of the stored keypoint */
+        this._index = isValid ? (index | 0) : MATCH_NOT_FOUND;
+
+        /** @type {number} a measure of the quality of the match */
+        this._distance = isValid ? +distance : Number.POSITIVE_INFINITY;
+
+        // done!
+        return Object.freeze(this);
+    }
+
+    /**
+     * The index of the stored keypoint
+     * @returns {number}
+     */
+    get index()
+    {
+        return this._index;
+    }
+
+    /**
+     * A measure of the quality of the match (lower values indicate better matches)
+     * @returns {number}
+     */
+    get distance()
+    {
+        return this._distance;
+    }
+
+    /**
+     * A string representation of the keypoint match
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyKeypointMatch(${this.index},${this.distance})`;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/speedy-keypoint.js":
 /*!*************************************!*\
   !*** ./src/core/speedy-keypoint.js ***!
@@ -8562,11 +9868,13 @@ class SpeedyKeypointDescriptor
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "SpeedyKeypoint": () => (/* binding */ SpeedyKeypoint),
-/* harmony export */   "SpeedyTrackedKeypoint": () => (/* binding */ SpeedyTrackedKeypoint)
+/* harmony export */   "SpeedyTrackedKeypoint": () => (/* binding */ SpeedyTrackedKeypoint),
+/* harmony export */   "SpeedyMatchedKeypoint": () => (/* binding */ SpeedyMatchedKeypoint)
 /* harmony export */ });
 /* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
-/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _speedy_keypoint_match__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-keypoint-match */ "./src/core/speedy-keypoint-match.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -8592,6 +9900,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Represents a keypoint
  */
@@ -8609,7 +9918,7 @@ class SpeedyKeypoint
     constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         /** @type {SpeedyPoint2} keypoint position */
-        this._position = new _speedy_point__WEBPACK_IMPORTED_MODULE_1__.SpeedyPoint2(+x, +y);
+        this._position = new _speedy_point__WEBPACK_IMPORTED_MODULE_2__.SpeedyPoint2(+x, +y);
 
         /** @type {number} level of detail */
         this._lod = +lod;
@@ -8721,7 +10030,7 @@ class SpeedyTrackedKeypoint extends SpeedyKeypoint
      * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
      * @param {SpeedyVector2} [flow] flow vector
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_2__.SpeedyVector2(0,0))
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, flow = new _speedy_vector__WEBPACK_IMPORTED_MODULE_3__.SpeedyVector2(0,0))
     {
         super(x, y, lod, rotation, score, descriptor);
 
@@ -8738,6 +10047,40 @@ class SpeedyTrackedKeypoint extends SpeedyKeypoint
         return this._flow;
     }
 }
+
+/**
+ * Represents a matched keypoint
+ */
+class SpeedyMatchedKeypoint extends SpeedyKeypoint
+{
+    /**
+     * Constructor
+     * @param {number} x X position
+     * @param {number} y Y position
+     * @param {number} [lod] Level-of-detail
+     * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
+     * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
+     * @param {SpeedyKeypointMatch[]} [matches] Keypoint matches, if any
+     */
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null, matches = [])
+    {
+        super(x, y, lod, rotation, score, descriptor);
+
+        /** @type {SpeedyKeypointMatch[]} keypoint matches */
+        this._matches = matches;
+    }
+
+    /**
+     * Keypoint matches
+     * @returns {SpeedyKeypointMatch[]}
+     */
+    get matches()
+    {
+        return this._matches;
+    }
+}
+
 
 /***/ }),
 
@@ -9631,7 +10974,7 @@ class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {'default'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -9639,7 +10982,7 @@ class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
      */
     findHomography(homography, src, dest, {
-        method = 'dlt',
+        method = 'default',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 512,
@@ -9672,7 +11015,8 @@ class SpeedyMatrixFactory extends Function
                     wasm.exports.Mat32_pransac_homography(homptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
-                case 'dlt':
+                case 'default':
+                case 'dlt': // obsolete
                     wasm.exports.Mat32_homography_ndlt(homptr, srcptr, destptr);
                     break;
 
@@ -9764,8 +11108,7 @@ class SpeedyMatrixFactory extends Function
             _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
-            wasm.exports.Mat32_affine_dlt3(matptr, srcptr, destptr); // FIXME use normalized version
-            //wasm.exports.Mat32_affine_ndlt3(matptr, srcptr, destptr);
+            wasm.exports.Mat32_affine_direct3(matptr, srcptr, destptr);
 
             // copy output matrix from WASM memory
             _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.copyFromMat32(wasm, memory, matptr, transform);
@@ -9786,7 +11129,7 @@ class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'dlt'|'pransac'} [options.method] method of computation
+     * @param {'default'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -9794,7 +11137,7 @@ class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to an affine transform
      */
     findAffineTransform(transform, src, dest, {
-        method = 'dlt',
+        method = 'default',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 512,
@@ -9827,9 +11170,8 @@ class SpeedyMatrixFactory extends Function
                     wasm.exports.Mat32_pransac_affine(matptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
-                case 'dlt':
-                    wasm.exports.Mat32_affine_dlt(matptr, srcptr, destptr);
-                    //wasm.exports.Mat32_affine_ndlt(matptr, srcptr, destptr);
+                case 'default':
+                    wasm.exports.Mat32_affine_direct(matptr, srcptr, destptr);
                     break;
 
                 default:
@@ -12249,7 +13591,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _speedy_lsh__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../speedy-lsh */ "./src/gpu/speedy-lsh.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12277,170 +13620,211 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // FAST corner detector
-const fast9_16 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
+const fast9_16 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
 // Harris corner detector
 const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
-                   (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/harris.glsl')
+                   (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/harris.glsl')
                   .withDefines({ 'WINDOW_SIZE': win })
                   .withArguments('corners', 'pyramid', 'derivatives', 'lod', 'lodStep', 'gaussian')
                ), obj), {});
 
-const harrisScoreFindMax = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/score-findmax.glsl')
+const harrisScoreFindMax = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/score-findmax.glsl')
                           .withArguments('corners', 'iterationNumber');
 
-const harrisScoreCutoff = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/harris-cutoff.glsl')
+const harrisScoreCutoff = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/harris-cutoff.glsl')
                          .withArguments('corners', 'maxScore', 'quality');
 
 // Subpixel refinement
-const subpixelQuadratic1d = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/subpixel-refinement.glsl')
+const subpixelQuadratic1d = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/subpixel-refinement.glsl')
                            .withDefines({ 'METHOD': 0 })
                            .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelTaylor2d = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/subpixel-refinement.glsl')
+const subpixelTaylor2d = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/subpixel-refinement.glsl')
                         .withDefines({ 'METHOD': 1 })
                         .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelBilinear = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/subpixel-refinement.glsl')
+const subpixelBilinear = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/subpixel-refinement.glsl')
                         .withDefines({ 'METHOD': 2 })
                         .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelBicubic = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/subpixel-refinement.glsl')
+const subpixelBicubic = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/subpixel-refinement.glsl')
                        .withDefines({ 'METHOD': 3 })
                        .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
 // Scale refinement
-const refineScaleLoG = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/refine-scale.glsl')
+const refineScaleLoG = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/refine-scale.glsl')
                       .withDefines({ 'METHOD': 0 })
                       .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const refineScaleFAST916 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/refine-scale.glsl')
+const refineScaleFAST916 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/refine-scale.glsl')
                           .withDefines({ 'METHOD': 1 })
                           .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
 // Pixel allocation
-const allocateDescriptors = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/allocate-descriptors.glsl')
+const allocateDescriptors = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
-const allocateExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/allocate-extra.glsl')
+const allocateExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/allocate-extra.glsl')
                      .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
-const transferToExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/transfer-to-extra.glsl')
+const transferToExtra = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/transfer-to-extra.glsl')
                         .withArguments('encodedData', 'strideOfEncodedData', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // ORB descriptors
-const orbDescriptor = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/orb-descriptor.glsl')
+const orbDescriptor = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/orb-descriptor.glsl')
                      .withArguments('image', 'encodedCorners', 'extraSize', 'encoderLength');
 
-const orbOrientation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/orb-orientation.glsl')
+const orbOrientation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/orb-orientation.glsl')
                       .withArguments('image', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Non-maximum suppression
-const nonMaxSuppression = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/nonmax-suppression.glsl')
+const nonMaxSuppression = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/nonmax-suppression.glsl')
                          .withDefines({ 'MULTISCALE': 0 })
                          .withArguments('image', 'lodStep');
 
-const multiscaleNonMaxSuppression = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/nonmax-suppression.glsl')
+const multiscaleNonMaxSuppression = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/nonmax-suppression.glsl')
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
-const nonmaxSpace = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/nonmax-space.glsl')
+const nonmaxSpace = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/nonmax-space.glsl')
                     .withArguments('corners');
 
-const nonmaxScale = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/nonmax-scale.glsl')
+const nonmaxScale = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/nonmax-scale.glsl')
                     .withDefines({ 'USE_LAPLACIAN': 1 })
                     .withArguments('corners', 'pyramid', 'pyrLaplacian', 'lodStep');
 
-const nonmaxScaleSimple = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/nonmax-scale.glsl')
+const nonmaxScaleSimple = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/nonmax-scale.glsl')
                          .withDefines({ 'USE_LAPLACIAN': 0 })
                          .withArguments('corners', 'pyramid', 'lodStep');
 
-const laplacian = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/laplacian.glsl')
+const laplacian = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/laplacian.glsl')
                  .withArguments('corners', 'pyramid', 'lodStep', 'lodOffset');
 
 // Keypoint tracking & optical-flow
-const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
-               (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/lk.glsl')
-               .withDefines({ 'MAX_WINDOW_SIZE': win })
-               .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
+const lk = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21].reduce((obj, win) => ((obj[win] =
+               (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/lk.glsl')
+               .withDefines({ 'WINDOW_SIZE': win })
+               .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            ), obj), {});
 
-const transferFlow = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/transfer-flow.glsl')
+const transferFlow = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// Brute-force matching
+const bfMatcherInitCandidates = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-init.glsl')
+                               .withDefines({ 'ENCODE_FILTERS': 0 });
+
+const bfMatcherInitFilters = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-init.glsl')
+                            .withDefines({ 'ENCODE_FILTERS': 1 });
+
+const bfMatcherTransfer = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-transfer.glsl')
+                         .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
+
+const bfMatcher32 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/bf-knn.glsl')
+                    .withDefines({ 'DESCRIPTOR_SIZE': 32 })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+
+const bfMatcher64 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/bf-knn.glsl')
+                    .withDefines({ 'DESCRIPTOR_SIZE': 64 })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+
+// LSH-based KNN matching
+const lshKnnInitCandidates = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-init.glsl')
+                            .withDefines({ 'ENCODE_FILTERS': 0 });
+
+const lshKnnInitFilters = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-init.glsl')
+                         .withDefines({ 'ENCODE_FILTERS': 1 });
+
+const lshKnn = _speedy_lsh__WEBPACK_IMPORTED_MODULE_3__.LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => ((obj[descriptorSize] = _speedy_lsh__WEBPACK_IMPORTED_MODULE_3__.LSH_ACCEPTABLE_HASH_SIZES.reduce((obj, hashSize) => ((obj[hashSize] = [0, 1, 2].reduce((obj, level) => ((obj[level] =
+                  (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/lsh-knn.glsl')
+                  .withDefines({
+                      'DESCRIPTOR_SIZE': descriptorSize,
+                      'HASH_SIZE': hashSize,
+                      'LEVEL': level,
+                      'SEQUENCE_MAXLEN': _speedy_lsh__WEBPACK_IMPORTED_MODULE_3__.LSH_SEQUENCE_MAXLEN,
+                      'SEQUENCE_COUNT': _speedy_lsh__WEBPACK_IMPORTED_MODULE_3__.LSH_SEQUENCE_COUNT,
+                  })
+                  .withArguments('candidates', 'filters', 'matcherLength', 'tables', 'descriptorDB', 'tableIndex', 'bucketCapacity', 'bucketsPerTable', 'tablesStride', 'descriptorDBStride', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength')
+              ), obj), {})), obj), {})), obj), {});
+
+const lshKnnTransfer = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-transfer.glsl')
+                       .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
+
 // Keypoint sorting
-const sortCreatePermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/sort-keypoints.glsl')
+const sortCreatePermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/sort-keypoints.glsl')
                              .withDefines({ 'STAGE': 1 })
                              .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const sortMergePermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/sort-keypoints.glsl')
+const sortMergePermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/sort-keypoints.glsl')
                             .withDefines({ 'STAGE': 2 })
                             .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
-const sortApplyPermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/sort-keypoints.glsl')
+const sortApplyPermutation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/sort-keypoints.glsl')
                             .withDefines({ 'STAGE': 3 })
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint mixing
-const mixKeypointsPreInit = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/mix-keypoints.glsl')
+const mixKeypointsPreInit = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/mix-keypoints.glsl')
                            .withDefines({ 'STAGE': 1 })
                            .withArguments('encodedKeypointsA', 'encodedKeypointsB', 'encoderLengthA', 'encoderLengthB', 'encoderCapacityA', 'encoderCapacityB', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const mixKeypointsInit = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/mix-keypoints.glsl')
+const mixKeypointsInit = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 2 })
                         .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
 
-const mixKeypointsSort = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/mix-keypoints.glsl')
+const mixKeypointsSort = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 3 })
                         .withArguments('array', 'blockSize');
 
-const mixKeypointsView = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/mix-keypoints.glsl')
+const mixKeypointsView = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 5 })
                         .withArguments('array');
 
-const mixKeypointsApply = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/mix-keypoints.glsl')
+const mixKeypointsApply = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/mix-keypoints.glsl')
                          .withDefines({ 'STAGE': 4 })
                          .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint encoding
-const initLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/lookup-of-locations.glsl')
+const initLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
                        .withArguments('corners');
 
-const sortLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
+const sortLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
                        .withArguments('lookupTable', 'blockSize', 'width', 'height');
 
-const viewLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/lookup-of-locations.glsl')
+const viewLookupTable = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'STAGE': -1 })
                        .withArguments('lookupTable');
 
-const encodeKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-keypoints.glsl')
+const encodeKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-keypoints.glsl')
                        .withArguments('corners', 'lookupTable', 'stride', 'descriptorSize', 'extraSize', 'encoderLength', 'encoderCapacity');
 
-const encodeKeypointSkipOffsets = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-keypoint-offsets.glsl')
+const encodeKeypointSkipOffsets = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-keypoint-offsets.glsl')
                                  .withArguments('corners', 'imageSize');
 
-const encodeKeypointLongSkipOffsets = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-keypoint-long-offsets.glsl')
+const encodeKeypointLongSkipOffsets = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-keypoint-long-offsets.glsl')
                                      .withDefines({ 'MAX_ITERATIONS': 6 }) // dependent texture reads :(
                                      .withArguments('offsetsImage', 'imageSize');
 
-const encodeKeypointPositions = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-keypoint-positions.glsl')
+const encodeKeypointPositions = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-keypoint-positions.glsl')
                                .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const encodeKeypointProperties = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-keypoint-properties.glsl')
+const encodeKeypointProperties = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-keypoint-properties.glsl')
                                 .withArguments('corners', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const encodeNullKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/encode-null-keypoints.glsl')
+const encodeNullKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/encode-null-keypoints.glsl')
                            .withArguments();
 
-const transferOrientation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/transfer-orientation.glsl')
+const transferOrientation = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const uploadKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/upload-keypoints.glsl')
+const uploadKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/upload-keypoints.glsl')
                        .withDefines({
                             // UBOs can hold at least 16KB of data;
                             // gl.MAX_UNIFORM_BLOCK_SIZE >= 16384
@@ -12451,16 +13835,31 @@ const uploadKeypoints = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.impo
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Geometric transformations
-const applyHomography = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/apply-homography.glsl')
+const applyHomography = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/apply-homography.glsl')
                         .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint filters
-const clipBorder = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/clip-border.glsl')
+const clipBorder = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/clip-border.glsl')
                   .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const distanceFilter = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_3__.importShader)('keypoints/distance-filter.glsl')
-                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'maxDistance');
+const distanceFilter = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/distance-filter.glsl')
+                      .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
+const hammingDistanceFilter32 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/hamming-distance-filter.glsl')
+                               .withDefines({ 'DESCRIPTOR_SIZE': 32 })
+                               .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
+
+const hammingDistanceFilter64 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/hamming-distance-filter.glsl')
+                               .withDefines({ 'DESCRIPTOR_SIZE': 64 })
+                               .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
+
+// Other utilities
+const shuffle = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/shuffle.glsl')
+               .withDefines({ 'PERMUTATION_MAXLEN': 2048 })
+               .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const clip = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/clip.glsl')
+            .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
 
 /**
  * SpeedyProgramGroupKeypoints
@@ -12543,25 +13942,61 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             //
             // LK optical-flow
             //
-            .declare('lk21', lk[21], { // up to 21x21 window
+            .declare('lk21', lk[21], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk15', lk[15], { // up to 15x15 window
+            .declare('lk19', lk[19], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk13', lk[13], { // up to 13x13
+            .declare('lk17', lk[17], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk11', lk[11], { // up to 11x11 window (nice on mobile)
+            .declare('lk15', lk[15], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk9', lk[9], { // up to 9x9 window
+            .declare('lk13', lk[13], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lk7', lk[7], { // up to 7x7 window (faster)
+            .declare('lk11', lk[11], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk9', lk[9], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk7', lk[7], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk5', lk[5], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk3', lk[3], {
                 ...this.program.usesPingpongRendering()
             })
             .declare('transferFlow', transferFlow)
+
+            //
+            // Brute-force KNN matching
+            //
+            .declare('bfMatcherInitCandidates', bfMatcherInitCandidates)
+            .declare('bfMatcherInitFilters', bfMatcherInitFilters)
+            .declare('bfMatcherTransfer', bfMatcherTransfer, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('bfMatcher32', bfMatcher32, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('bfMatcher64', bfMatcher64, {
+                ...this.program.usesPingpongRendering()
+            })
+
+            //
+            // LSH-based KNN matching
+            //
+            .declare('lshKnnInitCandidates', lshKnnInitCandidates)
+            .declare('lshKnnInitFilters', lshKnnInitFilters)
+            .declare('lshKnnTransfer', lshKnnTransfer, {
+                ...this.program.usesPingpongRendering()
+            })
 
             //
             // Keypoint sorting
@@ -12621,7 +14056,29 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             //
             .declare('clipBorder', clipBorder)
             .declare('distanceFilter', distanceFilter)
+            .declare('hammingDistanceFilter32', hammingDistanceFilter32)
+            .declare('hammingDistanceFilter64', hammingDistanceFilter64)
+
+            //
+            // Other utilities
+            //
+            .declare('shuffle', shuffle)
+            .declare('clip', clip)
         ;
+
+        //
+        // LSH-based KNN matching
+        //
+        for(const descriptorSize of Object.keys(lshKnn)) {
+            for(const hashSize of Object.keys(lshKnn[descriptorSize])) {
+                for(const level of Object.keys(lshKnn[descriptorSize][hashSize])) {
+                    const name = `lshKnn${descriptorSize}h${hashSize}lv${level}`;
+                    this.declare(name, lshKnn[descriptorSize][hashSize][level], {
+                        ...this.program.usesPingpongRendering()
+                    });
+                }
+            }
+        }
     }
 }
 
@@ -13761,6 +15218,8 @@ var map = {
 	"./float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
 	"./int32.glsl": "./src/gpu/shaders/include/int32.glsl",
+	"./keypoint-descriptors.glsl": "./src/gpu/shaders/include/keypoint-descriptors.glsl",
+	"./keypoint-matches.glsl": "./src/gpu/shaders/include/keypoint-matches.glsl",
 	"./keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -13810,6 +15269,8 @@ var map = {
 	"./include/float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./include/global.glsl": "./src/gpu/shaders/include/global.glsl",
 	"./include/int32.glsl": "./src/gpu/shaders/include/int32.glsl",
+	"./include/keypoint-descriptors.glsl": "./src/gpu/shaders/include/keypoint-descriptors.glsl",
+	"./include/keypoint-matches.glsl": "./src/gpu/shaders/include/keypoint-matches.glsl",
 	"./include/keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -13817,7 +15278,9 @@ var map = {
 	"./keypoints/allocate-descriptors.glsl": "./src/gpu/shaders/keypoints/allocate-descriptors.glsl",
 	"./keypoints/allocate-extra.glsl": "./src/gpu/shaders/keypoints/allocate-extra.glsl",
 	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
+	"./keypoints/bf-knn.glsl": "./src/gpu/shaders/keypoints/bf-knn.glsl",
 	"./keypoints/clip-border.glsl": "./src/gpu/shaders/keypoints/clip-border.glsl",
+	"./keypoints/clip.glsl": "./src/gpu/shaders/keypoints/clip.glsl",
 	"./keypoints/distance-filter.glsl": "./src/gpu/shaders/keypoints/distance-filter.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
@@ -13827,12 +15290,16 @@ var map = {
 	"./keypoints/encode-null-keypoints.glsl": "./src/gpu/shaders/keypoints/encode-null-keypoints.glsl",
 	"./keypoints/fast.glsl": "./src/gpu/shaders/keypoints/fast.glsl",
 	"./keypoints/fast.vs.glsl": "./src/gpu/shaders/keypoints/fast.vs.glsl",
+	"./keypoints/hamming-distance-filter.glsl": "./src/gpu/shaders/keypoints/hamming-distance-filter.glsl",
 	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
 	"./keypoints/harris.glsl": "./src/gpu/shaders/keypoints/harris.glsl",
+	"./keypoints/knn-init.glsl": "./src/gpu/shaders/keypoints/knn-init.glsl",
+	"./keypoints/knn-transfer.glsl": "./src/gpu/shaders/keypoints/knn-transfer.glsl",
 	"./keypoints/laplacian.glsl": "./src/gpu/shaders/keypoints/laplacian.glsl",
 	"./keypoints/lk.glsl": "./src/gpu/shaders/keypoints/lk.glsl",
 	"./keypoints/lookup-of-locations.glsl": "./src/gpu/shaders/keypoints/lookup-of-locations.glsl",
 	"./keypoints/lookup-of-locations.vs.glsl": "./src/gpu/shaders/keypoints/lookup-of-locations.vs.glsl",
+	"./keypoints/lsh-knn.glsl": "./src/gpu/shaders/keypoints/lsh-knn.glsl",
 	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
 	"./keypoints/nonmax-scale.glsl": "./src/gpu/shaders/keypoints/nonmax-scale.glsl",
 	"./keypoints/nonmax-space.glsl": "./src/gpu/shaders/keypoints/nonmax-space.glsl",
@@ -13841,6 +15308,7 @@ var map = {
 	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
 	"./keypoints/refine-scale.glsl": "./src/gpu/shaders/keypoints/refine-scale.glsl",
 	"./keypoints/score-findmax.glsl": "./src/gpu/shaders/keypoints/score-findmax.glsl",
+	"./keypoints/shuffle.glsl": "./src/gpu/shaders/keypoints/shuffle.glsl",
 	"./keypoints/sort-keypoints.glsl": "./src/gpu/shaders/keypoints/sort-keypoints.glsl",
 	"./keypoints/subpixel-refinement.glsl": "./src/gpu/shaders/keypoints/subpixel-refinement.glsl",
 	"./keypoints/transfer-flow.glsl": "./src/gpu/shaders/keypoints/transfer-flow.glsl",
@@ -13882,6 +15350,122 @@ webpackContext.keys = function webpackContextKeys() {
 webpackContext.resolve = webpackContextResolve;
 module.exports = webpackContext;
 webpackContext.id = "./src/gpu/shaders sync recursive ^\\.\\/.*$";
+
+/***/ }),
+
+/***/ "./src/gpu/speedy-descriptordb.js":
+/*!****************************************!*\
+  !*** ./src/gpu/speedy-descriptordb.js ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyDescriptorDB": () => (/* binding */ SpeedyDescriptorDB)
+/* harmony export */ });
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _core_speedy_namespace__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-descriptordb.js
+ * A database of binary descriptors in video memory
+ */
+
+
+
+
+
+
+//
+// A database of binary descriptors is a texture that stores
+// a set of (descriptor: uint8_t[]) entries.
+//
+
+/** @type {number} we use RGBA8 textures to store the descriptors */
+const DESCRIPTORDB_BYTESPERPIXEL = 4;
+
+/** @type {number} texture size goes up to 16 MB */
+const DESCRIPTORDB_MAXLOG2STRIDE = 11; // 2048x2048 RGBA8 textures are guaranteed to be available in WebGL2 (where is the source of this?)
+
+/**
+ * Utility for generating a database of binary descriptors in video memory
+ */
+class SpeedyDescriptorDB extends _core_speedy_namespace__WEBPACK_IMPORTED_MODULE_1__.SpeedyNamespace
+{
+    /**
+     * Create a database of binary descriptors
+     * @param {SpeedyTexture} texture output texture
+     * @param {Uint8Array[]} descriptors binary descriptors
+     * @param {number} descriptorSize in bytes, a multiple of 4
+     * @returns {SpeedyTexture} texture
+     */
+    static create(texture, descriptors, descriptorSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(descriptorSize % DESCRIPTORDB_BYTESPERPIXEL == 0, `Invalid descriptorSize: ${descriptorSize}`);
+
+        const numberOfDescriptors = descriptors.length;
+        const pixelsPerDescriptor = descriptorSize / DESCRIPTORDB_BYTESPERPIXEL;
+
+        // find an appropriate texture size
+        const n = Math.log2(pixelsPerDescriptor * Math.max(numberOfDescriptors, 1)) / 2;
+        const log2stride = Math.min(DESCRIPTORDB_MAXLOG2STRIDE, Math.ceil(n));
+
+        // setup texture parameters
+        const stride = 1 << log2stride;
+        const width = stride, height = stride; // we use powers-of-two
+
+        // are we within storage capacity?
+        const capacity = (width * height) / pixelsPerDescriptor;
+        if(numberOfDescriptors > capacity)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`The capacity of the descriptorDB (${capacity} for ${descriptorSize * 8}-bit descriptors) has been exceeded`);
+
+        // create texture data
+        const data = new Uint8Array(width * height * DESCRIPTORDB_BYTESPERPIXEL);
+        for(let i = 0; i < numberOfDescriptors; i++) {
+            const byteOffset = i * descriptorSize;
+            const descriptor = descriptors[i];
+
+            // validate input
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(descriptor.byteLength === descriptorSize);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(byteOffset + descriptorSize <= data.byteLength);
+
+            // write data
+            data.set(descriptor, byteOffset);
+        }
+
+        // log data for further study
+        const MEGABYTE = 1048576;
+        const totalSize = numberOfDescriptors * descriptorSize;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.log(
+            `Creating a ${width}x${height} database of ${numberOfDescriptors} ` +
+            `${descriptorSize * 8}-bit descriptors ` +
+            `(total size: ${(totalSize / MEGABYTE).toFixed(2)} MB)`
+        );
+
+        // upload to the texture
+        texture.resize(width, height);
+        texture.upload(data);
+        return texture;
+    }
+}
 
 /***/ }),
 
@@ -14159,6 +15743,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
     }
 }
 
+
 /***/ }),
 
 /***/ "./src/gpu/speedy-gpu.js":
@@ -14369,6 +15954,604 @@ class SpeedyGPU extends _utils_observable__WEBPACK_IMPORTED_MODULE_8__.Observabl
         this._notify();
     }
 }
+
+/***/ }),
+
+/***/ "./src/gpu/speedy-lsh.js":
+/*!*******************************!*\
+  !*** ./src/gpu/speedy-lsh.js ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "LSH_DEFAULT_NUMBER_OF_TABLES": () => (/* binding */ LSH_DEFAULT_NUMBER_OF_TABLES),
+/* harmony export */   "LSH_DEFAULT_HASH_SIZE": () => (/* binding */ LSH_DEFAULT_HASH_SIZE),
+/* harmony export */   "LSH_ACCEPTABLE_NUMBER_OF_TABLES": () => (/* binding */ LSH_ACCEPTABLE_NUMBER_OF_TABLES),
+/* harmony export */   "LSH_ACCEPTABLE_HASH_SIZES": () => (/* binding */ LSH_ACCEPTABLE_HASH_SIZES),
+/* harmony export */   "LSH_ACCEPTABLE_DESCRIPTOR_SIZES": () => (/* binding */ LSH_ACCEPTABLE_DESCRIPTOR_SIZES),
+/* harmony export */   "LSH_SEQUENCE_MAXLEN": () => (/* binding */ LSH_SEQUENCE_MAXLEN),
+/* harmony export */   "LSH_SEQUENCE_COUNT": () => (/* binding */ LSH_SEQUENCE_COUNT),
+/* harmony export */   "SpeedyLSH": () => (/* binding */ SpeedyLSH)
+/* harmony export */ });
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _speedy_descriptordb__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-descriptordb */ "./src/gpu/speedy-descriptordb.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-lsh.js
+ * GPU-based LSH tables for fast matching of binary descriptors
+ */
+
+
+
+
+
+
+/*
+ *              ALE'S GPU-BASED LSH FOR APPROXIMATE KNN MATCHING
+ *              ------------------------------------------------
+ *
+ * Here is my variant of Locality Sensitive Hashing for GPU-based KNN matching!
+ * Indices of keypoint descriptors are stored in several tables, each with many
+ * buckets of fixed capacity. In a nutshell, I create a data structure of fixed
+ * size to match the keypoints.
+ *
+ * Buckets in video memory may get full. Wouldn't it be cool if we could use a
+ * probabilistic approach to let us work within their storage capacity?
+ *
+ * Let there be n buckets in a table, each with storage capacity c (holding
+ * up to c elements). Buckets are numbered from 0 to n-1.
+ *
+ * We pick uniformly a random bucket to store a new element in the table. Let
+ * X be the chosen bucket. The probability that we'll store the new element in
+ * any particular bucket k is:
+ *
+ * P(X = k) = 1/n   (k = 0, 1, 2, ... n-1)
+ *
+ * On average, each new element stored in the table inserts 1/n of an element
+ * in each bucket. If we add m new elements to the table, each bucket receives
+ * m/n elements, on average(*).
+ *
+ * (*) for all k, define the Ik random variable as 1 if X = k and 0 otherwise.
+ *     It follows that the expected value of Ik, E(Ik), is 1/n for all k. In
+ *     addition, the expected value of (m Ik) is m * E(ik) = m/n.
+ *
+ * Now let Yi be the number of elements inserted in bucket i in m additions to
+ * the table. We model Yi as Poisson(m/n), since on average, m additions to
+ * the table result in m/n new elements being inserted in bucket i. Buckets
+ * are picked independently. Hence, for all i, the probability that we insert
+ * q elements in bucket i in m additions to the table is:
+ *
+ * P(Yi = q) = (m/n)^q * exp(-m/n) / q!   (q = 0, 1, 2...)
+ *
+ * Given that each bucket has storage capacity c, we require Yi <= c with a
+ * high probability p (say, p = 0.99). This means that, in m additions, we
+ * don't want to exceed the capacity c with high probability. So, let us find
+ * a (large) value of m such that:
+ *
+ * P(Yi <= c) >= p
+ *
+ * Sounds good! We can find the largest matching m using binary search.
+ *
+ * I don't think we need to enforce a high probability that ALL buckets stay
+ * within their capacity - n is large, we need to use the available space, and
+ * we have multiple tables anyway.
+ *
+ * In practice, the assumption that buckets are picked uniformly doesn't hold:
+ * keypoints that are nearby tend to have similar descriptors and buckets are
+ * picked according to those descriptors. Still, this model works well enough
+ * in practice and it is simple! That's what I like about it!
+ *
+ * ... now, how I actually do the matching is the theme of the next episode!
+ */
+
+/** @type {number} Default number of tables in a LSH data structure */
+const LSH_DEFAULT_NUMBER_OF_TABLES = 8;
+
+/** @type {number} Default number of bits of a hash */
+const LSH_DEFAULT_HASH_SIZE = 15;
+
+/** @type {number[]} Acceptable number of tables for a LSH data structure */
+const LSH_ACCEPTABLE_NUMBER_OF_TABLES = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
+
+/** @type {number[]} Acceptable values for hashSize, in bits */
+const LSH_ACCEPTABLE_HASH_SIZES = [10,11,12,13,14,15,16,17,18,19,20];
+
+/** @type {number[]} Acceptable sizes for keypoint descriptors, in bytes */
+const LSH_ACCEPTABLE_DESCRIPTOR_SIZES = [32,64];
+
+/**
+ * @typedef {Object} LSHProfile LSH profile
+ * @property {string} name name of the profile
+ * @property {number} capacity maximum number of keypoints that can be stored in such a table
+ * @property {number} hashSize number of bits in a keypoint descriptor hash (at most 16)
+ * @property {number} tableCount number of tables, preferably a power of 2 (at most 16)
+ * @property {number} bucketCapacity maximum number of entries of a bucket of a table
+ */
+
+/** @type {function(number,number,number):LSHProfile[]|null} generate LSH profiles sorted by increasing capacity */
+const generateLSHProfiles = (t,h,p) => !LSH_ACCEPTABLE_HASH_SIZES.includes(h) || !LSH_ACCEPTABLE_NUMBER_OF_TABLES.includes(t) ? null : [
+    {
+        name: 'x-small',
+        bucketCapacity: 1,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 1, p),
+    },
+    {
+        name: 'small',
+        bucketCapacity: 2,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 2, p),
+    },
+    {
+        name: 'small-plus',
+        bucketCapacity: 3,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 3, p),
+    },
+    {
+        name: 'medium',
+        bucketCapacity: 4,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 4, p),
+    },
+    {
+        name: 'medium-plus',
+        bucketCapacity: 5,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 5, p),
+    },
+    {
+        name: 'large',
+        bucketCapacity: 6,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 6, p),
+    },
+    {
+        name: 'x-large',
+        bucketCapacity: 8,
+        tableCount: t,
+        hashSize: h,
+        capacity: findTableCapacity(h, 8, p),
+    },
+];
+
+//
+// LSH hash sequences: random bits in increasing order
+// We generate a few sequences (one for each table) supporting up to 16 hash bits
+// We pad each sequence with invalid values at the end - we want to pick any bit with equal probability
+//
+
+/** @typedef {Uint32Array} BitSequences flattened array of LSH_SEQUENCE_COUNT sequences of LSH_SEQUENCE_MAXLEN elements each - each entry represents a bit index */
+/** @typedef {Object<number,BitSequences>} BitSequencesIndexedByDescriptorSize */
+/** @typedef {Object<number,BitSequencesIndexedByDescriptorSize>} LSHSequences */
+
+/** @type {number} maximum number of elements of a sequence */
+const LSH_SEQUENCE_MAXLEN = Math.max(...LSH_ACCEPTABLE_HASH_SIZES);
+
+/** @type {number} number of sequences in a BitSequences object */
+const LSH_SEQUENCE_COUNT = Math.max(...LSH_ACCEPTABLE_NUMBER_OF_TABLES);
+
+/** @type {function(BitSequences): BitSequences} Sort subsequences of random bits in ascending order */
+const partitionedSort = seq => (_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(LSH_SEQUENCE_COUNT)
+    .forEach(i => seq.subarray(i * LSH_SEQUENCE_MAXLEN, (i+1) * LSH_SEQUENCE_MAXLEN).sort()),
+seq);
+
+/** @type {function(number, BitSequences): BitSequences} Set the last p entries of the input subsequences to an invalid value */
+const padSequences = (p, seq) => (_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(LSH_SEQUENCE_COUNT)
+    .forEach(i => seq.subarray((i+1) * LSH_SEQUENCE_MAXLEN - p, (i+1) * LSH_SEQUENCE_MAXLEN).fill(0xBADCAFE)),
+seq);
+
+/** @type {LSHSequences} the bits we pick to form the hashes, laid out in ascending order and indexed by descriptorSize and hashSize */
+const LSH_SEQUENCES = (f => LSH_ACCEPTABLE_HASH_SIZES.reduce((p,o) => ((p[o]=f(o)), p), {}))(h => ({
+    // for 256-bit descriptors
+    32: partitionedSort(padSequences(LSH_SEQUENCE_MAXLEN - h, new Uint32Array([
+        ...(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(256))),
+        ...(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(256))),
+        ...(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(256))),
+    ].slice(0, LSH_SEQUENCE_COUNT * LSH_SEQUENCE_MAXLEN)))),
+
+    // for 512-bit descriptors
+    64: partitionedSort(padSequences(LSH_SEQUENCE_MAXLEN - h, new Uint32Array([
+        ...(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(512))),
+        ...(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(512))),
+    ].slice(0, LSH_SEQUENCE_COUNT * LSH_SEQUENCE_MAXLEN)))),
+}));
+
+//
+// Misc
+//
+
+/** @type {number} we use RGBA8 textures (32 bits per pixel) as storage */
+const LSH_BYTESPERPIXEL = 4;
+
+/** @type {function(number): number} next power of 2 */
+const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
+
+
+
+/**
+ * GPU-based LSH tables for fast matching of binary descriptors
+ */
+class SpeedyLSH
+{
+    /**
+     * Constructor
+     * @param {SpeedyTexture} lshTables texture to be used as the set of LSH tables
+     * @param {SpeedyTexture} descriptorDB texture to be used as the descriptor database
+     * @param {Uint8Array[]} descriptors the binary descriptors you'll store (make sure you don't repeat them, otherwise they will just waste space)
+     * @param {number} [tableCount] number of LSH tables, preferably a power of two
+     * @param {number} [hashSize] number of bits of a hash of a descriptor
+     * @param {number} [probability] probability of no discard events happening in the theoretical model
+     */
+    constructor(lshTables, descriptorDB, descriptors, tableCount = LSH_DEFAULT_NUMBER_OF_TABLES, hashSize = LSH_DEFAULT_HASH_SIZE, probability = 0.95)
+    {
+        const descriptorCount = descriptors.length;
+        const descriptorSize = descriptorCount > 0 ? descriptors[0].byteLength : 0;
+        const lshProfiles = generateLSHProfiles(tableCount, hashSize, probability);
+
+        // validate input
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(descriptorCount > 0, `Can't build LSH tables without descriptors!`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(LSH_ACCEPTABLE_DESCRIPTOR_SIZES.includes(descriptorSize), `Can't build LSH tables: unacceptable descriptor size of ${descriptorSize} bytes`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(descriptors.findIndex(d => d.byteLength !== descriptorSize) < 0, `Can't build LSH tables: incorrectly sized descriptors. Expected ${descriptorSize} bytes for each`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(descriptorCount < _utils_globals__WEBPACK_IMPORTED_MODULE_3__.MATCH_MAX_INDEX, `Can't build LSH tables: too many descriptors (${descriptors.length})`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(lshProfiles != null, `Can't build LSH tables: unacceptable number of tables (${tableCount}) x hash size (${hashSize})`);
+
+        /** @type {LSHProfile} LSH profile */
+        this._profile = lshProfiles.find(profile => descriptorCount <= profile.capacity) || lshProfiles[lshProfiles.length - 1];
+
+        /** @type {number} descriptor size, in bytes */
+        this._descriptorSize = descriptorSize;
+
+        /** @type {number} number of descriptors */
+        this._descriptorCount = descriptorCount;
+
+        /** @type {BitSequences} bit sequences */
+        this._sequences = this._pickSequences(this._descriptorSize);
+
+        /** @type {SpeedyTexture} LSH tables storing indices of descriptors */
+        this._tables = this._createStaticTables(lshTables, this._sequences, descriptors, descriptorSize);
+
+        /** @type {SpeedyTexture} a storage of descriptors */
+        this._descriptorDB = _speedy_descriptordb__WEBPACK_IMPORTED_MODULE_1__.SpeedyDescriptorDB.create(descriptorDB, descriptors, descriptorSize);
+    }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get descriptorSize()
+    {
+        return this._descriptorSize;
+    }
+
+    /**
+     * Number of descriptors stored in this LSH data structure
+     * @returns {number}
+     */
+    get descriptorCount()
+    {
+        return this._descriptorCount;
+    }
+
+    /**
+     * LSH bit sequences
+     * @returns {BitSequences}
+     */
+    get sequences()
+    {
+        return this._sequences;
+    }
+
+    /**
+     * Number of bits that make a hash
+     * @returns {number}
+     */
+    get hashSize()
+    {
+        return this._profile.hashSize;
+    }
+
+    /**
+     * Maximum number of descriptors that can be stored in a bucket of a table
+     * @returns {number}
+     */
+    get bucketCapacity()
+    {
+        return this._profile.bucketCapacity;
+    }
+
+    /**
+     * How many buckets per table do we have?
+     * @returns {number}
+     */
+    get bucketsPerTable()
+    {
+        return 1 << this._profile.hashSize;
+    }
+
+    /**
+     * Number of LSH tables
+     * @returns {number}
+     */
+    get tableCount()
+    {
+        return this._profile.tableCount;
+    }
+
+    /**
+     * Size of one LSH table, in bytes
+     * @returns {number}
+     */
+    get tableSize()
+    {
+        return this.bucketsPerTable * this.bucketCapacity * LSH_BYTESPERPIXEL;
+    }
+
+    /**
+     * Size of all LSH tables combined, in bytes
+     * @returns {number}
+     */
+    get totalSize()
+    {
+        // actually, the total memory in VRAM may be a bit larger than
+        // this value, depending on the actual size of the texture
+        return this.tableCount * this.tableSize;
+    }
+
+    /**
+     * LSH tables texture
+     * @returns {SpeedyDrawableTexture}
+     */
+    get tables()
+    {
+        return this._tables;
+    }
+
+    /**
+     * A collection of descriptors
+     * @returns {SpeedyDrawableTexture}
+     */
+    get descriptorDB()
+    {
+        return this._descriptorDB;
+    }
+
+    /**
+     * Pick the appropriate LSH sequences for a particular descriptor size
+     * @param {number} descriptorSize in bytes
+     * @returns {BitSequences}
+     */
+    _pickSequences(descriptorSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES, this.hashSize));
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES[this.hashSize], descriptorSize));
+
+        return LSH_SEQUENCES[this.hashSize][descriptorSize];
+    }
+
+    /**
+     * Create LSH tables
+     * @param {SpeedyTexture} texture output texture
+     * @param {BitSequences} sequences bit sequences
+     * @param {Uint8Array[]} descriptors non-empty array of binary descriptors, ALL HAVING THE SAME SIZE
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture} texture
+     */
+    _createStaticTables(texture, sequences, descriptors, descriptorSize)
+    {
+        const END_OF_LIST = 0xFFFFFFFF;
+        const profileName = this._profile.name;
+        const tableCapacity = this._profile.capacity;
+        const tableCount = this.tableCount;
+        const bucketsPerTable = this.bucketsPerTable;
+        const bucketSize = this.bucketCapacity * LSH_BYTESPERPIXEL;
+        const hashSize = this.hashSize;
+        const numberOfPixels = this.tableCount * this.bucketsPerTable * this.bucketCapacity; // watch for overflow?
+        const textureWidth = Math.min(nextPot(Math.sqrt(numberOfPixels)), 4096); // 4096 is compatible with most devices according to MDN
+        const textureHeight = Math.ceil(numberOfPixels / textureWidth);
+        const numberOfDescriptors = descriptors.length;
+
+        // validate input
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(hashSize <= LSH_SEQUENCE_MAXLEN);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(tableCount <= LSH_SEQUENCE_COUNT);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(numberOfPixels <= textureWidth * textureHeight);
+
+        // log
+        const MEGABYTE = 1048576;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.log(
+            `Building ${tableCount} ${profileName} LSH tables with ${numberOfDescriptors} ` +
+            `${descriptorSize * 8}-bit descriptors each and hashSize = ${hashSize} bits ` +
+            `(${textureWidth}x${textureHeight}, with ${(this.tableSize / MEGABYTE).toFixed(2)} ` +
+            `MB per table and total size = ${(this.totalSize / MEGABYTE).toFixed(2)} MB), `
+        );
+
+        // warn the user if there are too many descriptors
+        if(numberOfDescriptors > tableCapacity) {
+            const exceedingPercentage = 100 * numberOfDescriptors / tableCapacity;
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.warning(`There are too many descriptors (${numberOfDescriptors}) for a ${profileName} LSH table. That's ${exceedingPercentage.toFixed(2)}% of its theoretical capacity. Consider increasing the hashSize (currently set to ${hashSize}) or reducing the number of descriptors to avoid degradation.`);
+        }
+
+        // create empty LSH tables
+        const buffer = new ArrayBuffer(textureWidth * textureHeight * LSH_BYTESPERPIXEL);
+        const bytes = (new Uint8Array(buffer)).fill(0xFF);
+        const data = new DataView(buffer);
+
+        // shuffle the descriptors...
+        // it seems like a good idea to handle collisions of similar descriptors,
+        // which may be located next to each other in the array
+        const permutation = _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.range(numberOfDescriptors));
+
+        // for each descriptor
+        // do everything in little-endian format!
+        const numberOfDiscardedDescriptorsPerTable = (new Array(tableCount)).fill(0);
+        for(let i = 0; i < numberOfDescriptors; i++) {
+            const descriptorIndex = permutation[i]; //i;
+            const hashes = this._hashCodes(descriptors[descriptorIndex], sequences);
+
+            // for each table
+            for(let table = 0; table < tableCount; table++) {
+                // compute hash & memory addresses
+                const hash = hashes[table];
+                const tableByteOffset = table * bucketsPerTable * bucketSize;
+                const bucketByteOffset = tableByteOffset + hash * bucketSize;
+
+                // find the end of the list
+                let index = END_OF_LIST;
+                for(let entryByteOffset = 0; entryByteOffset < bucketSize; entryByteOffset += LSH_BYTESPERPIXEL) {
+                    const byteOffset = bucketByteOffset + entryByteOffset;
+                    index = data.getUint32(byteOffset, true);
+
+                    // add the keypoint
+                    if(index == END_OF_LIST) {
+                        data.setUint32(byteOffset, descriptorIndex, true);
+                        break;
+                    }
+                }
+
+                // note: if the bucket is full, we just discard the entry :\
+                // we give this event a probabilistic treatment (see above),
+                // so it happens with low probability
+                if(index != END_OF_LIST)
+                    numberOfDiscardedDescriptorsPerTable[table]++;
+            }
+        }
+
+        // log data for further study
+        const numberOfDiscardedDescriptors = numberOfDiscardedDescriptorsPerTable.reduce((sum, val) => sum + val, 0);
+        const profile = numberOfDiscardedDescriptorsPerTable.map(d => 100 * d / numberOfDescriptors);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.log(
+            `When building ${tableCount} ${profileName} LSH tables with ${numberOfDescriptors} ` +
+            `${descriptorSize * 8}-bit descriptors each and hashSize = ${hashSize} bits, ` +
+            `I got the following discard profile: ` + profile.map(x => x.toFixed(2) + '%').join(', ') + `. ` +
+            `Average: ${(100 * numberOfDiscardedDescriptors / (tableCount * numberOfDescriptors)).toFixed(2)}%. ` +
+            `Minimum: ${Math.min(...profile).toFixed(2)}%. ` +
+            `Table capacity: ${tableCapacity}.`
+        );
+
+        // upload the LSH tables to the GPU
+        texture.resize(textureWidth, textureHeight);
+        texture.upload(bytes);
+        return texture;
+    }
+
+    /**
+     * Pick bits from a binary descriptor
+     * @param {Uint8Array} descriptor a single descriptor
+     * @param {BitSequences} sequences flattened array of tableCount sequences of LSH_SEQUENCE_MAXLEN elements each
+     * @returns {number[]} hash code for each table
+     */
+    _hashCodes(descriptor, sequences)
+    {
+        const tableCount = this.tableCount;
+        const hashSize = this.hashSize;
+        const bucketsPerTable = this.bucketsPerTable;
+        const hashes = new Array(tableCount);
+        //const descriptorSize = descriptor.length;
+
+        // just to be sure...
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(
+            hashSize <= LSH_SEQUENCE_MAXLEN &&
+            sequences.length >= LSH_SEQUENCE_MAXLEN * tableCount
+        );
+
+        // for each table
+        for(let table = 0; table < tableCount; table++) {
+            const offset = LSH_SEQUENCE_MAXLEN * table;
+
+            // pick bits [ sequences[offset] .. sequences[offset + hashSize-1] ]
+            let hash = 0;
+            for(let i = 0; i < hashSize; i++) {
+                let bit = sequences[offset + i];
+                let b = bit >>> 3;
+                let m = 1 << (bit & 7);
+
+                //Utils.assert(b < descriptorSize);
+                hash = (hash << 1) | ((descriptor[b] & m) != 0);
+            }
+
+            // validate & store
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__.Utils.assert(hash >= 0 && hash < bucketsPerTable);
+            hashes[table] = hash;
+        }
+
+        // done!
+        return hashes;
+    }
+}
+
+/**
+ * Compute P(X <= k), where X ~ Poisson(lambda)
+ * @param {number} lambda positive number
+ * @param {number} k non-negative integer
+ * @returns {number}
+ */
+function cumulativePoisson(lambda, k)
+{
+    const exp = Math.exp(-lambda);
+    let sum = 1, fat = 1, pow = 1;
+
+    // k should be small!!!
+    for(let i = 1; i <= k; i++)
+        sum += (pow *= lambda) / (fat *= i);
+
+    return sum * exp;
+}
+
+/**
+ * Find the maximum number of keypoint descriptors that a table can hold
+ * @param {number} hashSize positive integer
+ * @param {number} bucketCapacity positive integer
+ * @param {number} [probability] probability of no discard events happening in the theoretical model
+ * @return {number} optimal table capacity
+ */
+function findTableCapacity(hashSize, bucketCapacity, probability = 0.99)
+{
+    const n = 1 << hashSize // number of buckets
+    const c = bucketCapacity;
+    const p = probability;
+
+    let l = 1, r = n * c; // watch for overflow!
+    let m = 0, pm = 0;
+
+    // binary search
+    while(l < r) {
+        m = Math.floor((l + r) / 2);
+        pm = cumulativePoisson(m / n, c);
+
+        if(pm > p) //if(1-pm < 1-p)
+            l = m + 1;
+        else
+            r = m;
+    }
+
+    return m;
+}
+
 
 /***/ }),
 
@@ -14836,6 +17019,9 @@ class SpeedyProgram extends Function
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
+        /** @type {ShaderDeclaration} shader declaration */
+        this._shaderdecl = shaderdecl;
+
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -15065,6 +17251,16 @@ class SpeedyProgram extends Function
 
         // done!
         return null;
+    }
+
+    /**
+     * A constant #defined in the shader declaration
+     * @param {string} name
+     * @returns {number}
+     */
+    definedConstant(name)
+    {
+        return this._shaderdecl.definedConstant(name);
     }
 
     /**
@@ -17363,8 +19559,8 @@ class FPSCounter
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "PYRAMID_MAX_LEVELS": () => (/* binding */ PYRAMID_MAX_LEVELS),
-/* harmony export */   "PYRAMID_MAX_SCALE": () => (/* binding */ PYRAMID_MAX_SCALE),
 /* harmony export */   "LOG2_PYRAMID_MAX_SCALE": () => (/* binding */ LOG2_PYRAMID_MAX_SCALE),
+/* harmony export */   "PYRAMID_MAX_SCALE": () => (/* binding */ PYRAMID_MAX_SCALE),
 /* harmony export */   "FIX_BITS": () => (/* binding */ FIX_BITS),
 /* harmony export */   "FIX_RESOLUTION": () => (/* binding */ FIX_RESOLUTION),
 /* harmony export */   "MAX_TEXTURE_LENGTH": () => (/* binding */ MAX_TEXTURE_LENGTH),
@@ -17372,6 +19568,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "MIN_ENCODER_LENGTH": () => (/* binding */ MIN_ENCODER_LENGTH),
 /* harmony export */   "MAX_ENCODER_CAPACITY": () => (/* binding */ MAX_ENCODER_CAPACITY),
 /* harmony export */   "DEFAULT_ENCODER_CAPACITY": () => (/* binding */ DEFAULT_ENCODER_CAPACITY),
+/* harmony export */   "LOG2_MAX_DESCRIPTOR_SIZE": () => (/* binding */ LOG2_MAX_DESCRIPTOR_SIZE),
+/* harmony export */   "MAX_DESCRIPTOR_SIZE": () => (/* binding */ MAX_DESCRIPTOR_SIZE),
+/* harmony export */   "MATCH_INDEX_BITS": () => (/* binding */ MATCH_INDEX_BITS),
+/* harmony export */   "MATCH_INDEX_MASK": () => (/* binding */ MATCH_INDEX_MASK),
+/* harmony export */   "MATCH_MAX_INDEX": () => (/* binding */ MATCH_MAX_INDEX),
+/* harmony export */   "MATCH_MAX_DISTANCE": () => (/* binding */ MATCH_MAX_DISTANCE),
 /* harmony export */   "LITTLE_ENDIAN": () => (/* binding */ LITTLE_ENDIAN)
 /* harmony export */ });
 /*
@@ -17400,13 +19602,13 @@ __webpack_require__.r(__webpack_exports__);
 // -----------------------------------------------------------------
 
 /** @type {number} The maximum number of levels in a pyramid, considering a scale factor of 2x between levels */
-const PYRAMID_MAX_LEVELS = 8; // i.e., maximum number of octaves
-
-/** @type {number} The maximum supported scale for a pyramid level */
-const PYRAMID_MAX_SCALE = 1; // preferably a power of 2 (image scale can go up to this value)
+const PYRAMID_MAX_LEVELS = 8;
 
 /** @type {number} The base-2 logarithm of PYRAMID_MAX_SCALE */
-const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
+const LOG2_PYRAMID_MAX_SCALE = 0;
+
+/** @type {number} The maximum supported scale for a pyramid level */
+const PYRAMID_MAX_SCALE = 1 << LOG2_PYRAMID_MAX_SCALE;
 
 
 
@@ -17446,6 +19648,24 @@ const MAX_ENCODER_CAPACITY = 8192;
 
 /** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
 const DEFAULT_ENCODER_CAPACITY = 2048;
+
+/** @type {number} log2 of MAX_DESCRIPTOR_SIZE */
+const LOG2_MAX_DESCRIPTOR_SIZE = 6;
+
+/** @type {number} maximum size of a keypoint descriptor, in bytes */
+const MAX_DESCRIPTOR_SIZE = 1 << LOG2_MAX_DESCRIPTOR_SIZE;
+
+/** @type {number} How many bits will we use when encoding the index of a keypoint match? */
+const MATCH_INDEX_BITS = 32 - (LOG2_MAX_DESCRIPTOR_SIZE + 3); // 32 - log2(MAX_DESCRIPTOR_SIZE * 8)
+
+/** @type {number} Bitwise mask to extract a keypoint index from an encoded match */
+const MATCH_INDEX_MASK = (1 << MATCH_INDEX_BITS) - 1;
+
+/** @type {number} Maximum size of the database of keypoints for matching */
+const MATCH_MAX_INDEX = (1 << MATCH_INDEX_BITS) - 1;
+
+/** @type {number} The maximum distance that can be stored in a match */
+const MATCH_MAX_DISTANCE = (1 << (32 - MATCH_INDEX_BITS)) - 1;
 
 
 
@@ -18449,6 +20669,31 @@ class Utils
     }
 
     /**
+     * Shuffle in-place
+     * @template T
+     * @param {T[]} arr
+     * @returns {T[]} arr
+     */
+    static shuffle(arr)
+    {
+        const len = arr.length;
+        const m = len - 1;
+
+        // Fisher-Yattes
+        for(let i = 0; i < m; i++) {
+            const j = i + ((Math.random() * (len - i)) | 0); // i <= j < arr.length
+
+            if(i !== j) {
+                const t = arr[i];
+                arr[i] = arr[j];
+                arr[j] = t;
+            }
+        }
+
+        return arr;
+    }
+
+    /**
      * Flatten an array (1 level only)
      * @template U
      * @param {U[]} array
@@ -18655,13 +20900,33 @@ module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(ve
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/include/keypoint-descriptors.glsl":
+/*!***********************************************************!*\
+  !*** ./src/gpu/shaders/include/keypoint-descriptors.glsl ***!
+  \***********************************************************/
+/***/ ((module) => {
+
+module.exports = "#ifndef _KEYPOINT_DESCRIPTORS_GLSL\n#define _KEYPOINT_DESCRIPTORS_GLSL\n#if !defined(DESCRIPTOR_SIZE)\n#error Must define DESCRIPTOR_SIZE\n#elif !defined(_KEYPOINTS_GLSL)\n#error Must include keypoints.glsl\n#endif\nuint[DESCRIPTOR_SIZE] readKeypointDescriptor(sampler2D encodedKeypoints, int descriptorSize, int extraSize, int encoderLength, KeypointAddress address)\n{\nint descriptorOffset = sizeofEncodedKeypoint(0, extraSize) / 4;\nKeypointAddress descriptorAddress = KeypointAddress(address.base, descriptorOffset);\nuint[DESCRIPTOR_SIZE] descriptor;\nvec4 pixel; uvec4 bytes;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\npixel = readKeypointData(encodedKeypoints, encoderLength, descriptorAddress);\nbytes = uvec4(pixel * 255.0f);\ndescriptor[i]   = bytes.r;\ndescriptor[i+1] = bytes.g;\ndescriptor[i+2] = bytes.b;\ndescriptor[i+3] = bytes.a;\ndescriptorAddress.offset++;\n}\nreturn descriptor;\n}\nuint[DESCRIPTOR_SIZE] readKeypointDescriptorFromDB(sampler2D descriptorDB, int descriptorDBStride, int index)\n{\nuint[DESCRIPTOR_SIZE] descriptor;\nint rasterIndex = index * (DESCRIPTOR_SIZE / 4) * int(index >= 0);\nvec4 pixel; uvec4 bytes; ivec2 pos;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\npos = ivec2(rasterIndex % descriptorDBStride, rasterIndex / descriptorDBStride);\npixel = (index >= 0) ? texelFetch(descriptorDB, pos, 0) : vec4(0.0f);\nbytes = uvec4(pixel * 255.0f);\ndescriptor[i]   = bytes.r;\ndescriptor[i+1] = bytes.g;\ndescriptor[i+2] = bytes.b;\ndescriptor[i+3] = bytes.a;\nrasterIndex++;\n}\nreturn descriptor;\n}\nint distanceBetweenKeypointDescriptors(uint[DESCRIPTOR_SIZE] a, uint[DESCRIPTOR_SIZE] b)\n{\nconst int[256] POPCNT = int[256](0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8);\nuvec4 xor, u, v;\nint dist = 0;\nivec4 bits;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\nu = uvec4(a[i], a[i+1], a[i+2], a[i+3]);\nv = uvec4(b[i], b[i+1], b[i+2], b[i+3]);\nxor = (u ^ v) & 255u;\nbits = ivec4(POPCNT[xor.x], POPCNT[xor.y], POPCNT[xor.z], POPCNT[xor.w]);\ndist += bits.x + bits.y + bits.z + bits.w;\n}\nreturn dist;\n}\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/keypoint-matches.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/include/keypoint-matches.glsl ***!
+  \*******************************************************/
+/***/ ((module) => {
+
+module.exports = "#ifndef _KEYPOINT_MATCHES_GLSL\n#define _KEYPOINT_MATCHES_GLSL\n@include \"int32.glsl\"\nconst int MATCH_INDEX_BITS = int(@MATCH_INDEX_BITS@);\nconst int MATCH_INDEX_MASK = int(@MATCH_INDEX_MASK@);\nconst int MATCH_MAX_INDEX = int(@MATCH_MAX_INDEX@);\nconst int MATCH_MAX_DISTANCE = int(@MATCH_MAX_DISTANCE@);\nstruct KeypointMatch\n{\nint index;\nint dist;\n};\nvec4 encodeKeypointMatch(KeypointMatch candidate)\n{\nuint index = uint(candidate.index & MATCH_INDEX_MASK);\nuint dist = uint(clamp(candidate.dist, 0, MATCH_MAX_DISTANCE));\nuint u32 = index | (dist << MATCH_INDEX_BITS);\nreturn encodeUint32(u32);\n}\nKeypointMatch decodeKeypointMatch(vec4 rgba)\n{\nuint u32 = decodeUint32(rgba);\nint dist = int(u32 >> MATCH_INDEX_BITS);\nint index = int(u32 & uint(MATCH_INDEX_MASK));\nreturn KeypointMatch(index, dist);\n}\nconst KeypointMatch MATCH_NOT_FOUND = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/include/keypoints.glsl":
 /*!************************************************!*\
   !*** ./src/gpu/shaders/include/keypoints.glsl ***!
   \************************************************/
 /***/ ((module) => {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_DISCARDED = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isDiscardedKeypoint(keypoint) ((((keypoint).flags) & KPF_DISCARDED) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define sizeofEncodedKeypointHeader() sizeofEncodedKeypoint(0,0)\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 rawEncodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(rawEncodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g);\nkeypoint.score = decodeKeypointScore(rawEncodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_DISCARDED * uint(isDiscarded);\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_DISCARDED = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isDiscardedKeypoint(keypoint) ((((keypoint).flags) & KPF_DISCARDED) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define sizeofEncodedKeypointHeader() sizeofEncodedKeypoint(0,0)\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 rawEncodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(rawEncodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g);\nkeypoint.score = decodeKeypointScore(rawEncodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_DISCARDED * uint(isDiscarded);\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
 
 /***/ }),
 
@@ -18725,6 +20990,16 @@ module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/bf-knn.glsl":
+/*!***********************************************!*\
+  !*** ./src/gpu/shaders/keypoints/bf-knn.glsl ***!
+  \***********************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\n@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedFilters;\nuniform int matcherLength;\nuniform sampler2D dbEncodedKeypoints;\nuniform int dbDescriptorSize;\nuniform int dbExtraSize;\nuniform int dbEncoderLength;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int passId;\nuniform int numberOfKeypointsPerPass;\nconst int INFINITE_DISTANCE = MATCH_MAX_DISTANCE + 1;\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch bestMatch = decodeKeypointMatch(threadPixel(encodedMatches));\nKeypointMatch filterMatch = decodeKeypointMatch(threadPixel(encodedFilters));\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nuint[DESCRIPTOR_SIZE] dbDescriptor;\nint dbPixelsPerKeypoint = sizeofEncodedKeypoint(dbDescriptorSize, dbExtraSize) / 4;\nfor(int i = 0; i < numberOfKeypointsPerPass; i++) {\nint dbKeypointIndex = passId * numberOfKeypointsPerPass + i;\nKeypointAddress dbAddress = KeypointAddress(dbKeypointIndex * dbPixelsPerKeypoint, 0);\nKeypoint dbKeypoint = decodeKeypoint(dbEncodedKeypoints, dbEncoderLength, dbAddress);\ndbDescriptor = readKeypointDescriptor(dbEncodedKeypoints, dbDescriptorSize, dbExtraSize, dbEncoderLength, dbAddress);\nint dist = !isBadKeypoint(dbKeypoint) ? distanceBetweenKeypointDescriptors(descriptor, dbDescriptor) : INFINITE_DISTANCE;\nbestMatch.index = all(bvec2(\ndist < bestMatch.dist || (dist == bestMatch.dist && dbKeypointIndex > bestMatch.index),\ndist > filterMatch.dist || (dist == filterMatch.dist && dbKeypointIndex < filterMatch.index)\n)) ? dbKeypointIndex : bestMatch.index;\nbestMatch.dist = dbKeypointIndex == bestMatch.index ? dist : bestMatch.dist;\n}\ncolor = encodeKeypointMatch(bestMatch);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/clip-border.glsl":
 /*!****************************************************!*\
   !*** ./src/gpu/shaders/keypoints/clip-border.glsl ***!
@@ -18735,13 +21010,23 @@ module.exports = "@include \"keypoints.glsl\"\nuniform int imageWidth;\nuniform 
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/clip.glsl":
+/*!*********************************************!*\
+  !*** ./src/gpu/shaders/keypoints/clip.glsl ***!
+  \*********************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = myIndex < maxKeypoints ? pixel : encodeNullKeypoint();\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/distance-filter.glsl":
 /*!********************************************************!*\
   !*** ./src/gpu/shaders/keypoints/distance-filter.glsl ***!
   \********************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform float maxDistance;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nvec2 delta = keypointA.position - keypointB.position;\nbool shouldKeep = (dot(delta, delta) <= maxDistance * maxDistance);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nvec2 delta = keypointA.position - keypointB.position;\nbool shouldKeep = (dot(delta, delta) <= threshold * threshold);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
@@ -18825,6 +21110,16 @@ module.exports = "uniform mediump float lod;\n#if !defined(FAST_TYPE)\n#error Un
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/hamming-distance-filter.glsl":
+/*!****************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/hamming-distance-filter.glsl ***!
+  \****************************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nuint[DESCRIPTOR_SIZE] descriptorA, descriptorB;\ndescriptorA = readKeypointDescriptor(encodedKeypointsA, descriptorSize, extraSize, encoderLengthA, address);\ndescriptorB = readKeypointDescriptor(encodedKeypointsB, descriptorSize, extraSize, encoderLengthB, address);\nint dist = distanceBetweenKeypointDescriptors(descriptorA, descriptorB);\nbool shouldKeep = (dist <= threshold);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/harris-cutoff.glsl":
 /*!******************************************************!*\
   !*** ./src/gpu/shaders/keypoints/harris-cutoff.glsl ***!
@@ -18845,6 +21140,26 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@includ
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/knn-init.glsl":
+/*!*************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/knn-init.glsl ***!
+  \*************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoint-matches.glsl\"\nvoid main()\n{\n#if ENCODE_FILTERS != 0\nKeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, 0);\n#else\nKeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif\ncolor = encodeKeypointMatch(initial);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/knn-transfer.glsl":
+/*!*****************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/knn-transfer.glsl ***!
+  \*****************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedKthMatches;\nuniform int numberOfMatchesPerKeypoint;\nuniform int kthMatch;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 matcherSize = textureSize(encodedMatches, 0);\nivec2 kthMatcherSize = textureSize(encodedKthMatches, 0);\nint rasterIndex = thread.y * matcherSize.x + thread.x;\nint matchIndex = rasterIndex / numberOfMatchesPerKeypoint;\nint matchCell = rasterIndex % numberOfMatchesPerKeypoint;\ncolor = threadPixel(encodedMatches);\nif(matchCell != kthMatch)\nreturn;\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(matchIndex >= kthMatcherSize.x * kthMatcherSize.y)\nreturn;\nivec2 pos = ivec2(matchIndex % kthMatcherSize.x, matchIndex / kthMatcherSize.x);\ncolor = texelFetch(encodedKthMatches, pos, 0);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/laplacian.glsl":
 /*!**************************************************!*\
   !*** ./src/gpu/shaders/keypoints/laplacian.glsl ***!
@@ -18861,7 +21176,7 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@includ
   \*******************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int level;\nuniform int depth;\nuniform int numberOfIterations;\nuniform float discardThreshold;\nuniform float epsilon;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_SQUARED = (MAX_WINDOW_SIZE) * (MAX_WINDOW_SIZE);\nconst int MAX_WINDOW_SIZE_PLUS = (MAX_WINDOW_SIZE) + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;\nconst highp float FLT_SCALE = 9.5367431640625e-7;\nconst highp float FLT_EPSILON = 0.00000011920929f;\n#define windowRadius() ((windowSize - 1) / 2)\nint pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];\n#define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \\\nidx = pixelIndex(offset.x, offset.y); \\\nnextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \\\nprevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nivec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 dx = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 dy = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(dx, window);\nmat3 fy = matrixCompMult(dy, window);\nconst vec3 ones = vec3(1.0f);\nreturn ivec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nint readBufferedPixel(int imageCode, ivec2 offset)\n{\nint r = windowRadius();\noffset = clamp(offset, -r, r);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nint readBufferedSubpixel(int imageCode, vec2 offset)\n{\nivec2 p = ivec2(floor(offset));\nvec2 frc = fract(offset);\nvec2 ifrc = vec2(1.0f) - frc;\nvec4 pix = vec4(\nreadBufferedPixel(imageCode, p),\nreadBufferedPixel(imageCode, p + ivec2(1,0)),\nreadBufferedPixel(imageCode, p + ivec2(0,1)),\nreadBufferedPixel(imageCode, p + ivec2(1,1))\n);\nvec4 sub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\nreturn int(0.5f + dot(sub*pix, vec4(1.0f)));\n}\nvec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)\n{\nint timeDerivative;\nivec2 mismatch = ivec2(0);\nint x, y, r = windowRadius();\nvec2 d = pyrGuess + localGuess;\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nx = _x - r; y = _y - r;\ntimeDerivative = (\nreadBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -\nreadBufferedPixel(PREV_IMAGE, ivec2(x, y))\n);\nmismatch += derivativesAt(x, y) * timeDerivative;\n}\n}\nreturn vec2(mismatch) * FLT_SCALE;\n}\nbool isInsideImage(vec2 position)\n{\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nvec2 border = vec2(windowSize);\nreturn all(bvec4(\ngreaterThanEqual(position, border),\nlessThan(position, imageSize - border)\n));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nfloat windowArea = float(windowSize * windowSize);\nint r = windowRadius();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = (level < depth - 1) ? decodePairOfFloat16(pixel) : vec2(0.0f);\npyrGuess *= 2.0f;\nreadWindow(keypoint.position, float(level));\nivec2 derivatives;\nivec3 harris3i = ivec3(0);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\nharris3i += ivec3(\nderivatives.x * derivatives.x,\nderivatives.x * derivatives.y,\nderivatives.y * derivatives.y\n);\nderivativesAt(i-r, j-r) = derivatives;\n}\n}\nhighp vec3 harris = vec3(harris3i) * FLT_SCALE;\nhighp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x);\nhighp float det = harris.x * harris.z - harris.y * harris.y;\nhighp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;\nhighp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(\n(harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)\n));\nint niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);\nbool goodKeypoint = (level > 0) || (niceNumbers != 0);\nhighp float eps2 = epsilon * epsilon;\nhighp vec2 mismatch, delta, localGuess = vec2(0.0f);\nfor(int k = 0; k < numberOfIterations; k++) {\nmismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f);\ndelta = mismatch * invHarris * invDet;\nniceNumbers *= int(eps2 <= dot(delta, delta));\nlocalGuess += float(niceNumbers) * delta;\n}\nvec2 opticalFlow = pyrGuess + localGuess;\nbool mustDiscard = (level == 0) && any(bvec2(\n!goodKeypoint,\n!isInsideImage(keypoint.position + opticalFlow)\n));\ncolor = !mustDiscard ? encodePairOfFloat16(opticalFlow) : encodeDiscardedPairOfFloat16();\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform int level;\nuniform int depth;\nuniform int numberOfIterations;\nuniform float discardThreshold;\nuniform float epsilon;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef WINDOW_SIZE\n#error Undefined WINDOW_SIZE\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int WINDOW_RADIUS = (WINDOW_SIZE - 1) / 2;\nconst int WINDOW_SIZE_SQUARED = (WINDOW_SIZE) * (WINDOW_SIZE);\nconst int WINDOW_SIZE_PLUS = (WINDOW_SIZE) + 2;\nconst int WINDOW_SIZE_PLUS_SQUARED = WINDOW_SIZE_PLUS * WINDOW_SIZE_PLUS;\nconst int DBL_WINDOW_SIZE_PLUS_SQUARED = 2 * WINDOW_SIZE_PLUS_SQUARED;\nconst int WINDOW_RADIUS_PLUS = (WINDOW_SIZE_PLUS - 1) / 2;\nconst highp float FLT_SCALE = 9.5367431640625e-7;\nconst highp float FLT_EPSILON = 0.00000011920929f;\nint pixelBuffer[DBL_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + WINDOW_RADIUS_PLUS) * WINDOW_SIZE_PLUS + ((i) + WINDOW_RADIUS_PLUS))\nivec2 derivBuffer[WINDOW_SIZE_SQUARED];\n#define derivativesAt(x, y) derivBuffer[((y) + WINDOW_RADIUS) * WINDOW_SIZE + ((x) + WINDOW_RADIUS)]\nvoid readWindow(vec2 center, float lod)\n{\nconst int r = WINDOW_RADIUS;\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \\\nidx = pixelIndex(offset.x, offset.y); \\\nnextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \\\nprevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)\nfor(int j = 0; j < WINDOW_SIZE; j++) {\nfor(int i = 0; i < WINDOW_SIZE; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < WINDOW_SIZE; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nivec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 dx = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 dy = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(dx, window);\nmat3 fy = matrixCompMult(dy, window);\nconst vec3 ones = vec3(1.0f);\nreturn ivec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nint readBufferedPixel(int imageCode, ivec2 offset)\n{\nconst int r = WINDOW_RADIUS;\noffset = clamp(offset, -r, r);\nint indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nint readBufferedSubpixel(int imageCode, vec2 offset)\n{\nivec2 p = ivec2(floor(offset));\nvec2 frc = fract(offset);\nvec2 ifrc = vec2(1.0f) - frc;\nvec4 pix = vec4(\nreadBufferedPixel(imageCode, p),\nreadBufferedPixel(imageCode, p + ivec2(1,0)),\nreadBufferedPixel(imageCode, p + ivec2(0,1)),\nreadBufferedPixel(imageCode, p + ivec2(1,1))\n);\nvec4 sub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\nreturn int(0.5f + dot(sub*pix, vec4(1.0f)));\n}\nvec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)\n{\nconst int r = WINDOW_RADIUS;\nint timeDerivative;\nivec2 mismatch = ivec2(0);\nint x, y, _x, _y;\nvec2 d = pyrGuess + localGuess;\n#define innerLoop() \\\nfor(_x = 0; _x < WINDOW_SIZE; _x++) { \\\nx = _x - r; y = _y - r; \\\ntimeDerivative = ( \\\nreadBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) - \\\nreadBufferedPixel(PREV_IMAGE, ivec2(x, y)) \\\n); \\\nmismatch += derivativesAt(x, y) * timeDerivative; \\\n}\n@unroll\nfor(_y = 0; _y < WINDOW_SIZE; _y++) {\ninnerLoop();\n}\nreturn vec2(mismatch) * FLT_SCALE;\n}\nbool isInsideImage(vec2 position)\n{\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nvec2 border = vec2(WINDOW_SIZE);\nreturn all(bvec4(\ngreaterThanEqual(position, border),\nlessThan(position, imageSize - border)\n));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nfloat windowArea = float(WINDOW_SIZE * WINDOW_SIZE);\nconst int r = WINDOW_RADIUS;\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = (level < depth - 1) ? decodePairOfFloat16(pixel) : vec2(0.0f);\npyrGuess *= 2.0f;\nreadWindow(keypoint.position, float(level));\nivec2 derivatives;\nivec3 harris3i = ivec3(0);\nfor(int j = 0; j < WINDOW_SIZE; j++) {\nfor(int i = 0; i < WINDOW_SIZE; i++) {\nderivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\nharris3i += ivec3(\nderivatives.x * derivatives.x,\nderivatives.x * derivatives.y,\nderivatives.y * derivatives.y\n);\nderivativesAt(i-r, j-r) = derivatives;\n}\n}\nhighp vec3 harris = vec3(harris3i) * FLT_SCALE;\nhighp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x);\nhighp float det = harris.x * harris.z - harris.y * harris.y;\nhighp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;\nhighp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(\n(harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)\n));\nint niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);\nbool goodKeypoint = (level > 0) || (niceNumbers != 0);\nhighp float eps2 = epsilon * epsilon;\nhighp vec2 mismatch, delta, localGuess = vec2(0.0f);\nfor(int k = 0; k < numberOfIterations; k++) {\nmismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f);\ndelta = mismatch * invHarris * invDet;\nniceNumbers *= int(eps2 <= dot(delta, delta));\nlocalGuess += float(niceNumbers) * delta;\n}\nvec2 opticalFlow = pyrGuess + localGuess;\nbool mustDiscard = (level == 0) && any(bvec2(\n!goodKeypoint,\n!isInsideImage(keypoint.position + opticalFlow)\n));\ncolor = !mustDiscard ? encodePairOfFloat16(opticalFlow) : encodeDiscardedPairOfFloat16();\n}"
 
 /***/ }),
 
@@ -18882,6 +21197,16 @@ module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecisi
 /***/ ((module) => {
 
 module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\nuniform mediump int blockSize;\nout vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\nvoid main()\n{\nfloat b = float(blockSize);\nsetupVertexShader();\n#define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)\nv_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);\nv_left = V(-1,0); v_center = V(0,0); v_right = V(1,0);\nv_bottomLeft = V(-1,1); v_bottom = V(0,1); v_bottomRight = V(1,1);\n}\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/lsh-knn.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/lsh-knn.glsl ***!
+  \************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-matches.glsl\"\n@include \"keypoint-descriptors.glsl\"\nuniform sampler2D candidates;\nuniform sampler2D filters;\nuniform int matcherLength;\nuniform sampler2D tables;\nuniform sampler2D descriptorDB;\nuniform int tableIndex;\nuniform int bucketCapacity;\nuniform int bucketsPerTable;\nuniform int tablesStride;\nuniform int descriptorDBStride;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if HASH_SIZE > SEQUENCE_MAXLEN\n#error LSH: invalid HASH_SIZE\n#elif SEQUENCE_COUNT * SEQUENCE_MAXLEN * 4 > 16384\n#error LSH: sequences are too large!\n#elif (SEQUENCE_COUNT * SEQUENCE_MAXLEN) % 4 > 0\n#error LSH: sequences of invalid size!\n#endif\nlayout(std140) uniform LSHSequences\n{\nuvec4 sequences[(SEQUENCE_COUNT * SEQUENCE_MAXLEN) / 4];\n};\n#if HASH_SIZE == 10\nconst int SWAP_COUNT[3] = int[3](1, 11, 56);\nconst int[56] SWAP = int[56](0,1,2,4,8,16,32,64,128,256,512,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768);\n#elif HASH_SIZE == 11\nconst int SWAP_COUNT[3] = int[3](1, 12, 67);\nconst int[67] SWAP = int[67](0,1,2,4,8,16,32,64,128,256,512,1024,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536);\n#elif HASH_SIZE == 12\nconst int SWAP_COUNT[3] = int[3](1, 13, 79);\nconst int[79] SWAP = int[79](0,1,2,4,8,16,32,64,128,256,512,1024,2048,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072);\n#elif HASH_SIZE == 13\nconst int SWAP_COUNT[3] = int[3](1, 14, 92);\nconst int[92] SWAP = int[92](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144);\n#elif HASH_SIZE == 14\nconst int SWAP_COUNT[3] = int[3](1, 15, 106);\nconst int[106] SWAP = int[106](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288);\n#elif HASH_SIZE == 15\nconst int SWAP_COUNT[3] = int[3](1, 16, 121);\nconst int[121] SWAP = int[121](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576);\n#elif HASH_SIZE == 16\nconst int SWAP_COUNT[3] = int[3](1, 17, 137);\nconst int[137] SWAP = int[137](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152);\n#elif HASH_SIZE == 17\nconst int SWAP_COUNT[3] = int[3](1, 18, 154);\nconst int[154] SWAP = int[154](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304);\n#elif HASH_SIZE == 18\nconst int SWAP_COUNT[3] = int[3](1, 19, 172);\nconst int[172] SWAP = int[172](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608);\n#elif HASH_SIZE == 19\nconst int SWAP_COUNT[3] = int[3](1, 20, 191);\nconst int[191] SWAP = int[191](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608,262145,262146,262148,262152,262160,262176,262208,262272,262400,262656,263168,264192,266240,270336,278528,294912,327680,393216);\n#elif HASH_SIZE == 20\nconst int SWAP_COUNT[3] = int[3](1, 21, 211);\nconst int[211] SWAP = int[211](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608,262145,262146,262148,262152,262160,262176,262208,262272,262400,262656,263168,264192,266240,270336,278528,294912,327680,393216,524289,524290,524292,524296,524304,524320,524352,524416,524544,524800,525312,526336,528384,532480,540672,557056,589824,655360,786432);\n#else\n#error Invalid HASH_SIZE\n#endif\n#if LEVEL < 0 || LEVEL > 2\n#error Invalid LEVEL\n#endif\nconst uint END_OF_LIST = 0xFFFFFFFFu;\nconst int NUMBER_OF_HASHES = SWAP_COUNT[LEVEL];\nuint sequenceElement(int sequenceIndex, int elementIndex)\n{\nint offset = (SEQUENCE_MAXLEN) * sequenceIndex + elementIndex;\nuvec4 tuple = sequences[offset / 4];\nreturn tuple[offset & 3];\n}\nint descriptorHash(uint[DESCRIPTOR_SIZE] descriptor, int sequenceIndex)\n{\nuint bit, b, m;\nint hash = 0;\n@unroll\nfor(int i = 0; i < HASH_SIZE; i++) {\nbit = sequenceElement(sequenceIndex, i);\nb = bit >> 3u;\nm = 1u << (bit & 7u);\nhash = (hash << 1) | int((descriptor[b] & m) != 0u);\n}\nreturn hash;\n}\n#define readTableData(tables, tablesStride, rasterIndex) decodeUint32(texelFetch((tables), ivec2((rasterIndex) % (tablesStride), (rasterIndex) / (tablesStride)), 0))\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch candidate = decodeKeypointMatch(threadPixel(candidates));\nKeypointMatch mfilter = decodeKeypointMatch(threadPixel(filters));\nuint[DESCRIPTOR_SIZE] candidateDescriptor;\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nint hash0 = descriptorHash(descriptor, tableIndex);\nfor(int h = 0; h < NUMBER_OF_HASHES; h++) {\nint hash = hash0 ^ SWAP[h];\nint tableAddress = tableIndex * bucketsPerTable * bucketCapacity;\nint bucketAddress = tableAddress + hash * bucketCapacity;\nbool validEntry = true;\nfor(int b = 0; b < bucketCapacity; b++) {\nint entryAddress = bucketAddress + b;\nuint entry = validEntry ? readTableData(tables, tablesStride, entryAddress) : END_OF_LIST;\nvalidEntry = (validEntry && entry != END_OF_LIST);\nint candidateIndex = int(entry);\ncandidateDescriptor = readKeypointDescriptorFromDB(descriptorDB, descriptorDBStride, validEntry ? candidateIndex : -1);\nint descriptorDistance = distanceBetweenKeypointDescriptors(descriptor, candidateDescriptor);\nKeypointMatch match = KeypointMatch(candidateIndex, descriptorDistance);\nbool betterThanCandidate = (match.dist < candidate.dist) || (match.dist == candidate.dist && match.index > candidate.index);\nbool worseThanFilter = (match.dist > mfilter.dist) || (match.dist == mfilter.dist && match.index < mfilter.index);\nbool nicerMatch = (validEntry && betterThanCandidate && worseThanFilter);\nivec2 v = nicerMatch ? ivec2(match.index, match.dist) : ivec2(candidate.index, candidate.dist);\ncandidate = KeypointMatch(v.x, v.y);\n}\n}\ncolor = encodeKeypointMatch(candidate);\n}"
 
 /***/ }),
 
@@ -18962,6 +21287,16 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"filters.glsl\"\n#if !d
 /***/ ((module) => {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 bounds = outputSize();\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = threadPixel(corners);\nvec4 p1 = texelFetch(corners, next1 % bounds, 0);\nvec4 p2 = texelFetch(corners, next2 % bounds, 0);\nvec4 p3 = texelFetch(corners, next3 % bounds, 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/shuffle.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/shuffle.glsl ***!
+  \************************************************/
+/***/ ((module) => {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if PERMUTATION_MAXLEN % 4 > 0 || PERMUTATION_MAXLEN * 4 > 16384\n#error Invalid PERMUTATION_MAXLEN\n#endif\nlayout(std140) uniform Permutation\n{\nivec4 permutation[PERMUTATION_MAXLEN / 4];\n};\nint permutationElement(int index)\n{\nint base = index - (index % PERMUTATION_MAXLEN);\nint offset = index - base;\nuvec4 tuple = permutation[offset / 4];\nint newOffset = tuple[offset & 3];\nreturn base + newOffset;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint otherIndex = permutationElement(myIndex);\nKeypointAddress otherAddress = KeypointAddress(otherIndex * pixelsPerKeypoint, myAddress.offset);\nKeypoint myKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nKeypoint otherKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, otherAddress);\ncolor = pixel;\nif(isBadKeypoint(myKeypoint) || isBadKeypoint(otherKeypoint))\nreturn;\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -19174,472 +21509,478 @@ module.exports = "uniform mediump float lod;\nout vec2 v_pix0, v_pix1, v_pix2,\n
 module.exports = `AGFzbQEAAAABiwETYAABfmADf39/AX9gAX8AYAN/f38AYAF9AX9gAX8Bf2ACf38Bf2AFf39/f38B
 f2AFf39/f38AYAZ/f39/f38Bf2AAAX9gAn99AX9gA39/fQF/YAJ/fwF9YAF/AX1gBH9/f38AYAR/
 f39/AX9gEX98fHx8fHx8fHx8fHx8fHx8AGAHf39/f39/fQF/AjsEA2VudgZtZW1vcnkCAAIDZW52
-BWZhdGFsAAIDZW52CGJ5dGVmaWxsAAMDZW52CmNvcHlXaXRoaW4AAwM/PgQFBgIGAQECBwgGAwAJ
-AgYCBgYKBQUFCQsFBgEBDAEBBgYGAQEMAQ0OAwgPAxAIAwYBEQEBAQ8BARIBEgEBBAUBcAEFBQYI
-AX8BQdCaBAsHnQQeBm1hbGxvYwAEBGZyZWUABgVzcmFuZAAKDE1hdDMyX2NyZWF0ZQAQDU1hdDMy
-X2Rlc3Ryb3kAFwpNYXQzMl9kYXRhABgOTWF0MzJfZGF0YVNpemUAGQ9NYXQzMl90cmFuc3Bvc2UA
-HQlNYXQzMl9hZGQAHg5NYXQzMl9zdWJ0cmFjdAAfC01hdDMyX3NjYWxlACAOTWF0MzJfY29tcG11
-bHQAIQ5NYXQzMl9tdWx0aXBseQAiDk1hdDMyX2ludmVyc2UxACMOTWF0MzJfaW52ZXJzZTIAJA5N
-YXQzMl9pbnZlcnNlMwAlDU1hdDMyX3FyX2Z1bGwALBBNYXQzMl9xcl9yZWR1Y2VkAC8MTWF0MzJf
-cXJfb2xzADAQTWF0MzJfcXJfaW52ZXJzZQAzFU1hdDMyX2hvbW9ncmFwaHlfZGx0NAA0Fk1hdDMy
-X2hvbW9ncmFwaHlfbmRsdDQANhRNYXQzMl9ob21vZ3JhcGh5X2RsdAA3FU1hdDMyX2hvbW9ncmFw
-aHlfbmRsdAA4EU1hdDMyX2FmZmluZV9kbHQzADoQTWF0MzJfYWZmaW5lX2RsdAA7GE1hdDMyX3By
-YW5zYWNfaG9tb2dyYXBoeQA8FE1hdDMyX3ByYW5zYWNfYWZmaW5lAD4bTWF0MzJfdHJhbnNmb3Jt
-X3BlcnNwZWN0aXZlAD8WTWF0MzJfdHJhbnNmb3JtX2FmZmluZQBACQoBAEEBCwQPERM9CpO3AT4j
-AQF/IAC8IgFBgICA/AdxQYCAgPwHRiABQf///wNxQQBHcQtpAQF/QQBBACgCoJqAgABBAWo2AqCa
-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
-tjgCACAnIChBA3RqIAS2OAIAICcgACgCECIAQQJ0aiACtjgCACAnIAAgKGoiKUECdGogBrY4AgAg
-JyAAIChBAXRqQQJ0aiAOtjgCACAnIABBA3RqIAG2OAIAICcgKCAAQQF0akECdGogA7Y4AgAgJyAp
-QQN0aiAFtjgCAAufCAoBfwF9AX8CfQF/Cn0BfwF9A38BfQJAAkAgACgCCEEDRw0AIAAoAgxBA0cN
-ACABKAIIQQJHDQAgASgCDEEERw0AIAIoAghBAkcNACACKAIMQQRGDQELQbKTgIAAEICAgIAACyAA
-IAEoAgAiAyoCACIEIAQgAyABQRRqKAIAIgVBAnRqKgIAIgaSIAMgBUEDdGoqAgAiB5IgAyAFQQNs
-IghBAnRqKgIAIgmSQwAAgD6UIgqTIgRDAAAAQSADIAggASgCECIBakECdGoqAgAiCyALIAMgAUEC
-dGoqAgAiDCADIAUgAWpBAnRqKgIAIg2SIAMgBUEBdCABakECdGoqAgAiDpKSQwAAgD6UIg+TIgsg
-C5QgCSAKkyIJIAmUIA4gD5MiDiAOlCAHIAqTIgcgB5QgDSAPkyINIA2UIAYgCpMiBiAGlCAEIASU
-IAwgD5MiDCAMlJKSkpKSkpKVkSIElLsgDCAElLsgBiAElLsgDSAElLsgByAElLsgDiAElLsgCSAE
-lLsgCyAElLsgAigCACIDKgIAIgsgCyADIAJBFGooAgAiBUECdGoqAgAiEJIgAyAFQQN0aioCACIM
-kiADIAVBA2wiCEECdGoqAgAiDZJDAACAPpQiCZMiC0MAAABBIAMgCCACKAIQIgFqQQJ0aioCACIO
-IA4gAyABQQJ0aioCACIRIAMgBSABakECdGoqAgAiEpIgAyAFQQF0IAFqQQJ0aioCACIGkpJDAACA
-PpQiDpMiByAHlCANIAmTIg0gDZQgBiAOkyIGIAaUIAwgCZMiDCAMlCASIA6TIhIgEpQgECAJkyIQ
-IBCUIAsgC5QgESAOkyIRIBGUkpKSkpKSkpWRIguUuyARIAuUuyAQIAuUuyASIAuUuyAMIAuUuyAG
-IAuUuyANIAuUuyAHIAuUuxC1gICAACAAKAIAIgMgAEEUaigCACIFQQF0IgIgACgCECIBQQF0Ighq
-QQJ0aioCACEQIAMgCCAFakECdGoiCCoCACEHIAMgAiABakECdGoiAioCACERIAMgBUEDdGoiEyoC
-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
-aiEPIBFBBGohESASQX9qIhINAAsgACAWIBkQuICAgAAaIBkQl4CAgAAaIBYQl4CAgAAaDAELIABB
-ACoCgIiAgAAQm4CAgAAaCwJAIARBAUgNACAEQQFqIRIgBEEDdCAVakF4aiEMA0AgDCgCABCXgICA
-ABogDEF4aiEMIBJBf2oiEkEBSg0ACwsgFUGzloCAABCHgICAABogFBCXgICAABogExCXgICAABog
-DkHRloCAABCHgICAABogC0HvloCAABCHgICAABogCkGNl4CAABCHgICAABogB0EQaiSAgICAACAA
-Cw0AIAEoAgQgACgCBGsLyBECGH8JfQJAAkAgACgCCEECRw0AIAAoAgxBA0cNACACKAIIQQJHDQAg
-AigCDCIHQQNIDQAgAygCCEECRw0AIAMoAgwgB0cNAAJAIAFFDQAgASgCCEEBRw0BIAEoAgwgB0cN
-AQsgBEEBSA0AIAVBAUgNACAGQwAAAABgDQELQauXgIAAEICAgIAAIAIoAgwhBwsCQCABRQ0AIAFD
-AAAAABCbgICAABoLIAdBAnQiCEHOl4CAABCFgICAACEJIAhB7peAgAAQhYCAgAAgBxCNgICAACIK
-IAdBBBCOgICAACAHIARBA2wiCyAHb2sgC2oiDEECdEGOmICAABCFgICAACENAkAgDEEBSA0AQQAh
-DiAHQQFIIQ8gDSEQA0ACQCAPDQBBACELIBAhEQNAIBEgCzYCACARQQRqIREgByALQQFqIgtHDQAL
-CyANIA5BAnRqIAdBBBCOgICAACAQIAhqIRAgDiAHaiIOIAxIDQALC0ECQQMQkoCAgAAhD0ECQQMQ
-koCAgAAhEiAEQQN0Qa6YgIAAEIWAgIAAIRMgBCEUAkAgBEEBSA0AIBMhCCANIQwgBCEVIAQhFANA
-IA8oAgAiCyACKAIAIhEgAigCFCIWIAwoAgAiF2wiDkECdGooAgA2AgAgCyAPKAIQIhhBAnRqIBEg
-AigCECIZIA5qQQJ0aigCADYCACASKAIAIg4gAygCACIQIBcgAygCFCIabCIXQQJ0aigCADYCACAO
-IBIoAhAiG0ECdGogECADKAIQIhwgF2pBAnRqKAIANgIAIAsgDygCFCIXQQJ0aiARIBYgDEEEaigC
-ACIdbCIeQQJ0aigCADYCACALIBggF2pBAnRqIBEgGSAeakECdGooAgA2AgAgDiASKAIUIh5BAnRq
-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
-IAmUk5SSIA8gC5QgByAOlJMgBCAIIAxqQQJ0aioCACIQlJKLu0SN7bWg98awPmMNAAJAIANBAUgN
-ACAAKAIQQQJ0IQIgASgCEEECdCEIIABBFGooAgBBAnQhDCABQRRqKAIAQQJ0IREgACgCACEEIAEo
-AgAhBQNAIAQgCiAPIAUqAgAiEpQgByAFIAhqKgIAIhOUkpIgECAGIBKUIA0gE5SSkiIUlTgCACAE
-IAJqIAkgDiASlCALIBOUkpIgFJU4AgAgBCAMaiEEIAUgEWohBSADQX9qIgMNAAsLIAAPCyAAQQAq
-AoCIgIAAEJuAgIAAC9UCBAN/Bn0CfwJ9AkACQCAAKAIIQQJHDQAgASgCCEECRw0AIAAoAgwiAyAB
-KAIMRw0AIAIoAghBAkcNACACKAIMQQNGDQELQeuZgIAAEICAgIAAIAEoAgwhAwsCQCADQQFIDQAg
-AigCACIEIAIoAhAiBUECdGoqAgAhBiAEIAJBFGooAgAiAkEDdGoqAgAhByAEIAJBAnRqKgIAIQgg
-BCACIAVqQQJ0aioCACEJIAQgAkEBdCAFakECdGoqAgAhCiAEKgIAIQsgACgCEEECdCECIAEoAhBB
-AnQhBSAAQRRqKAIAQQJ0IQwgAUEUaigCAEECdCENIAAoAgAhBCABKAIAIQEDQCAEIAcgCyABKgIA
-Ig6UIAggASAFaioCACIPlJKSOAIAIAQgAmogCiAGIA6UIAkgD5SSkjgCACAEIAxqIQQgASANaiEB
-IANBf2oiAw0ACwsgAAsL1BIDAEGACAuQEgAA+H9PdXQgb2YgbWVtb3J5IQBEb3VibGUgZnJlZQBB
-c3NlcnRpb24gZmFpbGVkIGF0IG1hdDMyLmM6NjEAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjYz
-AEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzo4NABPdXQgb2YgbWVtb3J5IGF0IG1hdDMyLmM6
-ODYAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjg5AE91dCBvZiBtZW1vcnkgYXQgbWF0MzIuYzox
-MzYAAABADQAAAQAAAAAAAAAAAAAAAQAAAAEAAAACAAAARG91YmxlIGZyZWUgYXQgbWF0MzIuYzox
-NDkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBtYXQzMi5jOjE4NABBc3NlcnRpb24gZmFpbGVkIGF0IG1h
-dDMyLmM6MTg4AEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzoyNzUARG91YmxlIGZyZWUgYXQg
-bWF0MzIuYzoyOQBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjM2AEFzc2VydGlv
-biBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NTgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1l
-dGljMzIuYzo4MABBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjk5AEFzc2VydGlv
-biBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTIxAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGht
-ZXRpYzMyLmM6MTQzAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTY4AEFzc2Vy
-dGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTg5AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJp
-dGhtZXRpYzMyLmM6MjE4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MjcxAEFz
-c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzIyAEFzc2VydGlvbiBmYWlsZWQgYXQg
-YXJpdGhtZXRpYzMyLmM6MzU2AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6Mzc4
-AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDIwAEFzc2VydGlvbiBmYWlsZWQg
-YXQgYXJpdGhtZXRpYzMyLmM6NDM2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI2MQBBc3Nl
-cnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyNjUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6Mjg2
-AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI5MABBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIu
-YzozMjEAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MzI1AEFzc2VydGlvbiBmYWlsZWQgYXQg
-cXIzMi5jOjM3OQBPdXQgb2YgbWVtb3J5IGF0IHFyMzIuYzozNgBBc3NlcnRpb24gZmFpbGVkIGF0
-IHFyMzIuYzo2OQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzo3MwBBc3NlcnRpb24gZmFpbGVk
-IGF0IHFyMzIuYzoxODQARG91YmxlIGZyZWUgYXQgcXIzMi5jOjU1AEFzc2VydGlvbiBmYWlsZWQg
-YXQgcXIzMi5jOjE0OABBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyMjQAQXNzZXJ0aW9uIGZh
-aWxlZCBhdCBxcjMyLmM6MjI4AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MzI0
-AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MzU5AEFzc2VydGlvbiBmYWlsZWQg
-YXQgaG9tb2dyYXBoeTMyLmM6NDQ0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6
-NTI0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MjQyAEFzc2VydGlvbiBmYWls
-ZWQgYXQgYWZmaW5lMzIuYzoxMjMAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhZmZpbmUzMi5jOjE1NwBB
-c3NlcnRpb24gZmFpbGVkIGF0IHJhbnNhYzMyLmM6NzEAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMz
-Mi5jOjg0AE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIuYzo4OABPdXQgb2YgbWVtb3J5IGF0IHJh
-bnNhYzMyLmM6OTMAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjEwNwBEb3VibGUgZnJlZSBh
-dCByYW5zYWMzMi5jOjIzNgBEb3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjI0MwBEb3VibGUgZnJl
-ZSBhdCByYW5zYWMzMi5jOjI0NgBEb3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjI0OQBBc3NlcnRp
-b24gZmFpbGVkIGF0IHJhbnNhYzMyLmM6Mjc1AE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIuYzoy
-ODgAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjI5MgBPdXQgb2YgbWVtb3J5IGF0IHJhbnNh
-YzMyLmM6Mjk3AE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIuYzozMTEARG91YmxlIGZyZWUgYXQg
-cmFuc2FjMzIuYzo0MzgARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIuYzo0NDUARG91YmxlIGZyZWUg
-YXQgcmFuc2FjMzIuYzo0NDgARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIuYzo0NTEAQXNzZXJ0aW9u
-IGZhaWxlZCBhdCB0cmFuc2Zvcm0zMi5jOjM5AEFzc2VydGlvbiBmYWlsZWQgYXQgdHJhbnNmb3Jt
-MzIuYzo3NwAAQZAaCwwIAAAAMA0AAAEAAAAAQaAaCyQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAA=
+BWZhdGFsAAIDZW52CGJ5dGVmaWxsAAMDZW52CmNvcHlXaXRoaW4AAwNAPwQFBgIGAQECBwgGAwAJ
+AgYCBgYKBQUFCQsFBgEBDAEBBgYGAQEMAQ0OAwgPAxAIAwYBEQEBAQEBARIBEgEBDwQFAXABBQUG
+CAF/AUHwmgQLB/QDHAZtYWxsb2MABARmcmVlAAYFc3JhbmQACgxNYXQzMl9jcmVhdGUAEA1NYXQz
+Ml9kZXN0cm95ABcKTWF0MzJfZGF0YQAYDk1hdDMyX2RhdGFTaXplABkPTWF0MzJfdHJhbnNwb3Nl
+AB0JTWF0MzJfYWRkAB4OTWF0MzJfc3VidHJhY3QAHwtNYXQzMl9zY2FsZQAgDk1hdDMyX2NvbXBt
+dWx0ACEOTWF0MzJfbXVsdGlwbHkAIg5NYXQzMl9pbnZlcnNlMQAjDk1hdDMyX2ludmVyc2UyACQO
+TWF0MzJfaW52ZXJzZTMAJQ1NYXQzMl9xcl9mdWxsACwQTWF0MzJfcXJfcmVkdWNlZAAvDE1hdDMy
+X3FyX29scwAwEE1hdDMyX3FyX2ludmVyc2UAMxZNYXQzMl9ob21vZ3JhcGh5X25kbHQ0ADcVTWF0
+MzJfaG9tb2dyYXBoeV9uZGx0ADgUTWF0MzJfYWZmaW5lX2RpcmVjdDMAOhNNYXQzMl9hZmZpbmVf
+ZGlyZWN0ADsYTWF0MzJfcHJhbnNhY19ob21vZ3JhcGh5ADwUTWF0MzJfcHJhbnNhY19hZmZpbmUA
+PhtNYXQzMl90cmFuc2Zvcm1fcGVyc3BlY3RpdmUAPxZNYXQzMl90cmFuc2Zvcm1fYWZmaW5lAEAJ
+CgEAQQELBA8REz0Kh7oBPyMBAX8gALwiAUGAgID8B3FBgICA/AdGIAFB////A3FBAEdxC2kBAX9B
+AEEAKALAmoCAAEEBajYCwJqAgABBAEEAKAK0moCAACIBQQdxIAFqIgEgAGo2ArSagIAAAkBB8JqE
+gABBB3EgAWpB8JqEgABqIgA/AEEQdEkNAEGEiICAABCAgICAAEEADwsgAAt1AQJ/QQAhAkEAQQAo
+AsCagIAAQQFqNgLAmoCAAEEAQQAoArSagIAAIgNBB3EgA2oiAyAAajYCtJqAgAACQAJAQfCahIAA
+QQdxIANqQfCahIAAaiIAPwBBEHRJDQAgAUUNASABEICAgIAAQQAPCyAAIQILIAILRgECf0EAQQAo
+AsCagIAAIgFBf2oiAjYCwJqAgAACQCACDQBBAEEINgK0moCAAA8LAkAgAUEASg0AQZOIgIAAEICA
+gIAACwtGAQJ/QQBBACgCwJqAgAAiAkF/aiIDNgLAmoCAAAJAIAMNAEEAQQg2ArSagIAAQQAPCwJA
+IAJBAEoNACABEICAgIAAC0EACxcAIAFB/wFxIAAgACACahCBgICAACAACxMAIAAgASABIAJqEIKA
+gIAAIAALoQECAX8CfkEAKAK4moCAACIBIACtQiCGIABBf3OthCICQqrw0/Sv7ry3PHwiA0IeiCAD
+hUK5y5Pn0e2RrL9/fiIDQhuIIAOFQuujxJmxt5LolH9+IgNCH4ggA4U3AwggASACQpX4qfqXt96b
+nn98IgJCHoggAoVCucuT59Htkay/f34iAkIbiCAChULro8SZsbeS6JR/fiICQh+IIAKFNwMAC0QB
+AX9B3oG33QAhBQJAIAJFDQAgAEUNACADRQ0AQQAhBSABQQJJDQAgACAAIAFBf2ogAmxqIAIgAyAE
+EIyAgIAACyAFC60GAwR/AXwFfwJAAkAgASAASw0AIAEhBSAAIQYMAQtBACACayEHIAJBBEshCANA
+IAEiBSAAIgZrIAJuIgFBCEkNAQJAAkBBACgCvJqAgAARgICAgAAAQgyIQoCAgICAgID4P4S/RAAA
+AAAAAPC/oCABQQFquKIiCUQAAAAAAADwQWMgCUQAAAAAAAAAAGZxRQ0AIAmrIQEMAQtBACEBCyAG
+IAEgAmxqIQogBSEBIAYhCwNAAkAgCyAKIAQgAxGBgICAAABBf0oNAANAIAsgAmoiCyAKIAQgAxGB
+gICAAABBAEgNAAsLAkAgASAKIAQgAxGBgICAAABBAUgNAANAIAEgB2oiASAKIAQgAxGBgICAAABB
+AEoNAAsLAkAgCyABTw0AIAEhACALIQwgAiENAkACQCAIDQACQAJAIAIOBQMBAQEAAwsgCygCACEA
+IAsgASgCADYCACABIAA2AgAMAgsgASEAIAshDCACIQ0LA0AgDC0AACEOIAwgAC0AADoAACAAIA46
+AAAgAEEBaiEAIAxBAWohDCANQX9qIg0NAAsLIAEgCyAKIAogAUYbIAogC0YbIQogASAHaiEBIAsg
+AmohCwwBCwsgCyACaiALIAsgAUYiABshDAJAAkAgASAHaiABIAAbIgEgBk0NACAMIAVPDQACQCAB
+IAZrIAUgDGtNDQAgDCAFIAIgAyAEEIyAgIAAIAYhAAwCCyAGIAEgAiADIAQQjICAgAAgBSEBIAwh
+AAwBCyAGIAwgASAGSyIKGyEAIAEgBSAKGyEBIAoNACAMIAVPDQILIAEhBSAAIQYgASAASw0ACwsC
+QCAGIAVPDQAgAkEESyEHA0AgBiINIAJqIgYhASANIQACQCAGIAVLDQADQCABIAAgASAAIAQgAxGB
+gICAAABBAEgbIQAgASACaiIBIAVNDQALIAAgDUYNAAJAIAcNAAJAIAIOBQIBAQEAAgsgACgCACEB
+IAAgDSgCADYCACANIAE2AgAMAQtBACEBA0AgACABaiIMLQAAIQogDCANIAFqIgstAAA6AAAgCyAK
+OgAAIAIgAUEBaiIBRw0ACwsgBiAFSQ0ACwsLNQECfwJAIAFBAUgNAEEAIQIgACEDA0AgAyACNgIA
+IANBBGohAyABIAJBAWoiAkcNAAsLIAALvgIFAn8BfAF/AXwEfwJAIAFBf2oiA0UNACACQQRLIQRE
+AAAAAAAAAAAhBUEAIQYDQAJAAkBBACgCvJqAgAARgICAgAAAQgyIQoCAgICAgID4P4S/RAAAAAAA
+APC/oCABIAZruKIgBaAiB0QAAAAAAADwQWMgB0QAAAAAAAAAAGZxRQ0AIAerIQgMAQtBACEICwJA
+IAYgCEYNAAJAIAQNAAJAIAIOBQIBAQEAAgsgACAGQQJ0aiIJKAIAIQogCSAAIAhBAnRqIggoAgA2
+AgAgCCAKNgIADAELIAAgBiACbGohCSAAIAggAmxqIQggAiEKA0AgCS0AACELIAkgCC0AADoAACAI
+IAs6AAAgCEEBaiEIIAlBAWohCSAKQX9qIgoNAAsLIAVEAAAAAAAA8D+gIQUgBkEBaiIGIANHDQAL
+CwtFAQN+QQBBACkD2JqAgAAiAEEAKQPQmoCAACIBhSICQiWJNwPYmoCAAEEAIAFCGIkgAoUgAkIQ
+hoU3A9CagIAAIAAgAXwLlAEBAX8CQAJAIAMgAkgNACAAQQFIDQAgAUEBSA0AIAJBAUgNACAAQX9q
+IAJsIAFBf2ogA2xqQQFqIARHDQAgBQ0BC0GfiICAABCAgICAAAtBHEG+iICAABCFgICAACIGIAM2
+AhQgBiACNgIQIAYgATYCDCAGIAA2AgggBiAENgIEIAZBgoCAgAA2AhggBiAFNgIAIAYLAgALkwEB
+BH8CQAJAIABBAUgNACABQQBKDQELQdqIgIAAEICAgIAAC0EcQfmIgIAAEIWAgIAAIQIgASAAbCID
+QQJ0IgRBlYmAgAAQhYCAgAAhBSACIAA2AhQgAkEBNgIQIAIgATYCDCACIAA2AgggAiADNgIEIAVB
+ACAEEIiAgIAAIQAgAkGDgICAADYCGCACIAA2AgAgAgsRACAAQeeKgIAAEIeAgIAAGgv0AQEEfwJA
+AkAgAEEBSA0AIAFBAEoNAQtB2oiAgAAQgICAgAALQRxB+YiAgAAQhYCAgAAhAiABIABsIgNBAnQi
+BEGViYCAABCFgICAACEFIAIgADYCFCACQQE2AhAgAiABNgIMIAIgADYCCCACIAM2AgQgBUEAIAQQ
+iICAgAAhAyACQYOAgIAANgIYIAIgAzYCAAJAIAAgASAAIAFIGyIBQQFIDQAgAyACKAIUIAIoAhBq
+IgQgAUF/amxBAnRqIQAgAUEBaiEBQQAgBEECdGshAwNAIABBgICA/AM2AgAgACADaiEAIAFBf2oi
+AUEBSg0ACwsgAguYAgEKfwJAAkAgACgCCCABKAIIRw0AIAAoAgwgASgCDEYNAQtBx4qAgAAQgICA
+gAALAkACQCAAKAIEIgIgASgCBEYNACAAKAIMIgNBAUgNAUEAIQQgACgCCCIFQQFIIQZBACEHA0AC
+QCAGDQAgACgCEEECdCEIIAEoAhBBAnQhCSAAKAIAIAAoAhQgBGxqIQIgASgCACABKAIUIARsaiEK
+QQAhCwNAIAIgCigCADYCACACIAhqIQIgCiAJaiEKIAtBAWoiCyAFSA0ACwsgBEEEaiEEIAdBAWoi
+ByADSA0ADAILCwJAIAEoAgAiCiAAKAIAIgsgAkECdCICak8NACAKIAJqIAtLDQELIAsgCiACEImA
+gIAAGgsgAAtVAQF/QRxBsYmAgAAQhYCAgAAiAEEYakEAKALoiYCAADYCACAAQRBqQQApAuCJgIAA
+NwIAIABBCGpBACkC2ImAgAA3AgAgAEEAKQLQiYCAADcCACAACyEAIAAoAgAgACgCGBGCgICAAAAg
+AEHsiYCAABCHgICAAAsHACAAKAIACwoAIAAoAgRBAnQL0AEBAn8CQCAAKAIYQYKAgIAARg0AQYeK
+gIAAEICAgIAACwJAAkAgAyACSA0AIAJBAEgNACAFIARIDQAgBEEASA0AIAEoAgggA0wNACABKAIM
+IAVKDQELQaeKgIAAEICAgIAACyABKAIQIQYgAEEUaiABQRRqKAIAIgc2AgAgACAGNgIQIAAgBSAE
+a0EBajYCDCAAIAMgAmtBAWo2AgggACAGIANsIAcgBWxqIAcgBGwgBiACbGoiAmtBAWo2AgQgACAB
+KAIAIAJBAnRqNgIAIAALgQEBCH8CQCAAKAIMIgJBAUgNAEEAIQMgACgCCCIEQQFIIQVBACEGA0AC
+QCAFDQAgACgCEEECdCEHIAAoAgAgACgCFCADbGohCEEAIQkDQCAIIAE4AgAgCCAHaiEIIAlBAWoi
+CSAESA0ACwsgA0EEaiEDIAZBAWoiBiACSA0ACwsgAAumAQEIfwJAIAAoAgwiASAAKAIIIgJsIgMg
+ACgCBEcNACAAKAIAQQAgA0ECdBCIgICAABogAA8LAkAgAUEBSA0AIAJBAUghBEEAIQVBACEGA0AC
+QCAEDQAgACgCEEECdCEHIAAoAgAgACgCFCAFbGohAyACIQgDQCADQQA2AgAgAyAHaiEDIAhBf2oi
+CA0ACwsgBUEEaiEFIAZBAWoiBiABRw0ACwsgAAvcAQEKfwJAAkAgACgCCCABKAIMRw0AIAAoAgwi
+AiABKAIIRg0BC0GBi4CAABCAgICAACAAKAIMIQILAkAgAkEBSA0AIAAoAgwhA0EAIQQgACgCCCIF
+QQFIIQZBACEHA0ACQCAGDQAgACgCEEECdCEIIAEoAhRBAnQhCSAAKAIAIAAoAhQgBGxqIQIgASgC
+ACABKAIQIARsaiEKQQAhCwNAIAIgCigCADYCACACIAhqIQIgCiAJaiEKIAtBAWoiCyAFSA0ACwsg
+BEEEaiEEIAdBAWoiByADSA0ACwsgAAuZAgEMfwJAAkAgASgCCCIDIAIoAghHDQAgASgCDCIEIAIo
+AgxHDQAgACgCCCADRw0AIAAoAgwgBEYNAQtBp4uAgAAQgICAgAAgACgCDCEECwJAIARBAUgNACAA
+KAIMIQVBACEGIAAoAggiB0EBSCEIQQAhCQNAAkAgCA0AIAAoAhBBAnQhCiACKAIQQQJ0IQsgASgC
+EEECdCEMIAAoAgAgACgCFCAGbGohBCACKAIAIAIoAhQgBmxqIQMgASgCACABKAIUIAZsaiENQQAh
+DgNAIAQgDSoCACADKgIAkjgCACAEIApqIQQgAyALaiEDIA0gDGohDSAOQQFqIg4gB0gNAAsLIAZB
+BGohBiAJQQFqIgkgBUgNAAsLIAALmQIBDH8CQAJAIAEoAggiAyACKAIIRw0AIAEoAgwiBCACKAIM
+Rw0AIAAoAgggA0cNACAAKAIMIARGDQELQc2LgIAAEICAgIAAIAAoAgwhBAsCQCAEQQFIDQAgACgC
+DCEFQQAhBiAAKAIIIgdBAUghCEEAIQkDQAJAIAgNACAAKAIQQQJ0IQogAigCEEECdCELIAEoAhBB
+AnQhDCAAKAIAIAAoAhQgBmxqIQQgAigCACACKAIUIAZsaiEDIAEoAgAgASgCFCAGbGohDUEAIQ4D
+QCAEIA0qAgAgAyoCAJM4AgAgBCAKaiEEIAMgC2ohAyANIAxqIQ0gDkEBaiIOIAdIDQALCyAGQQRq
+IQYgCUEBaiIJIAVIDQALCyAAC98BAQp/AkACQCAAKAIIIAEoAghHDQAgACgCDCIDIAEoAgxGDQEL
+QfOLgIAAEICAgIAAIAAoAgwhAwsCQCADQQFIDQAgACgCDCEEQQAhBSAAKAIIIgZBAUghB0EAIQgD
+QAJAIAcNACAAKAIQQQJ0IQkgASgCEEECdCEKIAAoAgAgACgCFCAFbGohAyABKAIAIAEoAhQgBWxq
+IQtBACEMA0AgAyALKgIAIAKUOAIAIAMgCWohAyALIApqIQsgDEEBaiIMIAZIDQALCyAFQQRqIQUg
+CEEBaiIIIARIDQALCyAAC5kCAQx/AkACQCABKAIIIgMgAigCCEcNACABKAIMIgQgAigCDEcNACAA
+KAIIIANHDQAgACgCDCAERg0BC0GZjICAABCAgICAACAAKAIMIQQLAkAgBEEBSA0AIAAoAgwhBUEA
+IQYgACgCCCIHQQFIIQhBACEJA0ACQCAIDQAgACgCEEECdCEKIAIoAhBBAnQhCyABKAIQQQJ0IQwg
+ACgCACAAKAIUIAZsaiEEIAIoAgAgAigCFCAGbGohAyABKAIAIAEoAhQgBmxqIQ1BACEOA0AgBCAN
+KgIAIAMqAgCUOAIAIAQgCmohBCADIAtqIQMgDSAMaiENIA5BAWoiDiAHSA0ACwsgBkEEaiEGIAlB
+AWoiCSAFSA0ACwsgAAvOAgMLfwF9BX8CQAJAIAEoAgwgAigCCEcNACAAKAIIIAEoAghHDQAgACgC
+DCACKAIMRg0BC0HAjICAABCAgICAAAsgABCcgICAABoCQCAAKAIMIgNBAUgNAEEAIQQgAigCCCIF
+QQFIIQZBACEHA0ACQCAGDQAgAigCFCAHbCEIIAAoAgghCSACKAIQIQogAigCACELQQAhDEEAIQ0D
+QAJAIAlBAUgNACALIAggCiANbGpBAnRqKgIAIQ4gACgCEEECdCEPIAEoAhBBAnQhECAAKAIAIAQg
+ACgCFGxqIREgASgCACABKAIUIAxsaiESQQAhEwNAIBEgDiASKgIAlCARKgIAkjgCACARIA9qIREg
+EiAQaiESIBNBAWoiEyAJSA0ACwsgDEEEaiEMIA1BAWoiDSAFSA0ACwsgBEEEaiEEIAdBAWoiByAD
+SA0ACwsgAAuIAQICfwF9AkACQCAAKAIIIgIgASgCCEcNACACQQFHDQAgAiAAKAIMIgNHDQAgAyAB
+KAIMRg0BC0HnjICAABCAgICAAAsCQAJAIAEoAgAqAgAiBIu7RI3ttaD3xrA+Y0EBcw0AQQAqAoCI
+gIAAIQQMAQtDAACAPyAElSEECyAAKAIAIAQ4AgAgAAuNAgICfwV9AkACQCAAKAIIIgIgASgCCEcN
+ACACQQJHDQAgAiAAKAIMIgNHDQAgAyABKAIMRg0BC0GOjYCAABCAgICAAAsCQAJAIAEoAgAiAioC
+ACIEIAIgAUEUaigCACIDIAEoAhAiAWpBAnRqKgIAIgWUIAIgAUECdGoqAgAiBiACIANBAnRqKgIA
+IgeUkyIIi7tEje21oPfGsD5jQQFzDQBBACoCgIiAgAAhCAwBC0MAAIA/IAiVIQgLIAAoAgAiASAF
+IAiUOAIAIAEgACgCECICQQJ0aiAIIAaMlDgCACABIABBFGooAgAiA0ECdGogCCAHjJQ4AgAgASAD
+IAJqQQJ0aiAEIAiUOAIAIAALnAQGAn8CfQF/BX0BfwZ9AkACQCAAKAIIIgIgASgCCEcNACACQQNH
+DQAgAiAAKAIMIgNHDQAgAyABKAIMRg0BC0G1jYCAABCAgICAAAsCQAJAIAEoAgAiAiABKAIQIgNB
+A3RqKgIAIgQgAiABQRRqKAIAIgFBAnRqKgIAIgUgAiABQQF0IgYgA2pBAnRqKgIAIgeUIAIgASAD
+akECdGoqAgAiCCACIAFBA3RqKgIAIgmUkyIKlCACKgIAIgsgCCACIAYgA0EBdCIMakECdGoqAgAi
+DZQgAiAMIAFqQQJ0aioCACIOIAeUkyIPlCACIANBAnRqKgIAIhAgBSANlCAOIAmUkyIRlJOSIhKL
+u0SN7bWg98awPmNBAXMNAEEAKgKAiICAACESDAELQwAAgD8gEpUhEgsgACgCACICIA8gEpQ4AgAg
+AiAAKAIQIgFBAnRqIBIgECANlCAEIAeUk4yUOAIAIAIgAUEDdGogECAOlCAEIAiUkyASlDgCACAC
+IABBFGooAgAiA0ECdGogEiARjJQ4AgAgAiADIAFqIgZBAnRqIAsgDZQgBCAJlJMgEpQ4AgAgAiAD
+IAFBAXRqQQJ0aiASIAsgDpQgBCAFlJOMlDgCACACIANBA3RqIAogEpQ4AgAgAiABIANBAXRqQQJ0
+aiASIAsgB5QgECAJlJOMlDgCACACIAZBA3RqIAsgCJQgECAFlJMgEpQ4AgAgAAvZAgIRfwF9AkAC
+QCABKAIIIAIoAghHDQAgACgCCCABKAIMRw0AIAAoAgwiAyACKAIMRg0BC0HcjYCAABCAgICAACAA
+KAIMIQMLAkAgA0EBSA0AIAAoAgwhBCAAKAIIIgVBAUghBkEAIQdBACEIA0ACQCAGDQAgACgCFCAI
+bCEJIAIoAgghCiAAKAIQIQsgACgCACEMQQAhDUEAIQ4DQCAMIAkgCyAObGpBAnRqIg9BADYCAAJA
+IApBAUgNACACKAIQQQJ0IRAgASgCEEECdCERIAIoAgAgByACKAIUbGohAyABKAIAIAEoAhQgDWxq
+IRJBACETQwAAAAAhFANAIA8gFCASKgIAIAMqAgCUkiIUOAIAIAMgEGohAyASIBFqIRIgE0EBaiIT
+IApIDQALCyANQQRqIQ0gDkEBaiIOIAVIDQALCyAHQQRqIQcgCEEBaiIIIARIDQALCyAAC5sFBAR/
+An0DfxB9AkACQCAAKAIIIgMgACgCDEcNACABKAIIIgQgASgCDEcNACACKAIIIgVBA0cNACAEQQNH
+DQAgA0EDRw0AIAUgAigCDEYNAQtBg46AgAAQgICAgAALIAIoAgAiAyACQRRqKAIAIgRBAXQiBiAC
+KAIQIgVBAXQiAmpBAnRqKgIAIQcgAyACIARqQQJ0aioCACEIIAEoAgAiAiABKAIQIglBAXQiCiAB
+QRRqKAIAIgtqQQJ0aioCACEMIAIgC0EBdCIBIApqQQJ0aioCACENIAMgBEEDdGoqAgAhDiADIAYg
+BWpBAnRqKgIAIQ8gAyAEQQJ0aioCACEQIAMgBCAFakECdGoqAgAhESACIAlBA3RqKgIAIRIgAiAJ
+QQJ0aioCACETIAIgCyAJakECdGoqAgAhFCACIAEgCWpBAnRqKgIAIRUgACgCACIBIAIqAgAiFiAD
+KgIAIheUIAIgC0ECdGoqAgAiGCADIAVBAnRqKgIAIhmUkiACIAtBA3RqKgIAIhogAyAFQQN0aioC
+ACIblJI4AgAgASAAKAIQIgNBAnRqIBMgF5QgFCAZlJIgFSAblJI4AgAgASADQQN0aiASIBeUIAwg
+GZSSIA0gG5SSOAIAIAEgAEEUaigCACICQQJ0aiAWIBCUIBggEZSSIBogCJSSOAIAIAEgAiADaiIE
+QQJ0aiATIBCUIBQgEZSSIBUgCJSSOAIAIAEgAiADQQF0akECdGogEiAQlCAMIBGUkiANIAiUkjgC
+ACABIAJBA3RqIBYgDpQgGCAPlJIgGiAHlJI4AgAgASADIAJBAXRqQQJ0aiATIA6UIBQgD5SSIBUg
+B5SSOAIAIAEgBEEDdGogEiAOlCAMIA+UkiANIAeUkjgCACAAC+UBAQp/AkACQCAAKAIIIAEoAghH
+DQAgACgCDCIDIAEoAgxGDQELQaqOgIAAEICAgIAAIAAoAgwhAwsCQCADQQFIDQAgACgCDCEEQQAh
+BSAAKAIIIgZBAUghB0EAIQgDQAJAIAcNACAAKAIQQQJ0IQkgASgCEEECdCEKIAAoAgAgACgCFCAF
+bGohAyABKAIAIAEoAhQgBWxqIQtBACEMA0AgAyALKgIAIAKUIAMqAgCSOAIAIAMgCWohAyALIApq
+IQsgDEEBaiIMIAZIDQALCyAFQQRqIQUgCEEBaiIIIARIDQALCyAAC48CAwh/AX0DfwJAAkAgASgC
+DEEBRw0AIAIoAghBAUcNACAAKAIIIAEoAghHDQAgACgCDCIDIAIoAgxGDQELQdGOgIAAEICAgIAA
+IAAoAgwhAwsCQCADQQFIDQAgAkEUaigCACEEIAAoAgwhBSACKAIAIQZBACEHIAAoAggiCEEBSCEJ
+QQAhCgNAAkAgCQ0AIAYgBCAKbEECdGoqAgAhCyAAKAIQQQJ0IQwgASgCEEECdCENIAAoAgAgACgC
+FCAHbGohAiABKAIAIQNBACEOA0AgAiALIAMqAgCUOAIAIAIgDGohAiADIA1qIQMgDkEBaiIOIAhI
+DQALCyAHQQRqIQcgCkEBaiIKIAVIDQALCyAAC70BAwF/AX0DfwJAAkAgACgCDEEBRw0AIAEoAgxB
+AUcNACAAKAIIIgIgASgCCEYNAQtB+I6AgAAQgICAgAAgASgCCCECCwJAAkAgAkEBTg0AQwAAAAAh
+AwwBCyABKAIQQQJ0IQQgACgCEEECdCEFIAEoAgghBiABKAIAIQEgACgCACEAQwAAAAAhA0EAIQID
+QCADIAAqAgAgASoCAJSSIQMgASAEaiEBIAAgBWohACACQQFqIgIgBkgNAAsLIAMLggEEAX8BfQJ/
+AX0CQCAAKAIMQQFGDQBBn4+AgAAQgICAgAALAkACQCAAKAIIIgFBAU4NAEMAAAAAIQIMAQsgACgC
+EEECdCEDIAAoAgAhAEEAIQRDAAAAACECA0AgAiAAKgIAIgUgBZSSIQIgACADaiEAIARBAWoiBCAB
+SA0ACwsgApELsQIBBX8CQCACKAIIIgMgAigCDCIETg0AQcaPgIAAEICAgIAACwJAAkAgACgCCCAD
+Rw0AIAAoAgwgA0cNACABKAIIIANHDQAgASgCDCAERg0BC0Hlj4CAABCAgICAAAsgBEECdEGfkYCA
+ABCFgICAACEFAkACQCAEQQFIDQBBACEGIAUhBwNAIAcgAyAGakEBEJKAgIAANgIAIAdBBGohByAE
+IAZBf2oiBmoNAAsgAyAEIAUgASACEK2AgIAAIAMgBCAFIAAQroCAgAAgBEEBaiEHIARBAnQgBWpB
+fGohBgNAIAYoAgAQl4CAgAAaIAZBfGohBiAHQX9qIgdBAUoNAAwCCwsgAyAEIAUgASACEK2AgIAA
+IAMgBCAFIAAQroCAgAALIAVBlZKAgAAQh4CAgAAaC5AEAgl/An0CQCAAIAFODQBBupGAgAAQgICA
+gAALAkACQCAEKAIIIABHDQAgBCgCDCABRw0AIAMoAgggAEcNACADKAIMIAFGDQELQdiRgIAAEICA
+gIAACxCWgICAACEFEJaAgIAAIQYQloCAgAAhBxCWgICAACEIIABBAWoiCSABQQFqIgoQkoCAgAAh
+CyAJIAoQkoCAgAAhDCADIAQQlYCAgAAaAkAgAUEBSA0AIAFBf2ohDSAAQX9qIQpBACEAA0AgBSAD
+IAAgCiAAIAAQmoCAgAAiBCgCACoCACEOIAIoAgAgBBCVgICAABogBBCrgICAACEPIAIoAgAiBCgC
+ACIJIA8gDkMAAAAAYCAOQwAAAABda7KUIAkqAgCSOAIAAkAgBBCrgICAACIOi7tEje21oPfGsD5j
+DQAgAigCACIEIARDAACAPyAOlRCggICAABogBiADIAAgCiAAIA0QmoCAgAAhBCAHIAtBASACKAIA
+KAIMQQEgBCgCDBCagICAACACKAIAIAQQpoCAgAAhCSAEIAggDEEBIAIoAgAoAghBASAEKAIMEJqA
+gIAAIAIoAgAgCRCpgICAAEMAAADAEKiAgIAAGgsgAkEEaiECIAEgAEEBaiIARw0ACwsgDBCXgICA
+ABogCxCXgICAABogCBCXgICAABogBxCXgICAABogBhCXgICAABogBRCXgICAABoL8gICCH8BfQJA
+AkAgAygCCCAARw0AIAMoAgwiBCAARg0BIAQgAUYNAQtB9pGAgAAQgICAgAALEJaAgIAAIQUQloCA
+gAAhBiADEJyAgIAAGgJAIAMoAgwiB0EBSA0AIAMoAgAgA0EUaigCACADKAIQaiIIIAdBf2psQQJ0
+aiEEIAdBAWohCUEAIAhBAnRrIQgDQCAEQYCAgPwDNgIAIAQgCGohBCAJQX9qIglBAUoNAAsgB0EB
+SA0AIAFBAWohCiAAQX9qIQAgAUECdCACakF8aiELQQAhAgNAIAUgA0EAIAAgAiACEJqAgIAAIQcg
+CyEEIAohCQJAIAFBAUgNAANAIAYgByAJQX5qIABBAEEAEJqAgIAAIQggBCgCACAIEKqAgIAAIQwg
+CCAEKAIAIAxDAAAAwJQQqICAgAAaIARBfGohBCAJQX9qIglBAUoNAAsLIAJBAWoiAiADKAIMSA0A
+CwsgBhCXgICAABogBRCXgICAABoLlwMBB38CQCACKAIIIgMgAigCDCIETg0AQYSQgIAAEICAgIAA
+CwJAAkAgACgCCCADRw0AIAAoAgwgBEcNACABKAIIIARHDQAgASgCDCAERg0BC0GjkICAABCAgICA
+AAsQloCAgAAhBSADIAQQkoCAgAAhBiAEQQJ0QZ+RgIAAEIWAgIAAIQcCQAJAIARBAUgNAEEAIQgg
+ByEJA0AgCSADIAhqQQEQkoCAgAA2AgAgCUEEaiEJIAQgCEF/aiIIag0ACyADIAQgByAGIAIQrYCA
+gAAgAyAEIAcgABCugICAACABIAUgBkEAIARBf2oiCEEAIAgQmoCAgAAQlYCAgAAaIARBAWohCSAE
+QQJ0IAdqQXxqIQgDQCAIKAIAEJeAgIAAGiAIQXxqIQggCUF/aiIJQQFKDQAMAgsLIAMgBCAHIAYg
+AhCtgICAACADIAQgByAAEK6AgIAAIAEgBSAGQQAgBEF/aiIIQQAgCBCagICAABCVgICAABoLIAdB
+lZKAgAAQh4CAgAAaIAYQl4CAgAAaIAUQl4CAgAAaC+QDAQp/AkAgASgCCCIEIAEoAgwiBU4NAEHC
+kICAABCAgICAAAsCQAJAIAIoAgggBEcNACACKAIMQQFHDQAgACgCCCAFRw0AIAAoAgxBAUYNAQtB
+4ZCAgAAQgICAgAALIAQgBRCSgICAACEGIARBARCSgICAACEHIARBARCSgICAACEIIAVBARCSgICA
+ACEJIAVBAnRBn5GAgAAQhYCAgAAhCgJAIAVBAUgNACAEIQsgCiEMIAUhDQNAIAwgC0EBEJKAgIAA
+NgIAIAtBf2ohCyAMQQRqIQwgDUF/aiINDQALCyAEIAUgCiAGIAEQrYCAgAAgBCAFIAogByACELGA
+gIAAIAAgBiAHELKAgIAAAkAgA0EBSA0AIANBAWohCwNAIAggAiAHIAEgABCigICAABCfgICAABog
+BCAFIAogByAIELGAgIAAIAkgBiAHELKAgIAAIAAgCUMAAIA/EKiAgIAAGiALQX9qIgtBAUoNAAsL
+AkAgBUEBSA0AIAVBAWohDCAFQQJ0IApqQXxqIQsDQCALKAIAEJeAgIAAGiALQXxqIQsgDEF/aiIM
+QQFKDQALCyAKQZWSgIAAEIeAgIAAGiAJEJeAgIAAGiAIEJeAgIAAGiAHEJeAgIAAGiAGEJeAgIAA
+GiAAC+MCAwh/AX0BfwJAAkAgAygCCCAARw0AIAMoAgxBAUcNACAEKAIIIABHDQAgBCgCDEEBRg0B
+C0GukoCAABCAgICAAAsgAyAEEJWAgIAAGgJAIAFBAUgNAEEAIQUgACEGQQAhBwNAAkAgByAATiII
+DQAgAygCECIEQQJ0IQkgAygCACAEIAVsaiEEIAIgB0ECdGoiCigCACILKAIQQQJ0IQwgCygCACEL
+QwAAAAAhDSAGIQ4DQCANIAsqAgAgBCoCAJSSIQ0gBCAJaiEEIAsgDGohCyAOQX9qIg4NAAsgCA0A
+IA0gDZIhDSADKAIQIgRBAnQhCSADKAIAIAQgBWxqIQQgCigCACILKAIQQQJ0IQwgCygCACELIAYh
+DgNAIAQgBCoCACANIAsqAgCUkzgCACAEIAlqIQQgCyAMaiELIA5Bf2oiDg0ACwsgBUEEaiEFIAZB
+f2ohBiAHQQFqIgcgAUcNAAsLC7IDAwx/An0DfwJAIAEoAggiAyABKAIMIgRODQBBzZKAgAAQgICA
+gAALAkACQCAAKAIIIARHDQAgACgCDEEBRw0AIAIoAgggA0cNACACKAIMQQFGDQELQeySgIAAEICA
+gIAACwJAIARBAUgNAEEAIQVBACABQRRqKAIAIgNBAnQiBiABKAIQIgdBAnRqayEIIAEoAgAiCSAD
+IARsIAcgBEF/amxqQQJ0aiEKIARBAnQhCyADIAdqIQwgBCENA0ACQCAJIAwgDUF/aiIObEECdGoq
+AgAiD4u7RI3ttaD3xrA+Y0EBcw0AIABBACoCgIiAgAAQm4CAgAAaDwsgAigCACACKAIQIA5sQQJ0
+aioCACEQAkACQCANIARIDQAgACgCECERIAAoAgAhEgwBCyAAKAIQIhFBAnQhEyAAKAIAIhIgESAL
+bGohASAKIQMgBSEHA0AgECADKgIAIAEqAgCUkyEQIAEgE2ohASADIAZqIQMgB0F/aiIHDQALCyAS
+IBEgDmxBAnRqIBAgD5U4AgAgC0F8aiELIAogCGohCiAFQQFqIQUgDUEBSiEBIA4hDSABDQALCwvC
+AwEKfwJAAkAgACgCCCICIAAoAgxHDQAgAiABKAIIIgNHDQAgAyABKAIMRg0BC0GAkYCAABCAgICA
+ACAAKAIMIQILIAIgAhCUgICAACEEIAIgAhCSgICAACEFIAJBARCSgICAACEGEJaAgIAAIQcQloCA
+gAAhCCACQQJ0QZ+RgIAAEIWAgIAAIQkCQAJAIAJBAUgNACAJIQMgAiEKA0AgAyAKQQEQkoCAgAA2
+AgAgA0EEaiEDIApBf2oiCg0ACyACIAIgCSAFIAEQrYCAgAAgAkEBSA0BIAJBf2ohCkEAIQMDQCAH
+IARBACAKIAMgAxCagICAACEBIAggAEEAIAogAyADEJqAgIAAIQsgAiACIAkgBiABELGAgIAAIAsg
+BSAGELKAgIAAIAIgA0EBaiIDRw0ACyACQQFIDQEgAkEBaiEKIAJBAnQgCWpBfGohAwNAIAMoAgAQ
+l4CAgAAaIANBfGohAyAKQX9qIgpBAUoNAAwCCwsgAiACIAkgBSABEK2AgIAACyAJQZWSgIAAEIeA
+gIAAGiAIEJeAgIAAGiAHEJeAgIAAGiAGEJeAgIAAGiAFEJeAgIAAGiAEEJeAgIAAGiAAC9YCAQJ/
+AkACQCAAKAIIQQNHDQAgACgCDEEDRw0AIAEoAghBAkcNACABKAIMQQRHDQAgAigCCEECRw0AIAIo
+AgxBBEYNAQtBi5OAgAAQgICAgAALIAAgASgCACIDKgIAuyADIAEoAhAiBEECdGoqAgC7IAMgAUEU
+aigCACIBQQJ0aioCALsgAyABIARqQQJ0aioCALsgAyABQQN0aioCALsgAyABQQF0IARqQQJ0aioC
+ALsgAyABQQNsIgFBAnRqKgIAuyADIAEgBGpBAnRqKgIAuyACKAIAIgMqAgC7IAMgAigCECIEQQJ0
+aioCALsgAyACQRRqKAIAIgFBAnRqKgIAuyADIAEgBGpBAnRqKgIAuyADIAFBA3RqKgIAuyADIAFB
+AXQgBGpBAnRqKgIAuyADIAFBA2wiAUECdGoqAgC7IAMgASAEakECdGoqAgC7ELWAgIAAIAAL9QoC
+FnwDf0EAKgKAiICAALshEQJAAkAgAiAEoSISIAWiIAQgBqEiEyABoiAGIAKhIhQgA6KgoCAKIAyh
+IhUgDaIgDCAOoSIWIAmiIA4gCqEgC6KgoKJEAAAAAAAAAABjDQAgEyAHoiAGIAihIhcgA6IgCCAE
+oSIYIAWioKAgFiAPoiAOIBChIhkgC6IgECAMoSANoqCgokQAAAAAAAAAAGMNACASIAeiIAQgCKEg
+AaIgCCACoSITIAOioKAgFSAPoiAMIBChIAmiIBAgCqEiEiALoqCgokQAAAAAAAAAAGMNACACIAah
+IAeiIBcgAaIgEyAFoqCgIAogDqEgD6IgGSAJoiASIA2ioKCiRAAAAAAAAAAAYw0AIAQgAqEiGiAH
+IAGhIheiIAMgAaEiGyAToqEiHJkiHUSN7bWg98awPmMNACAUIBeiIAUgAaEiHiAToqEiH5kiIESN
+7bWg98awPmMNACAbIBSiIBogHqKhIhSZIiFEje21oPfGsD5jDQAgBiAEoSAHIAOhoiAFIAOhIBii
+oZlEje21oPfGsD5jDQAgHCAFoiIYIB8gA6KhIiIgFCAIoiAcIAaiIh6gIiOiIB4gHyAEoqEiHiAU
+IAeiIBigIhiioSIkmUSN7bWg98awPmMNACAcmiIlIBShIiYgIqIgHyAcoSIiIBiioUQAAAAAAADw
+PyAkoyIkoiEYICIgI6IgJiAeoqEgJKIhHgJAAkAgHSAgZEEBcw0AIBMgGCAEoiAeIAOiRAAAAAAA
+APA/oKAiBKIgJaMhHSAcIR8MAQsgEyAYIAaiIB4gBaJEAAAAAAAA8D+goCIEoiAfmqMhHQsgFyAE
+oiAfoyETAkACQCAhICWZZEEBcw0AIBogGCAGoiAeIAWiRAAAAAAAAPA/oKAiBKIgFJqjIQcMAQsg
+GiAYIAiiIB4gB6JEAAAAAAAA8D+goCIEoiAcoyEHICUhFAsgGCAdmiABoiATIAKioSIXIAeioiAd
+IBsgBKIgFKMiFKIgHiATIAeaIAGiIBQgAqKhIhyioqCgIBMgB6KhIBggHSAcoqKhIB4gFyAUoqKh
+mUSN7bWg98awPmMNACALIA2hIhsgECAOoSIaoiAWIA8gDaEiH6KhIiCZRI3ttaD3xrA+Yw0AIBEh
+BCARIQIgESEGIBEhDiARIQEgESEDIBEhBSARIQggGyAVIBmgIhWiIBYgCSALoSANIA+hoCIZoqFE
+AAAAAAAA8D8gIKMiFqIiDSAMIAqhIBogGaIgHyAVoqEgFqIiFiAMoqAiDCAJoqIgCyAJoSAWIAui
+oCILIBIgDSAQoqAiEKIgFiAPIAmhIA0gD6KgIg8gCqKioKAgDyAMoqEgDSALIAqioqEgFiAQIAmi
+oqGZRI3ttaD3xrA+Yw0BIBYgF6IgDSAcoqBEAAAAAAAA8D+gIQUgGCAWIBOiIA0gFKKgoCEDIB4g
+FiAdoiANIAeioKAhASAMIBeiIBAgHKKgIAqgIQ4gGCAKoiAMIBOiIBAgFKKgoCEGIB4gCqIgDCAd
+oiAQIAeioKAhAiALIBeiIA8gHKKgIAmgIQQgGCAJoiALIBOiIA8gFKKgoCERIB4gCaIgCyAdoiAP
+IAeioKAhCAwBCyARIQQgESECIBEhBiARIQ4gESEBIBEhAyARIQUgESEICyAAKAIAIicgCLY4AgAg
+JyAAQRRqKAIAIihBAnRqIBG2OAIAICcgKEEDdGogBLY4AgAgJyAAKAIQIgBBAnRqIAK2OAIAICcg
+ACAoaiIpQQJ0aiAGtjgCACAnIAAgKEEBdGpBAnRqIA62OAIAICcgAEEDdGogAbY4AgAgJyAoIABB
+AXRqQQJ0aiADtjgCACAnIClBA3RqIAW2OAIAC7oHAhZ/Cn0CQAJAIAAoAghBA0cNACAAKAIMQQNH
+DQAgASgCCEECRw0AIAEoAgwiA0EESA0AIAIoAghBAkcNACACKAIMIANGDQELQbKTgIAAEICAgIAA
+IAEoAgwhAwsgA0EBdCIEQQgQkoCAgAAhBSAEQQEQkoCAgAAhBkEIQQEQkoCAgAAhBwJAIANBAUgN
+ACAFQRRqKAIAIgRBDGwgBSgCECIIQQJ0IglqIQogBEEEdCAJaiELIARBFGwgCWohDCAEQRhsIg0g
+CWohDiAEQRxsIg8gCWohECACKAIQQQJ0IREgASgCEEECdCESIAhBA3QhCCAGKAIQIglBA3QhEyAJ
+QQJ0IRQgAkEUaigCAEECdCEVIAFBFGooAgBBAnQhFiAEQQN0IRcgBEECdCEYIAYoAgAhCSAFKAIA
+IQQgAigCACECIAEoAgAhAQNAIAIgEWoqAgAhGSABIBJqKgIAIRogAioCACEbIAQgASoCACIcOAIA
+IAQgGGogGjgCACAEIBdqQYCAgPwDNgIAIAQgCmogHDgCACAEIAtqIBo4AgAgBCAMakGAgID8AzYC
+ACAEIA1qIBsgHIwiHJQ4AgAgBCAOaiAZIByUOAIAIAQgD2ogGyAajCIalDgCACAEIBBqIBkgGpQ4
+AgAgCSAbOAIAIAkgFGogGTgCACACIBVqIQIgASAWaiEBIAQgCGohBCAJIBNqIQkgA0F/aiIDDQAL
+CyAHIAUgBkEDELCAgIAAGgJAAkAgBygCACIEKgIAIhkgBCAHKAIQIglBBHRqKgIAIhqUIAQgCUEC
+dGoqAgAiGyAEIAlBFGxqKgIAIhyUIAQgCUEYbGoqAgAiHZSSIAQgCUEDdGoqAgAiHiAEIAlBDGxq
+KgIAIh+UIAQgCUEcbGoqAgAiIJSSIBsgH5STIBkgHJQgIJSTIB4gGpQgHZSTIiEQg4CAgAANAEMA
+AIA/ISIgIYu7RI3ttaD3xrA+Y0EBcw0BC0EAKgKAiICAACIZIRsgGSEeIBkhHyAZIRogGSEcIBkh
+HSAZISAgGSEiCyAAKAIAIgQgGTgCACAEIABBFGooAgAiCUECdGogGzgCACAEIAlBA3RqIB44AgAg
+BCAAKAIQIgJBAnRqIB84AgAgBCACIAlqIgFBAnRqIBo4AgAgBCACIAlBAXRqQQJ0aiAcOAIAIAQg
+AkEDdGogHTgCACAEIAkgAkEBdGpBAnRqICA4AgAgBCABQQN0aiAiOAIAIAcQl4CAgAAaIAYQl4CA
+gAAaIAUQl4CAgAAaIAALnwgKAX8BfQF/An0Bfwp9AX8BfQN/AX0CQAJAIAAoAghBA0cNACAAKAIM
+QQNHDQAgASgCCEECRw0AIAEoAgxBBEcNACACKAIIQQJHDQAgAigCDEEERg0BC0HZk4CAABCAgICA
+AAsgACABKAIAIgMqAgAiBCAEIAMgAUEUaigCACIFQQJ0aioCACIGkiADIAVBA3RqKgIAIgeSIAMg
+BUEDbCIIQQJ0aioCACIJkkMAAIA+lCIKkyIEQwAAAEEgAyAIIAEoAhAiAWpBAnRqKgIAIgsgCyAD
+IAFBAnRqKgIAIgwgAyAFIAFqQQJ0aioCACINkiADIAVBAXQgAWpBAnRqKgIAIg6SkkMAAIA+lCIP
+kyILIAuUIAkgCpMiCSAJlCAOIA+TIg4gDpQgByAKkyIHIAeUIA0gD5MiDSANlCAGIAqTIgYgBpQg
+BCAElCAMIA+TIgwgDJSSkpKSkpKSlZEiBJS7IAwgBJS7IAYgBJS7IA0gBJS7IAcgBJS7IA4gBJS7
+IAkgBJS7IAsgBJS7IAIoAgAiAyoCACILIAsgAyACQRRqKAIAIgVBAnRqKgIAIhCSIAMgBUEDdGoq
+AgAiDJIgAyAFQQNsIghBAnRqKgIAIg2SQwAAgD6UIgmTIgtDAAAAQSADIAggAigCECIBakECdGoq
+AgAiDiAOIAMgAUECdGoqAgAiESADIAUgAWpBAnRqKgIAIhKSIAMgBUEBdCABakECdGoqAgAiBpKS
+QwAAgD6UIg6TIgcgB5QgDSAJkyINIA2UIAYgDpMiBiAGlCAMIAmTIgwgDJQgEiAOkyISIBKUIBAg
+CZMiECAQlCALIAuUIBEgDpMiESARlJKSkpKSkpKVkSILlLsgESALlLsgECALlLsgEiALlLsgDCAL
+lLsgBiALlLsgDSALlLsgByALlLsQtYCAgAAgACgCACIDIABBFGooAgAiBUEBdCICIAAoAhAiAUEB
+dCIIakECdGoqAgAhECADIAggBWpBAnRqIggqAgAhByADIAIgAWpBAnRqIgIqAgAhESADIAVBA3Rq
+IhMqAgAhFCADIAUgAWoiFUECdGoiFioCACEGIAMgBUECdGoiBSoCACEMIAMgAUECdGoiFyoCACES
+IAMgBCAJIAMgAUEDdGoiASoCACINlCADKgIAIhhDAACAPyALlSILlJKUOAIAIBcgBCAOIA2UIBIg
+C5SSlDgCACABIAQgDZQ4AgAgBSAEIAkgB5QgDCALlJKUOAIAIBYgBCAOIAeUIAYgC5SSlDgCACAI
+IAQgB5Q4AgAgEyAUIAQgCiAYlCAPIAyUkpSTIAuUIAkgECAEIAogDZQgDyAHlJKUkyIHlJI4AgAg
+AiARIAQgCiASlCAPIAaUkpSTIAuUIA4gB5SSOAIAIAMgFUEDdGogBzgCACAAC5sCAQZ/AkACQCAA
+KAIIQQNHDQAgACgCDEEDRw0AIAEoAghBAkcNACABKAIMIgNBBEgNACACKAIIQQJHDQAgAigCDCAD
+Rg0BC0GAlICAABCAgICAACABKAIMIQMLQQIgAxCSgICAACEEQQIgAxCSgICAACEFQQNBAxCSgICA
+ACEGQQNBAxCSgICAACEHQQNBAxCSgICAACEIIAQgASAGQQNBAxCSgICAACIDEMGAgIAAIAUgAiAD
+IAcQwYCAgAAgAyAIIAQgBRC2gICAACIBIAYQp4CAgAAaIAAgByADEKeAgIAAGiADEJeAgIAAGiAB
+EJeAgIAAGiAHEJeAgIAAGiAGEJeAgIAAGiAFEJeAgIAAGiAEEJeAgIAAGiAAC/kFAhZ/Bn0CQAJA
+IAAoAghBAkcNACAAKAIMQQNHDQAgASgCCEECRw0AIAEoAgwiA0EDSA0AIAIoAghBAkcNACACKAIM
+IANGDQELQaeUgIAAEICAgIAAIAEoAgwhAwsgA0EBdCIEQQYQkoCAgAAhBSAEQQEQkoCAgAAhBkEG
+QQEQkoCAgAAhBwJAIANBAUgNACAFQRRqKAIAIgRBDGwgBSgCECIIQQJ0IglqIQogBEEEdCAJaiEL
+IARBFGwgCWohDCACKAIQQQJ0IQ0gASgCEEECdCEOIAhBA3QhDyAGKAIQIglBA3QhECAJQQJ0IREg
+AkEUaigCAEECdCESIAFBFGooAgBBAnQhEyAEQQN0IRQgBEECdCEVIAYoAgAhCSAFKAIAIQQgAigC
+ACECIAEoAgAhAQNAIAIgDWooAgAhFiABIA5qKAIAIQggAigCACEXIAQgASgCACIYNgIAIAQgFWog
+CDYCACAEIBRqQYCAgPwDNgIAIAQgCmogGDYCACAEIAtqIAg2AgAgBCAMakGAgID8AzYCACAJIBc2
+AgAgCSARaiAWNgIAIAIgEmohAiABIBNqIQEgBCAPaiEEIAkgEGohCSADQX9qIgMNAAsLIAcgBSAG
+QQMQsICAgAAaAkACQCAHKAIAIgQqAgAiGSAEIAcoAhAiCUECdGoqAgAiGpIgBCAJQQN0aioCACIb
+kiAEIAlBDGxqKgIAIhySIAQgCUEEdGoqAgAiHZIgBCAJQRRsaioCACIekhCDgICAAA0AIBkgHZQg
+GiAclJOLu0SN7bWg98awPmNBAXMNAQtBACoCgIiAgAAiGSEaIBkhGyAZIRwgGSEdIBkhHgsgACgC
+ACIEIBk4AgAgBCAAQRRqKAIAIglBAnRqIBo4AgAgBCAJQQN0aiAbOAIAIAQgACgCECICQQJ0aiAc
+OAIAIAQgAiAJakECdGogHTgCACAEIAIgCUEBdGpBAnRqIB44AgAgBxCXgICAABogBhCXgICAABog
+BRCXgICAABogAAvNBQMBfAJ/FXwCQAJAIAAoAghBAkcNACAAKAIMQQNHDQAgASgCCEECRw0AIAEo
+AgxBA0cNACACKAIIQQJHDQAgAigCDEEDRg0BC0HKlICAABCAgICAAAtBACoCgIiAgAC7IQMCQAJA
+IAEoAgAiBCABKAIQIgVBAnRqKgIAuyIGIAQgAUEUaigCACIBIAVqQQJ0aioCALsiB6EiCCAEIAFB
+A3RqKgIAuyIJoiAHIAQgAUEBdCAFakECdGoqAgC7IgqhIgsgBCoCALsiDKIgCiAGoSINIAQgAUEC
+dGoqAgC7Ig6ioKAiD5lEje21oPfGsD5jDQAgAigCACIEIAIoAhAiBUECdGoqAgC7IhAgBCACQRRq
+KAIAIgEgBWpBAnRqKgIAuyIRoSAEIAFBA3RqKgIAuyISoiARIAQgAUEBdCAFakECdGoqAgC7IhOh
+IAQqAgC7IhSiIBMgEKEgBCABQQJ0aioCALsiFaKgoJlEje21oPfGsD5jDQBEAAAAAAAA8D8gD6Mi
+FiALIBSiIA0gFaKgIAggEqKgoiIPIBYgCSAOoSIXIBCiIAwgCaEiGCARoqAgDiAMoSIZIBOioKIi
+GqIgFiAXIBSiIBggFaKgIBkgEqKgoiIXIBYgCyAQoiANIBGioCAIIBOioKIiCKKhmUSN7bWg98aw
+PmNBAXNFDQAgFiAOIAqiIAcgCaKhIgMgEKIgBiAJoiAMIAqioSIKIBGioCAMIAeiIAYgDqKhIgcg
+E6KgoiEGIBYgAyAUoiAKIBWioCAHIBKioKIhAwwBCyADIQ8gAyEXIAMhCCADIRogAyEGCyAAKAIA
+IgQgD7Y4AgAgBCAAQRRqKAIAIgFBAnRqIBe2OAIAIAQgAUEDdGogA7Y4AgAgBCAAKAIQIgVBAnRq
+IAi2OAIAIAQgBSABakECdGogGrY4AgAgBCAFIAFBAXRqQQJ0aiAGtjgCACAAC4EDAQl/AkACQCAA
+KAIIQQJHDQAgACgCDEEDRw0AIAEoAghBAkcNACABKAIMIgNBA0gNACACKAIIQQJHDQAgAigCDCAD
+Rg0BC0HtlICAABCAgICAACABKAIMIQMLQQIgAxCSgICAACEEQQIgAxCSgICAACEFQQNBAxCSgICA
+ACEGQQNBAxCSgICAACEHQQNBAxCUgICAACEIEJaAgIAAIAhBAEEBQQBBAhCagICAACEJQQNBAxCS
+gICAACEDQQNBAxCSgICAACEKEJaAgIAAIApBAEEBQQBBAhCagICAACELIAQgASAGIAMQwYCAgAAg
+BSACIAMgBxDBgICAACAJIAQgBRC5gICAACEBIAMgCCAGEKeAgIAAGiAKIAcgAxCngICAABogACAL
+EJWAgIAAGiALEJeAgIAAGiAKEJeAgIAAGiADEJeAgIAAGiABEJeAgIAAGiAIEJeAgIAAGiAHEJeA
+gIAAGiAGEJeAgIAAGiAFEJeAgIAAGiAEEJeAgIAAGiAAC5kUAhx/DX0jgICAgABBEGsiBySAgICA
+AAJAAkAgACgCCEEDRw0AIAAoAgxBA0cNACACKAIIQQJHDQAgAigCDCIIQQRIDQAgAygCCEECRw0A
+IAMoAgwgCEcNAAJAIAFFDQAgASgCCEEBRw0BIAEoAgwgCEcNAQsgBEEBSA0AIAVBAUgNACAGQwAA
+AABgDQELQZCVgIAAEICAgIAAIAIoAgwhCAsCQCABRQ0AIAFDAAAAABCbgICAABoLIAhBAnQiCUGy
+lYCAABCFgICAACEKIAlB0ZWAgAAQhYCAgAAgCBCNgICAACILIAhBBBCOgICAACAIIARBAnQiDCAI
+b2sgDGoiDUECdEHwlYCAABCFgICAACEOAkAgDUEBSA0AQQAhDyAIQQFIIRAgDiERA0ACQCAQDQBB
+ACEMIBEhEgNAIBIgDDYCACASQQRqIRIgCCAMQQFqIgxHDQALCyAOIA9BAnRqIAhBBBCOgICAACAR
+IAlqIREgDyAIaiIPIA1IDQALC0ECQQQQkoCAgAAhE0ECQQQQkoCAgAAhFCAEQQN0QY+WgIAAEIWA
+gIAAIRUgBCEWAkAgBEEBSA0AIBUhFyAOIQkgBCEYIAQhFgNAIAcgCSgCACIZNgIAIAcgCUEEaigC
+ACIaNgIEIAcgCUEIaigCACIbNgIIIAcgCUEMaigCADYCDCAUKAIUIQ0gEygCFCEQIAMoAhAhHCAU
+KAIQIR0gFCgCACEMIAMoAgAhEiADKAIUIR4gAigCECEfIBMoAhAhICATKAIAIg8gAigCACIRIBkg
+AigCFCIhbCIiQQJ0aigCADYCACAPICBBAnRqIBEgHyAiakECdGooAgA2AgAgDCASIB4gGWwiGUEC
+dGooAgA2AgAgDCAdQQJ0aiASIBwgGWpBAnRqKAIANgIAIA8gEEECdGogESAhIBpsIhlBAnRqKAIA
+NgIAIA8gICAQakECdGogESAfIBlqQQJ0aigCADYCACAMIA1BAnRqIBIgHiAabCIZQQJ0aigCADYC
+ACAMIB0gDWpBAnRqIBIgHCAZakECdGooAgA2AgAgDyAQQQN0aiARICEgG2wiGUECdGooAgA2AgAg
+DyAgIBBBAXRqQQJ0aiARIB8gGWpBAnRqKAIANgIAIAwgDUEDdGogEiAeIBtsIhlBAnRqKAIANgIA
+IAwgHSANQQF0akECdGogEiAcIBlqQQJ0aigCADYCACAPIBBBA2wiEEECdGogESAhIAcoAgwiGWwi
+IUECdGooAgA2AgAgDyAgIBBqQQJ0aiARIB8gIWpBAnRqKAIANgIAIAwgDUEDbCIPQQJ0aiASIB4g
+GWwiEUECdGooAgA2AgAgDCAdIA9qQQJ0aiASIBwgEWpBAnRqKAIANgIAQQNBAxCSgICAACEMIBdB
+BGoiEkEANgIAIBcgDDYCACAMIBMgFBC0gICAABoCQCAXKAIAKAIAKgIAEIOAgIAARQ0AIBJBfzYC
+ACAWQX9qIRYLIBdBCGohFyAJQRBqIQkgGEF/aiIYDQALCwJAAkAgFg0AIABBACoCgIiAgAAQm4CA
+gAAaDAELIAYgBpQhI0EAIRcgFSAEQQhBhICAgABBABCLgICAABoCQAJAIAhBAUgNAEEAIRwDQCAc
+IhJBAWoiHCAFbyEMAkAgFkECSA0AIAwNACAVIBZBCEGEgICAAEEAEIuAgIAAGiAWQQF2IRYLAkAg
+FkEBRw0AQQAhFwwDCwJAIBZBAUgNACADKAIAIgwgAygCFCALIBJBAnRqKAIAIhJsIg9BAnRqKgIA
+ISQgAigCACIRIAIoAhQgEmwiEkECdGoqAgAhBiAMIA8gAygCEGpBAnRqKgIAISUgESASIAIoAhBq
+QQJ0aioCACEmIBUhESAWIQkDQCARQQRqIgwgDCgCACARKAIAIg8oAgAiDCAPQRRqKAIAIhJBAXQi
+DSAPKAIQIg9qQQJ0aioCACAGIAwgD0ECdGoqAgCUICYgDCASIA9qQQJ0aioCAJSSkiAMIA0gD0EB
+dCIQakECdGoqAgAgBiAMIA9BA3RqKgIAlCAmIAwgECASakECdGoqAgCUkpIiJ5UgJZMiKCAolCAM
+IBJBA3RqKgIAIAYgDCoCAJQgJiAMIBJBAnRqKgIAlJKSICeVICSTIicgJ5SSICNfajYCACARQQhq
+IREgCUF/aiIJDQALCyAcIAhHDQALCyAWQQJIDQAgFUEMaiEMQQAhF0EBIRIDQCASIBcgDCgCACAV
+IBdBA3RqKAIEShshFyAMQQhqIQwgFiASQQFqIhJHDQALCwJAIAhBAUgNACAVIBdBA3RqKAIAIg8o
+AgAiDCAPKAIQIhJBA3RqKgIAISQgDCASQQJ0aioCACElIAwgD0EUaigCACIPQQN0aioCACEpIAwg
+D0ECdGoqAgAhKiAMIBJBAXQiESAPakECdGoqAgAhKyAMIA8gEmpBAnRqKgIAISwgDCAPQQF0Ig8g
+EWpBAnRqKgIAIS0gDCAPIBJqQQJ0aioCACEuIAwqAgAhLyADKAIAIQ8gAigCACERQQAhEkEAIQwD
+QAJAICkgLyARIAIoAhQgDGwiCUECdGoqAgAiBpQgKiARIAkgAigCEGpBAnRqKgIAIiaUkpIgLSAk
+IAaUICsgJpSSkiInlSAPIAMoAhQgDGwiCUECdGoqAgCTIiggKJQgLiAlIAaUICwgJpSSkiAnlSAP
+IAkgAygCEGpBAnRqKgIAkyIGIAaUkiAjX0EBcw0AIAogEkECdGogDDYCACASQQFqIRIgAUUNACAB
+KAIAIAEoAhQgDGxBAnRqQYCAgPwDNgIACyAIIAxBAWoiDEcNAAsgEkEDTA0AQQIgEhCSgICAACEW
+QQIgEhCSgICAACIZKAIQQQJ0IRcgFkEUaigCAEECdCEcIBYoAhBBAnQhHSAZQRRqKAIAQQJ0IR4g
+GSgCACEMIANBFGooAgAhHyAWKAIAIQ8gAkEUaigCACEgIAMoAhAhISADKAIAIQggAigCECEDIAIo
+AgAhCSAKIREDQCAPIAkgICARKAIAIg1sIhBBAnRqKAIANgIAIA8gHWogCSADIBBqQQJ0aigCADYC
+ACAMIAggHyANbCINQQJ0aigCADYCACAMIBdqIAggISANakECdGooAgA2AgAgDCAeaiEMIA8gHGoh
+DyARQQRqIREgEkF/aiISDQALIAAgFiAZELiAgIAAGiAZEJeAgIAAGiAWEJeAgIAAGgwBCyAAQQAq
+AoCIgIAAEJuAgIAAGgsCQCAEQQFIDQAgBEEBaiESIARBA3QgFWpBeGohDANAIAwoAgAQl4CAgAAa
+IAxBeGohDCASQX9qIhJBAUoNAAsLIBVBr5aAgAAQh4CAgAAaIBQQl4CAgAAaIBMQl4CAgAAaIA5B
+zZaAgAAQh4CAgAAaIAtB65aAgAAQh4CAgAAaIApBiZeAgAAQh4CAgAAaIAdBEGokgICAgAAgAAsN
+ACABKAIEIAAoAgRrC8gRAhh/CX0CQAJAIAAoAghBAkcNACAAKAIMQQNHDQAgAigCCEECRw0AIAIo
+AgwiB0EDSA0AIAMoAghBAkcNACADKAIMIAdHDQACQCABRQ0AIAEoAghBAUcNASABKAIMIAdHDQEL
+IARBAUgNACAFQQFIDQAgBkMAAAAAYA0BC0Gnl4CAABCAgICAACACKAIMIQcLAkAgAUUNACABQwAA
+AAAQm4CAgAAaCyAHQQJ0IghBypeAgAAQhYCAgAAhCSAIQeqXgIAAEIWAgIAAIAcQjYCAgAAiCiAH
+QQQQjoCAgAAgByAEQQNsIgsgB29rIAtqIgxBAnRBipiAgAAQhYCAgAAhDQJAIAxBAUgNAEEAIQ4g
+B0EBSCEPIA0hEANAAkAgDw0AQQAhCyAQIREDQCARIAs2AgAgEUEEaiERIAcgC0EBaiILRw0ACwsg
+DSAOQQJ0aiAHQQQQjoCAgAAgECAIaiEQIA4gB2oiDiAMSA0ACwtBAkEDEJKAgIAAIQ9BAkEDEJKA
+gIAAIRIgBEEDdEGqmICAABCFgICAACETIAQhFAJAIARBAUgNACATIQggDSEMIAQhFSAEIRQDQCAP
+KAIAIgsgAigCACIRIAIoAhQiFiAMKAIAIhdsIg5BAnRqKAIANgIAIAsgDygCECIYQQJ0aiARIAIo
+AhAiGSAOakECdGooAgA2AgAgEigCACIOIAMoAgAiECAXIAMoAhQiGmwiF0ECdGooAgA2AgAgDiAS
+KAIQIhtBAnRqIBAgAygCECIcIBdqQQJ0aigCADYCACALIA8oAhQiF0ECdGogESAWIAxBBGooAgAi
+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
+bWVtb3J5IGF0IG1hdDMyLmM6ODkAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjEzNgAAAGANAAAB
+AAAAAAAAAAAAAAABAAAAAQAAAAIAAABEb3VibGUgZnJlZSBhdCBtYXQzMi5jOjE0OQBBc3NlcnRp
+b24gZmFpbGVkIGF0IG1hdDMyLmM6MTg0AEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzoxODgA
+QXNzZXJ0aW9uIGZhaWxlZCBhdCBtYXQzMi5jOjI3NQBEb3VibGUgZnJlZSBhdCBtYXQzMi5jOjI5
+AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzYAQXNzZXJ0aW9uIGZhaWxlZCBh
+dCBhcml0aG1ldGljMzIuYzo1OABBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjgw
+AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6OTkAQXNzZXJ0aW9uIGZhaWxlZCBh
+dCBhcml0aG1ldGljMzIuYzoxMjEAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzox
+NDMAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzoxNjgAQXNzZXJ0aW9uIGZhaWxl
+ZCBhdCBhcml0aG1ldGljMzIuYzoxODkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIu
+YzoyMTgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzoyNzEAQXNzZXJ0aW9uIGZh
+aWxlZCBhdCBhcml0aG1ldGljMzIuYzozMjIAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGlj
+MzIuYzozNTYAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzozNzgAQXNzZXJ0aW9u
+IGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzo0MjAAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1l
+dGljMzIuYzo0MzYAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MjYxAEFzc2VydGlvbiBmYWls
+ZWQgYXQgcXIzMi5jOjI2NQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyODYAQXNzZXJ0aW9u
+IGZhaWxlZCBhdCBxcjMyLmM6MjkwAEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjMyMQBBc3Nl
+cnRpb24gZmFpbGVkIGF0IHFyMzIuYzozMjUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6Mzc5
+AE91dCBvZiBtZW1vcnkgYXQgcXIzMi5jOjM2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjY5
+AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjczAEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5j
+OjE4NABEb3VibGUgZnJlZSBhdCBxcjMyLmM6NTUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6
+MTQ4AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjIyNABBc3NlcnRpb24gZmFpbGVkIGF0IHFy
+MzIuYzoyMjgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBob21vZ3JhcGh5MzIuYzoyNDQAQXNzZXJ0aW9u
+IGZhaWxlZCBhdCBob21vZ3JhcGh5MzIuYzoyODAAQXNzZXJ0aW9uIGZhaWxlZCBhdCBob21vZ3Jh
+cGh5MzIuYzozNTkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBob21vZ3JhcGh5MzIuYzo0NDQAQXNzZXJ0
+aW9uIGZhaWxlZCBhdCBhZmZpbmUzMi5jOjExOQBBc3NlcnRpb24gZmFpbGVkIGF0IGFmZmluZTMy
+LmM6MTk2AEFzc2VydGlvbiBmYWlsZWQgYXQgYWZmaW5lMzIuYzoyMjkAQXNzZXJ0aW9uIGZhaWxl
+ZCBhdCByYW5zYWMzMi5jOjcxAE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIuYzo4NABPdXQgb2Yg
+bWVtb3J5IGF0IHJhbnNhYzMyLmM6ODgAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjkzAE91
+dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIuYzoxMDcARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIuYzoy
+MzYARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIuYzoyNDMARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIu
+YzoyNDYARG91YmxlIGZyZWUgYXQgcmFuc2FjMzIuYzoyNDkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBy
+YW5zYWMzMi5jOjI3NQBPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6Mjg4AE91dCBvZiBtZW1v
+cnkgYXQgcmFuc2FjMzIuYzoyOTIAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjI5NwBPdXQg
+b2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6MzExAERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6NDM2
+AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6NDQzAERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6
+NDQ2AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6NDQ5AEFzc2VydGlvbiBmYWlsZWQgYXQgdHJh
+bnNmb3JtMzIuYzozOQBBc3NlcnRpb24gZmFpbGVkIGF0IHRyYW5zZm9ybTMyLmM6NzcAQXNzZXJ0
+aW9uIGZhaWxlZCBhdCB0cmFuc2Zvcm0zMi5jOjExNAAAQbQaCwwIAAAAUA0AAAEAAAAAQcAaCyQA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 `
 
 /***/ })
@@ -19911,7 +22252,7 @@ class Speedy
     static get version()
     {
         if(true)
-            return "0.8.3-wip" + '-dev';
+            return "0.9.0-wip" + '-dev';
         else
             {}
     }

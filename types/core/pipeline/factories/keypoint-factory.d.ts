@@ -93,6 +93,12 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      */
     static Mixer(name?: string | undefined): SpeedyPipelineNodeKeypointMixer;
     /**
+     * Create a keypoint shuffler
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointShuffler}
+     */
+    static Shuffler(name?: string | undefined): SpeedyPipelineNodeKeypointShuffler;
+    /**
      * Create a keypoint multiplexer
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointMultiplexer}
@@ -110,6 +116,18 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeKeypointSubpixelRefiner}
      */
     static SubpixelRefiner(name?: string | undefined): SpeedyPipelineNodeKeypointSubpixelRefiner;
+    /**
+     * Distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeDistanceFilter}
+     */
+    static DistanceFilter(name?: string | undefined): any;
+    /**
+     * Hamming distance filter
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeHammingDistanceFilter}
+     */
+    static HammingDistanceFilter(name?: string | undefined): any;
 }
 import { SpeedyNamespace } from "../../speedy-namespace";
 import { SpeedyPipelineNodeKeypointPortalSource } from "../nodes/keypoints/portal";
@@ -152,12 +170,6 @@ declare class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeLKKeypointTracker}
      */
     static LK(name?: string | undefined): SpeedyPipelineNodeLKKeypointTracker;
-    /**
-     * Distance filter
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDistanceFilter}
-     */
-    static DistanceFilter(name?: string | undefined): any;
 }
 /**
  * Keypoint matchers
@@ -175,6 +187,12 @@ declare class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace {
      * @returns {SpeedyPipelineNodeLSHKNNMatcher}
      */
     static LSHKNN(name?: string | undefined): SpeedyPipelineNodeLSHKNNMatcher;
+    /**
+     * Brute-force K-nearest neighbors keypoint matcher
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeBruteForceKNNKeypointMatcher}
+     */
+    static BFKNN(name?: string | undefined): SpeedyPipelineNodeBruteForceKNNKeypointMatcher;
 }
 import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
 import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";
@@ -184,6 +202,7 @@ import { SpeedyPipelineNodeKeypointClipper } from "../nodes/keypoints/clipper";
 import { SpeedyPipelineNodeKeypointBorderClipper } from "../nodes/keypoints/border-clipper";
 import { SpeedyPipelineNodeKeypointBuffer } from "../nodes/keypoints/buffer";
 import { SpeedyPipelineNodeKeypointMixer } from "../nodes/keypoints/mixer";
+import { SpeedyPipelineNodeKeypointShuffler } from "../nodes/keypoints/shuffler";
 import { SpeedyPipelineNodeKeypointMultiplexer } from "../nodes/keypoints/multiplexer";
 import { SpeedyPipelineNodeKeypointTransformer } from "../nodes/keypoints/transformer";
 import { SpeedyPipelineNodeKeypointSubpixelRefiner } from "../nodes/keypoints/subpixel";
@@ -193,4 +212,5 @@ import { SpeedyPipelineNodeORBKeypointDescriptor } from "../nodes/keypoints/desc
 import { SpeedyPipelineNodeLKKeypointTracker } from "../nodes/keypoints/trackers/lk";
 import { SpeedyPipelineNodeStaticLSHTables } from "../nodes/keypoints/matchers/lsh-static-tables";
 import { SpeedyPipelineNodeLSHKNNMatcher } from "../nodes/keypoints/matchers/lsh-knn";
+import { SpeedyPipelineNodeBruteForceKNNKeypointMatcher } from "../nodes/keypoints/matchers/bf-knn";
 export {};

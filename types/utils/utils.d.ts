@@ -97,9 +97,9 @@ export class Utils {
      * Shuffle in-place
      * @template T
      * @param {T[]} arr
-     * @returns {T} arr
+     * @returns {T[]} arr
      */
-    static shuffle<T>(arr: T[]): T;
+    static shuffle<T>(arr: T[]): T[];
     /**
      * Flatten an array (1 level only)
      * @template U
