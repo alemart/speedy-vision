@@ -54,15 +54,21 @@ uniform int descriptorSize; // expected to be equal to DESCRIPTOR_SIZE
 uniform int extraSize;
 uniform int encoderLength;
 
+// Validate
+#if HASH_SIZE > SEQUENCE_MAXLEN
+#error LSH: invalid HASH_SIZE
+#elif SEQUENCE_COUNT * SEQUENCE_MAXLEN * 4 > 16384
+// gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the spec
+#error LSH: sequences are too large!
+#elif (SEQUENCE_COUNT * SEQUENCE_MAXLEN) % 4 > 0
+#error LSH: sequences of invalid size!
+#endif
+
 // LSH sequences UBO
 layout(std140) uniform LSHSequences
 {
-    uvec4 sequences[((SEQUENCE_COUNT) * (SEQUENCE_MAXLEN)) / 4]; // tightly packed
+    uvec4 sequences[(SEQUENCE_COUNT * SEQUENCE_MAXLEN) / 4]; // tightly packed
 };
-
-#if HASH_SIZE > SEQUENCE_MAXLEN
-#error Invalid HASH_SIZE
-#endif
 
 // Bit swaps
 // SWAP_COUNT[LEVEL] := sum of combinations C(H,i) from i = 0 to LEVEL, where H = HASH_SIZE
