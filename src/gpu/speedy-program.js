@@ -142,6 +142,9 @@ export class SpeedyProgram extends Function
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
+        /** @type {ShaderDeclaration} shader declaration */
+        this._shaderdecl = shaderdecl;
+
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -371,6 +374,16 @@ export class SpeedyProgram extends Function
 
         // done!
         return null;
+    }
+
+    /**
+     * A constant #defined in the shader declaration
+     * @param {string} name
+     * @returns {number}
+     */
+    definedConstant(name)
+    {
+        return this._shaderdecl.definedConstant(name);
     }
 
     /**
