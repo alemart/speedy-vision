@@ -26,6 +26,7 @@ import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeKeypointBorderClipper } from '../nodes/keypoints/border-clipper';
 import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
 import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
+import { SpeedyPipelineNodeKeypointShuffler } from '../nodes/keypoints/shuffler';
 import { SpeedyPipelineNodeKeypointMultiplexer } from '../nodes/keypoints/multiplexer';
 import { SpeedyPipelineNodeKeypointTransformer } from '../nodes/keypoints/transformer';
 import { SpeedyPipelineNodeKeypointSubpixelRefiner } from '../nodes/keypoints/subpixel';
@@ -288,6 +289,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Mixer(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointMixer(name);
+    }
+
+    /**
+     * Create a keypoint shuffler
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointShuffler}
+     */
+    static Shuffler(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointShuffler(name);
     }
 
     /**

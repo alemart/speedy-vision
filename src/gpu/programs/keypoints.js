@@ -147,7 +147,13 @@ const lshKnnInitFilters = importShader('keypoints/knn-init.glsl')
 
 const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => ((obj[descriptorSize] = LSH_ACCEPTABLE_HASH_SIZES.reduce((obj, hashSize) => ((obj[hashSize] = [0, 1, 2].reduce((obj, level) => ((obj[level] =
                   importShader('keypoints/lsh-knn.glsl')
-                  .withDefines({ 'DESCRIPTOR_SIZE': descriptorSize, 'HASH_SIZE': hashSize, 'LEVEL': level, 'SEQUENCE_MAXLEN': LSH_SEQUENCE_MAXLEN, 'SEQUENCE_COUNT': LSH_SEQUENCE_COUNT })
+                  .withDefines({
+                      'DESCRIPTOR_SIZE': descriptorSize,
+                      'HASH_SIZE': hashSize,
+                      'LEVEL': level,
+                      'SEQUENCE_MAXLEN': LSH_SEQUENCE_MAXLEN,
+                      'SEQUENCE_COUNT': LSH_SEQUENCE_COUNT,
+                  })
                   .withArguments('candidates', 'filters', 'matcherLength', 'tables', 'descriptorDB', 'tableIndex', 'bucketCapacity', 'bucketsPerTable', 'tablesStride', 'descriptorDBStride', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength')
               ), obj), {})), obj), {})), obj), {});
 
@@ -251,6 +257,14 @@ const hammingDistanceFilter32 = importShader('keypoints/hamming-distance-filter.
 const hammingDistanceFilter64 = importShader('keypoints/hamming-distance-filter.glsl')
                                .withDefines({ 'DESCRIPTOR_SIZE': 64 })
                                .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
+
+// Other utilities
+const shuffle = importShader('keypoints/shuffle.glsl')
+               .withDefines({ 'PERMUTATION_MAXLEN': 2048 })
+               .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const clip = importShader('keypoints/clip.glsl')
+            .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
 
 /**
  * SpeedyProgramGroupKeypoints
@@ -449,6 +463,12 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('distanceFilter', distanceFilter)
             .declare('hammingDistanceFilter32', hammingDistanceFilter32)
             .declare('hammingDistanceFilter64', hammingDistanceFilter64)
+
+            //
+            // Other utilities
+            //
+            .declare('shuffle', shuffle)
+            .declare('clip', clip)
         ;
 
         //
