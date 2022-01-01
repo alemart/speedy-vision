@@ -63,7 +63,10 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
      */
     set maxKeypoints(value)
     {
-        this._maxKeypoints = Math.max(0, Math.floor(value)); // accepts NaN
+        if(!Number.isNaN(value))
+            this._maxKeypoints = Math.max(0, value | 0);
+        else
+            this._maxKeypoints = Number.NaN;
     }
 
     /**
@@ -82,7 +85,7 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
         const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
         const permutation = this._generatePermutation(permutationLength);
-        shuffle.setUBO('Permutation', new Int32Array(permutation));
+        shuffle.setUBO('Permutation', permutation);
         encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         // clip the output?
@@ -100,19 +103,17 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
     /**
      * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
      * @param {number} n positive integer
-     * @returns {number[]} permutation
+     * @returns {Int32Array} permutation
      */
     _generatePermutation(n)
     {
-        const p = (new Array(n)).fill(-1);
+        const p = (new Int32Array(n)).fill(-1);
         const q = Utils.shuffle(Utils.range(n));
-        const s = new Set(); // excluded numbers
 
         for(let i = 0, j = 0; i < n; i++) {
             if(p[i] < 0) {
-                do { p[i] = q[j++]; } while(s.has(p[i]));
+                do { p[i] = q[j++]; } while(p[i] < i);
                 p[p[i]] = i;
-                s.add(p[i]).add(i);
             }
         }
 
