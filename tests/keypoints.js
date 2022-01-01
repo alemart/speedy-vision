@@ -240,208 +240,292 @@ describe('Keypoint routines', function() {
         expect(serialize(output2.sort(cmp))).toEqual(serialize(testKeypoints.sort(cmp)));
     });
 
-    it('filters keypoints that are near each other', async function() {
-        const image = await loadImage('speedy-wall.jpg');
-        const media = await Speedy.load(image);
+    describe('filters', function() {
 
-        const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
-        const createPipeline = (ptsA, ptsB, maxDistance) => {
-            const pipeline = Speedy.Pipeline();
-            const source1 = Speedy.Keypoint.Source('source1');
-            const source2 = Speedy.Keypoint.Source('source2');
-            const distanceFilter = Speedy.Keypoint.DistanceFilter('distanceFilter');
-            const sink = Speedy.Keypoint.Sink();
-            const sinkA = Speedy.Keypoint.Sink('keypointsA');
-            const sinkB = Speedy.Keypoint.Sink('keypointsB');
+        it('filters keypoints that are near each other', async function() {
+            const image = await loadImage('speedy-wall.jpg');
+            const media = await Speedy.load(image);
 
-            source1.output().connectTo(distanceFilter.input());
-            source2.output().connectTo(distanceFilter.input('reference'));
-            distanceFilter.output().connectTo(sink.input());
-            source1.output().connectTo(sinkA.input());
-            source2.output().connectTo(sinkB.input());
-            pipeline.init(source1, source2, distanceFilter, sink, sinkA, sinkB);
+            const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+            const createPipeline = (ptsA, ptsB, maxDistance) => {
+                const pipeline = Speedy.Pipeline();
+                const source1 = Speedy.Keypoint.Source('source1');
+                const source2 = Speedy.Keypoint.Source('source2');
+                const distanceFilter = Speedy.Keypoint.DistanceFilter('distanceFilter');
+                const sink = Speedy.Keypoint.Sink();
+                const sinkA = Speedy.Keypoint.Sink('keypointsA');
+                const sinkB = Speedy.Keypoint.Sink('keypointsB');
 
-            source1.keypoints = ptsA;
-            source2.keypoints = ptsB;
-            distanceFilter.threshold = maxDistance;
+                source1.output().connectTo(distanceFilter.input());
+                source2.output().connectTo(distanceFilter.input('reference'));
+                distanceFilter.output().connectTo(sink.input());
+                source1.output().connectTo(sinkA.input());
+                source2.output().connectTo(sinkB.input());
+                pipeline.init(source1, source2, distanceFilter, sink, sinkA, sinkB);
 
-            return pipeline;
-        };
+                source1.keypoints = ptsA;
+                source2.keypoints = ptsB;
+                distanceFilter.threshold = maxDistance;
 
-        const numPoints = 100;
-        const points = [], otherPoints = [];
-        for(let i = 0; i < numPoints; i++) {
-            const x = Math.round(Math.random() * media.width);
-            const y = Math.round(Math.random() * media.height);
-            const dx = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
-            const dy = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
+                return pipeline;
+            };
 
-            points.push({
-                position: { x: x, y: y },
-                score: 1,
-            });
+            const numPoints = 100;
+            const points = [], otherPoints = [];
+            for(let i = 0; i < numPoints; i++) {
+                const x = Math.round(Math.random() * media.width);
+                const y = Math.round(Math.random() * media.height);
+                const dx = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
+                const dy = Math.max(0, Math.round((Math.random() - 0.5) * 40) * 0.25);
 
-            otherPoints.push({
-                position: { x: x+dx, y: y+dy },
-                score: 1,
-            });
-        }
+                points.push({
+                    position: { x: x, y: y },
+                    score: 1,
+                });
 
-        const filterKeypoints = (result, setA, setB, maxDist) => {
-            const n = Math.min(setA.length, setB.length);
-            const filtered = [];
-
-            for(let i = 0; i < n; i++) {
-                const dx = setA[i].position.x - setB[i].position.x;
-                const dy = setA[i].position.y - setB[i].position.y;
-
-                // result: get keypoints from set A
-                if(dx * dx + dy * dy <= maxDist * maxDist)
-                    filtered.push(setA[i]);
+                otherPoints.push({
+                    position: { x: x+dx, y: y+dy },
+                    score: 1,
+                });
             }
 
-            return filtered;
-        }
+            const filterKeypoints = (result, setA, setB, maxDist) => {
+                const n = Math.min(setA.length, setB.length);
+                const filtered = [];
 
-        print(`Let us filter two sets of ${points.length} keypoints by distance.`);
-        print(`A: ${serialize(points)}`);
-        print(`B: ${serialize(otherPoints)}`);
+                for(let i = 0; i < n; i++) {
+                    const dx = setA[i].position.x - setB[i].position.x;
+                    const dy = setA[i].position.y - setB[i].position.y;
 
-        for(const maxDistance of [0,1,2,3,4,5,6,7]) {
-            const pipeline = createPipeline(points, otherPoints, maxDistance);
-            const { keypoints, keypointsA, keypointsB } = await pipeline.run();
+                    // result: get keypoints from set A
+                    if(dx * dx + dy * dy <= maxDist * maxDist)
+                        filtered.push(setA[i]);
+                }
 
-            print(`When maxDistance = ${maxDistance} pixels, we get ${keypoints.length} points: ${serialize(keypoints)}`);
+                return filtered;
+            }
 
-            const expectedResult = filterKeypoints(keypoints, points, otherPoints, maxDistance);
-            expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
+            print(`Let us filter two sets of ${points.length} keypoints by distance.`);
+            print(`A: ${serialize(points)}`);
+            print(`B: ${serialize(otherPoints)}`);
 
-            const canvas = display(media, 'Original (red) x Reference (yellow)');
-            displayFeatures(canvas, keypointsB, '', 'yellow'); // reference
-            displayFeatures(canvas, keypointsA, '', 'red'); // original
-            const canvas2 = displayFeatures(media, keypoints, 'Filtered keypoints', '#0f0');
+            for(const maxDistance of [0,1,2,3,4,5,6,7]) {
+                const pipeline = createPipeline(points, otherPoints, maxDistance);
+                const { keypoints, keypointsA, keypointsB } = await pipeline.run();
 
-            pipeline.release();
-        }
+                print(`When maxDistance = ${maxDistance} pixels, we get ${keypoints.length} points: ${serialize(keypoints)}`);
+
+                const expectedResult = filterKeypoints(keypoints, points, otherPoints, maxDistance);
+                expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
+
+                const canvas = display(media, 'Original (red) x Reference (yellow)');
+                displayFeatures(canvas, keypointsB, '', 'yellow'); // reference
+                displayFeatures(canvas, keypointsA, '', 'red'); // original
+                const canvas2 = displayFeatures(media, keypoints, 'Filtered keypoints', '#0f0');
+
+                pipeline.release();
+            }
+
+        });
+
+        it('filters keypoints that have similar descriptors', async function() {
+            const image = await loadImage('speedy-wall.jpg');
+            const media = await Speedy.load(image);
+
+            const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+            const createPipeline = (ptsA, ptsB, threshold) => {
+                const pipeline = Speedy.Pipeline();
+                const imageSource = Speedy.Image.Source();
+                const greyscale = Speedy.Filter.Greyscale();
+                const blur = Speedy.Filter.GaussianBlur();
+                const source1 = Speedy.Keypoint.Source('source1');
+                const source2 = Speedy.Keypoint.Source('source2');
+                const orb1 = Speedy.Keypoint.Descriptor.ORB();
+                const orb2 = Speedy.Keypoint.Descriptor.ORB();
+                const hamming = Speedy.Keypoint.HammingDistanceFilter('hamming');
+                const sink = Speedy.Keypoint.Sink();
+                const sinkA = Speedy.Keypoint.Sink('keypointsA');
+                const sinkB = Speedy.Keypoint.Sink('keypointsB');
+
+                imageSource.output().connectTo(greyscale.input());
+                greyscale.output().connectTo(blur.input());
+
+                blur.output().connectTo(orb1.input('image'));
+                blur.output().connectTo(orb2.input('image'));
+                source1.output().connectTo(orb1.input('keypoints'));
+                source2.output().connectTo(orb2.input('keypoints'));
+
+                orb1.output().connectTo(hamming.input());
+                orb2.output().connectTo(hamming.input('reference'));
+
+                hamming.output().connectTo(sink.input());
+                orb1.output().connectTo(sinkA.input());
+                orb2.output().connectTo(sinkB.input());
+
+                pipeline.init(imageSource, greyscale, blur, orb1, orb2, source1, source2, hamming, sink, sinkA, sinkB);
+
+                imageSource.media = media;
+                source1.keypoints = ptsA;
+                source2.keypoints = ptsB;
+                hamming.threshold = threshold;
+
+                return pipeline;
+            };
+
+            const numPoints = 20;
+            const points = [], otherPoints = [];
+            for(let i = 0; i < numPoints; i++) {
+                const x = Math.round(Math.random() * media.width);
+                const y = Math.round(Math.random() * media.height);
+                const dx = Math.max(0, Math.round((Math.random() - 0.5) * 20) * 0.25);
+                const dy = Math.max(0, Math.round((Math.random() - 0.5) * 20) * 0.25);
+
+                points.push({
+                    position: { x: x, y: y },
+                    score: 1,
+                });
+
+                otherPoints.push({
+                    position: { x: x+dx, y: y+dy },
+                    score: 1,
+                });
+            }
+
+            const popcnt = x => {
+                let cnt = 0;
+                for(; x > 0; x >>= 1)
+                    cnt += x & 1;
+                return cnt;
+            };
+
+            const hammingDistance = (bytesA, bytesB) => {
+                if(bytesA.byteLength != bytesB.byteLength)
+                    throw new Error();
+
+                let dist = 0;
+                for(let i = bytesA.byteLength - 1; i >= 0; i--)
+                    dist += popcnt(bytesA[i] ^ bytesB[i]);
+
+                return dist;
+            };
+
+            const filterKeypoints = (result, setA, setB, maxDist) => {
+                const n = Math.min(setA.length, setB.length);
+                const filtered = [];
+
+                for(let i = 0; i < n; i++) {
+                    const descriptorA = setA[i].descriptor;
+                    const descriptorB = setB[i].descriptor;
+
+                    if(hammingDistance(descriptorA.data, descriptorB.data) <= maxDist)
+                        filtered.push(setA[i]);
+                }
+
+                return filtered;
+            }
+
+            print(`Let us filter two sets of ${points.length} keypoints by Hamming distance.`);
+            print(`A: ${serialize(points)}`);
+            print(`B: ${serialize(otherPoints)}`);
+
+            for(const maxDistance of [0,16,32,64,256]) {
+                const pipeline = createPipeline(points, otherPoints, maxDistance);
+                const { keypoints, keypointsA, keypointsB } = await pipeline.run();
+
+                print(`When maxDistance = ${maxDistance}, we get ${keypoints.length} points: ${serialize(keypoints)}`);
+
+                const expectedResult = filterKeypoints(keypoints, keypointsA, keypointsB, maxDistance);
+                expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
+
+                const canvas = display(media, 'Original (red) x Reference (yellow)');
+                displayFeatures(canvas, keypointsB, '', 'yellow'); // reference
+                displayFeatures(canvas, keypointsA, '', 'red'); // original
+                const canvas2 = displayFeatures(media, keypoints, 'Filtered', '#0f0');
+
+                pipeline.release();
+            }
+
+        });
 
     });
 
-    it('filters keypoints that have similar descriptors', async function() {
-        const image = await loadImage('speedy-wall.jpg');
-        const media = await Speedy.load(image);
+    describe('shuffling', function() {
 
-        const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
-        const createPipeline = (ptsA, ptsB, threshold) => {
-            const pipeline = Speedy.Pipeline();
-            const imageSource = Speedy.Image.Source();
-            const greyscale = Speedy.Filter.Greyscale();
-            const blur = Speedy.Filter.GaussianBlur();
-            const source1 = Speedy.Keypoint.Source('source1');
-            const source2 = Speedy.Keypoint.Source('source2');
-            const orb1 = Speedy.Keypoint.Descriptor.ORB();
-            const orb2 = Speedy.Keypoint.Descriptor.ORB();
-            const hamming = Speedy.Keypoint.HammingDistanceFilter('hamming');
-            const sink = Speedy.Keypoint.Sink();
-            const sinkA = Speedy.Keypoint.Sink('keypointsA');
-            const sinkB = Speedy.Keypoint.Sink('keypointsB');
+        function createPoints(numPoints)
+        {
+            const point = new Array(numPoints);
 
-            imageSource.output().connectTo(greyscale.input());
-            greyscale.output().connectTo(blur.input());
-
-            blur.output().connectTo(orb1.input('image'));
-            blur.output().connectTo(orb2.input('image'));
-            source1.output().connectTo(orb1.input('keypoints'));
-            source2.output().connectTo(orb2.input('keypoints'));
-
-            orb1.output().connectTo(hamming.input());
-            orb2.output().connectTo(hamming.input('reference'));
-
-            hamming.output().connectTo(sink.input());
-            orb1.output().connectTo(sinkA.input());
-            orb2.output().connectTo(sinkB.input());
-
-            pipeline.init(imageSource, greyscale, blur, orb1, orb2, source1, source2, hamming, sink, sinkA, sinkB);
-
-            imageSource.media = media;
-            source1.keypoints = ptsA;
-            source2.keypoints = ptsB;
-            hamming.threshold = threshold;
-
-            return pipeline;
-        };
-
-        const numPoints = 20;
-        const points = [], otherPoints = [];
-        for(let i = 0; i < numPoints; i++) {
-            const x = Math.round(Math.random() * media.width);
-            const y = Math.round(Math.random() * media.height);
-            const dx = Math.max(0, Math.round((Math.random() - 0.5) * 20) * 0.25);
-            const dy = Math.max(0, Math.round((Math.random() - 0.5) * 20) * 0.25);
-
-            points.push({
-                position: { x: x, y: y },
-                score: 1,
-            });
-
-            otherPoints.push({
-                position: { x: x+dx, y: y+dy },
-                score: 1,
-            });
-        }
-
-        const popcnt = x => {
-            let cnt = 0;
-            for(; x > 0; x >>= 1)
-                cnt += x & 1;
-            return cnt;
-        };
-
-        const hammingDistance = (bytesA, bytesB) => {
-            if(bytesA.byteLength != bytesB.byteLength)
-                throw new Error();
-
-            let dist = 0;
-            for(let i = bytesA.byteLength - 1; i >= 0; i--)
-                dist += popcnt(bytesA[i] ^ bytesB[i]);
-
-            return dist;
-        };
-
-        const filterKeypoints = (result, setA, setB, maxDist) => {
-            const n = Math.min(setA.length, setB.length);
-            const filtered = [];
-
-            for(let i = 0; i < n; i++) {
-                const descriptorA = setA[i].descriptor;
-                const descriptorB = setB[i].descriptor;
-
-                if(hammingDistance(descriptorA.data, descriptorB.data) <= maxDist)
-                    filtered.push(setA[i]);
+            for(let i = 0; i < numPoints; i++) {
+                point[i] = {
+                    position: { x: i, y : 0 },
+                    score: 1,
+                };
             }
 
-            return filtered;
+            return point;
         }
 
-        print(`Let us filter two sets of ${points.length} keypoints by Hamming distance.`);
-        print(`A: ${serialize(points)}`);
-        print(`B: ${serialize(otherPoints)}`);
+        function createPipeline()
+        {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Keypoint.Source('source');
+            const shuffler = Speedy.Keypoint.Shuffler('shuffler');
+            const sink = Speedy.Keypoint.Sink();
 
-        for(const maxDistance of [0,16,32,64,256]) {
-            const pipeline = createPipeline(points, otherPoints, maxDistance);
-            const { keypoints, keypointsA, keypointsB } = await pipeline.run();
+            source.keypoints = [];
+            source.capacity = 8192;
 
-            print(`When maxDistance = ${maxDistance}, we get ${keypoints.length} points: ${serialize(keypoints)}`);
+            source.output().connectTo(shuffler.input());
+            shuffler.output().connectTo(sink.input());
 
-            const expectedResult = filterKeypoints(keypoints, keypointsA, keypointsB, maxDistance);
-            expect(serialize(keypoints.sort(cmp))).toEqual(serialize(expectedResult.sort(cmp)));
+            pipeline.init(source, sink, shuffler);
+            return pipeline;
+        }
 
-            const canvas = display(media, 'Original (red) x Reference (yellow)');
-            displayFeatures(canvas, keypointsB, '', 'yellow'); // reference
-            displayFeatures(canvas, keypointsA, '', 'red'); // original
-            const canvas2 = displayFeatures(media, keypoints, 'Filtered', '#0f0');
+        it('shuffles keypoints', async function() {
+            const pipeline = createPipeline();
+
+            for(const numPoints of [0, 1, 4, 16, 64, 256, 2048, 4096, 8192]) {
+                const set = new Set();
+                const source = pipeline.node('source');
+                source.keypoints = createPoints(numPoints);
+
+                const { keypoints } = await pipeline.run();
+                for(let keypoint of keypoints)
+                    set.add(keypoint.position.x);
+
+                print(`Shuffling ${numPoints} points... x: ${keypoints.map(k => k.position.x).join(',')}`);
+                expect(set.size).toEqual(numPoints);
+
+            }
 
             pipeline.release();
-        }
+        });
+
+        it('shuffles keypoints and clips the output', async function() {
+            const n = 8192;
+
+            const pipeline = createPipeline(n);
+            const source = pipeline.node('source');
+            source.keypoints = createPoints(n);
+
+            for(const numPoints of [0, 1, 4, 16, 64, 256, 2048, 4096, 8192]) {
+                const set = new Set();
+                const shuffler = pipeline.node('shuffler');
+                shuffler.maxKeypoints = numPoints;
+
+                const { keypoints } = await pipeline.run();
+                for(let keypoint of keypoints)
+                    set.add(keypoint.position.x);
+
+                print(`Shuffling ${n} points and clipping to ${numPoints}... x: ${keypoints.map(k => k.position.x).join(',')}`);
+                expect(keypoints.length).toEqual(numPoints);
+                expect(set.size).toEqual(numPoints);
+
+            }
+
+            pipeline.release();
+        });
 
     });
 

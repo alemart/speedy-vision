@@ -64,7 +64,7 @@ int permutationElement(int index)
     int base = index - (index % PERMUTATION_MAXLEN); // a multiple of PERMUTATION_MAXLEN
 
     int offset = index - base;
-    uvec4 tuple = permutation[offset / 4]; // div 4
+    ivec4 tuple = permutation[offset / 4]; // div 4
     int newOffset = tuple[offset & 3]; // mod 4
 
     return base + newOffset;
@@ -74,7 +74,6 @@ int permutationElement(int index)
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 pixel = threadPixel(encodedKeypoints);
     int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
 
     // find keypoints
@@ -86,11 +85,6 @@ void main()
     // decode keypoints
     Keypoint myKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     Keypoint otherKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, otherAddress);
-
-    // do nothing?
-    color = pixel;
-    if(isBadKeypoint(myKeypoint) || isBadKeypoint(otherKeypoint))
-        return;
 
     // replace keypoint
     color = readKeypointData(encodedKeypoints, encoderLength, otherAddress);

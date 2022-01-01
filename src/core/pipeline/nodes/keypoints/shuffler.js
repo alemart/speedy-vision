@@ -39,7 +39,7 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 2, [
+        super(name, 6, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
@@ -77,23 +77,40 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
     _run(gpu)
     {
         let { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
-        const maxKeypoints = this._maxKeypoints;
-        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
-        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
-
-        // shuffle the keypoints
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
+        const maxKeypoints = this._maxKeypoints;
+
+        // shuffle the keypoints (including nulls)
+        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
         const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
         const permutation = this._generatePermutation(permutationLength);
         shuffle.setUBO('Permutation', permutation);
         encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
+        // sort the keypoints
+        gpu.programs.keypoints.mixKeypointsInit.outputs(encoderLength, encoderLength, this._tex[1]);
+        gpu.programs.keypoints.mixKeypointsSort.outputs(encoderLength, encoderLength, this._tex[2], this._tex[3]);
+        gpu.programs.keypoints.mixKeypointsApply.outputs(encoderLength, encoderLength, this._tex[4]);
+
+        let sortedKeypoints = gpu.programs.keypoints.mixKeypointsInit(
+            encodedKeypoints, descriptorSize, extraSize, encoderLength, capacity
+        );
+
+        for(let b = 1; b < capacity; b *= 2)
+            sortedKeypoints = gpu.programs.keypoints.mixKeypointsSort(sortedKeypoints, b);
+
+        encodedKeypoints = gpu.programs.keypoints.mixKeypointsApply(
+            sortedKeypoints, encodedKeypoints, descriptorSize, extraSize, encoderLength
+        );
+
         // clip the output?
         if(!Number.isNaN(maxKeypoints) && maxKeypoints < capacity) {
-            encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize);
+            const newEncoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize);
             encodedKeypoints = (gpu.programs.keypoints.clip
-                .outputs(encoderLength, encoderLength, this._tex[1])
-            )(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+                .outputs(newEncoderLength, newEncoderLength, this._tex[5])
+            )(encodedKeypoints, descriptorSize, extraSize, encoderLength, maxKeypoints);
+            encoderLength = newEncoderLength;
         }
 
         // done!

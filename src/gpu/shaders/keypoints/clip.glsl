@@ -16,26 +16,29 @@
  * limitations under the License.
  *
  * clip.glsl
- * Clip the list of keypoints
+ * Clip list of keypoints
  */
 
 @include "keypoints.glsl"
 
+// original set of keypoints
 uniform sampler2D encodedKeypoints;
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
+// max. number of keypoints
 uniform int maxKeypoints;
 
 // We'll remove any keypoint whose index is not less than than maxKeypoints
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 pixel = threadPixel(encodedKeypoints);
+    int newEncoderLength = outputSize().x;
 
-    KeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
-    int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
+    KeypointAddress address = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);
+    int index = findKeypointIndex(address, descriptorSize, extraSize);
+    vec4 pixel = readKeypointData(encodedKeypoints, encoderLength, address);
 
-    color = myIndex < maxKeypoints ? pixel : encodeNullKeypoint();
+    color = index < maxKeypoints ? pixel : encodeNullKeypoint();
 }

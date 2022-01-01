@@ -1121,6 +1121,24 @@ The pairs of keypoints are provided as two separate sets, "in" and "reference". 
 | `"reference"` | Keypoints | A reference set of keypoints. |
 | `"out"` | Keypoints | Filtered set of keypoints. |
 
+##### Speedy.Keypoint.Shuffler()
+
+`Speedy.Keypoint.Shuffler(name?: string): SpeedyPipelineNodeKeypointShuffler`
+
+Shuffles the input keypoints, optionally clipping the output set.
+
+###### Parameters
+
+* `maxKeypoints: number`. Maximum number of keypoints of the output set. If unspecified, the number of keypoints of the output set will be the number of keypoints of the input set.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
+| `"out"`   | Keypoints | The input set of keypoints, shuffled and possibly clipped. |
+
+
 
 
 #### Keypoint detection
