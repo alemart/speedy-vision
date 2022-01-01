@@ -22,8 +22,8 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode {
     /**
      * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
      * @param {number} n positive integer
-     * @returns {number[]} permutation
+     * @returns {Int32Array} permutation
      */
-    _generatePermutation(n: number): number[];
+    _generatePermutation(n: number): Int32Array;
 }
 import { SpeedyPipelineNode } from "../../pipeline-node";

@@ -3,10 +3,10 @@
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision
  *
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2021-12-30T03:22:04.495Z
+ * Date: 2022-01-01T19:06:18.344Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -5886,7 +5886,7 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
      */
     constructor(name = undefined)
     {
-        super(name, 2, [
+        super(name, 6, [
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints),
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints)
         ]);
@@ -5910,7 +5910,10 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
      */
     set maxKeypoints(value)
     {
-        this._maxKeypoints = Math.max(0, Math.floor(value)); // accepts NaN
+        if(!Number.isNaN(value))
+            this._maxKeypoints = Math.max(0, value | 0);
+        else
+            this._maxKeypoints = Number.NaN;
     }
 
     /**
@@ -5921,23 +5924,40 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
     _run(gpu)
     {
         let { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
-        const maxKeypoints = this._maxKeypoints;
-        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
-        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
-
-        // shuffle the keypoints
         const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
+        const maxKeypoints = this._maxKeypoints;
+
+        // shuffle the keypoints (including nulls)
+        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
         const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
         const permutation = this._generatePermutation(permutationLength);
-        shuffle.setUBO('Permutation', new Int32Array(permutation));
+        shuffle.setUBO('Permutation', permutation);
         encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // sort the keypoints
+        gpu.programs.keypoints.mixKeypointsInit.outputs(encoderLength, encoderLength, this._tex[1]);
+        gpu.programs.keypoints.mixKeypointsSort.outputs(encoderLength, encoderLength, this._tex[2], this._tex[3]);
+        gpu.programs.keypoints.mixKeypointsApply.outputs(encoderLength, encoderLength, this._tex[4]);
+
+        let sortedKeypoints = gpu.programs.keypoints.mixKeypointsInit(
+            encodedKeypoints, descriptorSize, extraSize, encoderLength, capacity
+        );
+
+        for(let b = 1; b < capacity; b *= 2)
+            sortedKeypoints = gpu.programs.keypoints.mixKeypointsSort(sortedKeypoints, b);
+
+        encodedKeypoints = gpu.programs.keypoints.mixKeypointsApply(
+            sortedKeypoints, encodedKeypoints, descriptorSize, extraSize, encoderLength
+        );
 
         // clip the output?
         if(!Number.isNaN(maxKeypoints) && maxKeypoints < capacity) {
-            encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize);
+            const newEncoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize);
             encodedKeypoints = (gpu.programs.keypoints.clip
-                .outputs(encoderLength, encoderLength, this._tex[1])
-            )(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+                .outputs(newEncoderLength, newEncoderLength, this._tex[5])
+            )(encodedKeypoints, descriptorSize, extraSize, encoderLength, maxKeypoints);
+            encoderLength = newEncoderLength;
         }
 
         // done!
@@ -5947,19 +5967,17 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
     /**
      * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
      * @param {number} n positive integer
-     * @returns {number[]} permutation
+     * @returns {Int32Array} permutation
      */
     _generatePermutation(n)
     {
-        const p = (new Array(n)).fill(-1);
+        const p = (new Int32Array(n)).fill(-1);
         const q = _utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.range(n));
-        const s = new Set(); // excluded numbers
 
         for(let i = 0, j = 0; i < n; i++) {
             if(p[i] < 0) {
-                do { p[i] = q[j++]; } while(s.has(p[i]));
+                do { p[i] = q[j++]; } while(p[i] < i);
                 p[p[i]] = i;
-                s.add(p[i]).add(i);
             }
         }
 
@@ -21016,7 +21034,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform int imageWidth;\nuniform 
   \*********************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = myIndex < maxKeypoints ? pixel : encodeNullKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\nvoid main()\n{\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress address = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nvec4 pixel = readKeypointData(encodedKeypoints, encoderLength, address);\ncolor = index < maxKeypoints ? pixel : encodeNullKeypoint();\n}"
 
 /***/ }),
 
@@ -21296,7 +21314,7 @@ module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform
   \************************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if PERMUTATION_MAXLEN % 4 > 0 || PERMUTATION_MAXLEN * 4 > 16384\n#error Invalid PERMUTATION_MAXLEN\n#endif\nlayout(std140) uniform Permutation\n{\nivec4 permutation[PERMUTATION_MAXLEN / 4];\n};\nint permutationElement(int index)\n{\nint base = index - (index % PERMUTATION_MAXLEN);\nint offset = index - base;\nuvec4 tuple = permutation[offset / 4];\nint newOffset = tuple[offset & 3];\nreturn base + newOffset;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint otherIndex = permutationElement(myIndex);\nKeypointAddress otherAddress = KeypointAddress(otherIndex * pixelsPerKeypoint, myAddress.offset);\nKeypoint myKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nKeypoint otherKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, otherAddress);\ncolor = pixel;\nif(isBadKeypoint(myKeypoint) || isBadKeypoint(otherKeypoint))\nreturn;\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if PERMUTATION_MAXLEN % 4 > 0 || PERMUTATION_MAXLEN * 4 > 16384\n#error Invalid PERMUTATION_MAXLEN\n#endif\nlayout(std140) uniform Permutation\n{\nivec4 permutation[PERMUTATION_MAXLEN / 4];\n};\nint permutationElement(int index)\n{\nint base = index - (index % PERMUTATION_MAXLEN);\nint offset = index - base;\nivec4 tuple = permutation[offset / 4];\nint newOffset = tuple[offset & 3];\nreturn base + newOffset;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint otherIndex = permutationElement(myIndex);\nKeypointAddress otherAddress = KeypointAddress(otherIndex * pixelsPerKeypoint, myAddress.offset);\nKeypoint myKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nKeypoint otherKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, otherAddress);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
 
 /***/ }),
 
