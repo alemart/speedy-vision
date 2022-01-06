@@ -74,7 +74,7 @@ export class SpeedyMatrixWASM
     {
         return new SpeedyPromise((resolve, reject) => {
             SpeedyMatrixWASM._ready(resolve, reject);
-        }).turbocharge();
+        });
     }
 
     /**

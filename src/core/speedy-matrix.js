@@ -320,9 +320,16 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
 
             // deep copy
             const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
-            for(let column = this._columns - 1; column >= 0; column--) {
-                for(let row = this._rows - 1; row >= 0; row--)
-                    this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
+            if(step0 === rstep0 && step1 === rstep1 && this._data.length === result._data.length) {
+                // fast copy
+                this._data.set(result._data);
+            }
+            else {
+                // copy each element
+                for(let column = this._columns - 1; column >= 0; column--) {
+                    for(let row = this._rows - 1; row >= 0; row--)
+                        this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
+                }
             }
 
             // done!
