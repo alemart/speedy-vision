@@ -134,7 +134,7 @@ export class SpeedyMatrixFactory extends Function
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Aptr);
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Rptr);
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Qptr);
-        });
+        }).turbocharge();
     }
 
     /**
@@ -188,7 +188,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return solution;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -223,7 +223,7 @@ export class SpeedyMatrixFactory extends Function
                 default:
                     throw new IllegalArgumentError(`Invalid method: "${method}"`);
             }
-        });
+        }).turbocharge();
     }
 
     /**
@@ -264,7 +264,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return homography;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -337,7 +337,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return homography;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -378,7 +378,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return dest;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -419,7 +419,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return transform;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -491,7 +491,7 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return transform;
-        });
+        }).turbocharge();
     }
 
     /**
@@ -532,6 +532,6 @@ export class SpeedyMatrixFactory extends Function
 
             // done!
             return dest;
-        });
+        }).turbocharge();
     }
 }
