@@ -26,10 +26,10 @@
 uniform sampler2D image;
 uniform float kernel[@KERNEL_SIZE@];
 
-const ivec2 magic = ivec2(1-AXIS, AXIS);
+const ivec2 axis = ivec2(1-AXIS, AXIS);
 
 // Shrink the code
-#define S(x,k) result += pixelAtShortOffset(image, ivec2((x),(x)) * magic) * kernel[k]
+#define S(x,k) result += pixelAtShortOffset(image, ivec2((x),(x)) * axis) * kernel[k]
 
 void main()
 {
