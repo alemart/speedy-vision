@@ -90,9 +90,9 @@ export class SpeedyPromise<T> {
      * Setup rejection handler
      * @template U, V=never
      * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise<U>}
+     * @returns {SpeedyPromise<V>}
      */
-    catch<U_1, V_1>(onRejection?: ((arg0: Error) => V_1 | PromiseLike<V_1> | SpeedyPromise<V_1>) | null | undefined): SpeedyPromise<U_1>;
+    catch<U_1, V_1>(onRejection?: ((arg0: Error) => V_1 | PromiseLike<V_1> | SpeedyPromise<V_1>) | null | undefined): SpeedyPromise<V_1>;
     /**
      * Execute a callback when the promise is settled
      * (i.e., fulfilled or rejected)

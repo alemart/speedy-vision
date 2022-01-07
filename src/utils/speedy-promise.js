@@ -85,7 +85,7 @@ export class SpeedyPromise
      * Setup rejection handler
      * @template U, V=never
      * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise<U>}
+     * @returns {SpeedyPromise<V>}
      */
     catch(onRejection)
     {
