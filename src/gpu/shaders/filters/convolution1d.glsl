@@ -20,7 +20,7 @@
  */
 
 #if !defined(KERNEL_SIZE) || !defined(AXIS) || (AXIS != 0 && AXIS != 1)
-#define Must define KERNEL_SIZE and AXIS
+#error Undefined KERNEL_SIZE / AXIS
 #endif
 
 uniform sampler2D image;
