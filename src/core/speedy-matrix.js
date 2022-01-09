@@ -334,7 +334,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
 
             // done!
             return this;
-        }).turbocharge();
+        });
     }
 
     /**
