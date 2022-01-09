@@ -49,11 +49,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
                     msg.format === ImageFormat.GREY
             ),
-            InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints).satisfying(
-                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
-                    msg.descriptorSize == 0 &&
-                    msg.extraSize == 0
-            ),
+            InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
     }
