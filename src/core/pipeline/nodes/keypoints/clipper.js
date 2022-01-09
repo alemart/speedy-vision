@@ -48,11 +48,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
     constructor(name = undefined)
     {
         super(name, 4, [
-            InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
-                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
-                    msg.descriptorSize == 0 &&
-                    msg.extraSize == 0
-            ),
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
 
