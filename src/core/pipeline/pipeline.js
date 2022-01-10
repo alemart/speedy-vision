@@ -160,19 +160,22 @@ export class SpeedyPipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
             // export results
-            SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
+            SpeedyPromise.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
 
                 // aggregate results by the names of the sinks
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
+
             )
 
         ).finally(() => {
+
             // clear all ports
             for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
 
             // the pipeline is no longer busy
             this._busy = false;
+
         }).turbocharge();
     }
 
