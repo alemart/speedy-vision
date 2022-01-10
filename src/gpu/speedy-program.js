@@ -336,6 +336,7 @@ export class SpeedyProgram extends Function
      * Set data using a Uniform Buffer Object
      * @param {string} blockName uniform block name
      * @param {ArrayBufferView} data
+     * @returns {SpeedyProgram} this
      */
     setUBO(blockName, data)
     {
@@ -343,6 +344,7 @@ export class SpeedyProgram extends Function
             this._ubo = new UBOHelper(this._gl, this._program);
 
         this._ubo.set(blockName, data);
+        return this;
     }
 
     /**
