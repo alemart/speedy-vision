@@ -78,15 +78,16 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
     {
         let { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
-        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
         const maxKeypoints = this._maxKeypoints;
 
         // shuffle the keypoints (including nulls)
-        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
-        const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
-        const permutation = this._generatePermutation(permutationLength);
-        shuffle.setUBO('Permutation', permutation);
-        encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        const permutationMaxLength = gpu.programs.keypoints.shuffle.definedConstant('PERMUTATION_MAXLEN');
+        const permutationLength = Math.min(permutationMaxLength, capacity);
+        const permutation = this._generatePermutation(permutationLength, permutationMaxLength);
+        encodedKeypoints = (gpu.programs.keypoints.shuffle
+            .setUBO('Permutation', permutation)
+            .outputs(encoderLength, encoderLength, this._tex[0])
+        )(encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         // sort the keypoints
         gpu.programs.keypoints.mixKeypointsInit.outputs(encoderLength, encoderLength, this._tex[1]);
@@ -120,11 +121,13 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
     /**
      * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
      * @param {number} n positive integer
+     * @param {number} [bufsize] size of the output array
      * @returns {Int32Array} permutation
      */
-    _generatePermutation(n)
+    _generatePermutation(n, bufsize = n)
     {
-        const p = (new Int32Array(n)).fill(-1);
+        const array = new Int32Array(bufsize);
+        const p = array.subarray(0, n).fill(-1);
         const q = Utils.shuffle(Utils.range(n));
 
         for(let i = 0, j = 0; i < n; i++) {
@@ -134,6 +137,6 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
             }
         }
 
-        return p;
+        return array; // padded with zeros
     }
 }
