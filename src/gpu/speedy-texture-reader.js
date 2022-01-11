@@ -26,12 +26,13 @@ import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
-const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
+//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 
 /**
  * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
  */
-const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
+//const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -106,14 +107,14 @@ export class SpeedyTextureReader
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
+        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+        this._pbo = (new Array(numberOfBuffers)).fill(null);
+
         /** @type {ObservableQueue<Consumable>} for async data transfers */
         this._consumer = new ObservableQueue();
 
         /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
         this._producer = new ObservableQueue();
-
-        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
-        this._pbo = (new Array(numberOfBuffers)).fill(null);
 
         /** @type {boolean} is this object initialized? */
         this._initialized = false;
