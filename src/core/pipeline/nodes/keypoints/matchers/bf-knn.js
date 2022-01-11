@@ -136,7 +136,8 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
             }
 
             // copy the (k+1)-th best match to the filter
-            encodedPartialMatches.copyTo(encodedFilters);
+            if(matchesPerKeypoint > 1)
+                encodedPartialMatches.copyTo(encodedFilters);
 
             // aggregate matches
             encodedMatches = keypoints.bfMatcherTransfer(
