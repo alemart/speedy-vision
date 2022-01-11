@@ -35,12 +35,6 @@ const PROGRAM_NAME = {
     64: 'bfMatcher64',
 };
 
-/** @type {Object<number,number>} how many (database) keypoints we analyze in each pass, indexed by descriptor size */
-const NUMBER_OF_KEYPOINTS_PER_PASS = {
-    32: 12, // this number is based on the number of texture reads performed by the shader
-    64: 8,
-};
-
 /**
  * Brute Force KNN Keypoint Matcher. Make sure to use a Keypoint Clipper before
  * invoking this (use a database of 50 keypoints or so - your mileage may vary)
@@ -96,7 +90,6 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
         const database = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('database').read() );
-        const keypoints = gpu.programs.keypoints;
         const candidatesA = this._tex[0];
         const candidatesB = this._tex[1];
         const candidatesC = this._tex[2];
@@ -104,6 +97,7 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
         const encodedMatchesA = this._tex[4];
         const encodedMatchesB = this._tex[5];
         const matchesPerKeypoint = this._matchesPerKeypoint;
+        const keypoints = gpu.programs.keypoints;
 
         // validate parameters
         if(descriptorSize !== database.descriptorSize)
@@ -112,13 +106,13 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
             throw new NotSupportedError(`Unsupported descriptor size (${descriptorSize}) in ${this.fullName}`);
 
         // prepare the brute force matching
+        const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
         const dbCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(database.descriptorSize, database.extraSize, database.encoderLength);
-        const numberOfKeypointsPerPass = NUMBER_OF_KEYPOINTS_PER_PASS[descriptorSize];
+        const numberOfKeypointsPerPass = bfMatcher.definedConstant('NUMBER_OF_KEYPOINTS_PER_PASS');
         const numberOfPasses = Math.ceil(dbCapacity / numberOfKeypointsPerPass);
         const partialMatcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
         const matcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity * matchesPerKeypoint)));
-        const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
         keypoints.bfMatcherTransfer.outputs(matcherLength, matcherLength, encodedMatchesA, encodedMatchesB);
         keypoints.bfMatcherInitCandidates.outputs(partialMatcherLength, partialMatcherLength, candidatesC);
         keypoints.bfMatcherInitFilters.outputs(partialMatcherLength, partialMatcherLength, encodedFiltersA);
@@ -136,10 +130,10 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
                     encodedPartialMatches, encodedFilters, partialMatcherLength,
                     database.encodedKeypoints, database.descriptorSize, database.extraSize, database.encoderLength,
                     encodedKeypoints, descriptorSize, extraSize, encoderLength,
-                    passId, numberOfKeypointsPerPass
+                    passId
                 );
+                gpu.gl.flush();
             }
-            gpu.gl.flush();
 
             // copy the (k+1)-th best match to the filter
             encodedPartialMatches.copyTo(encodedFilters);

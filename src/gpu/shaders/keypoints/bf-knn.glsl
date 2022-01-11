@@ -51,10 +51,15 @@ uniform int encoderLength;
 
 // multipass algorithm
 uniform int passId; // 0, 1, 2...
-uniform int numberOfKeypointsPerPass; // how many (database) keypoints we analyze in each pass
+
+// how many (database) keypoints we'll analyze in each pass
+#ifndef NUMBER_OF_KEYPOINTS_PER_PASS
+#error Undefined NUMBER_OF_KEYPOINTS_PER_PASS
+#endif
 
 // Constants
 const int INFINITE_DISTANCE = MATCH_MAX_DISTANCE + 1;
+
 
 // main
 void main()
@@ -80,9 +85,9 @@ void main()
 
     // brute force matching
     int dbPixelsPerKeypoint = sizeofEncodedKeypoint(dbDescriptorSize, dbExtraSize) / 4;
-    for(int i = 0; i < numberOfKeypointsPerPass; i++) {
+    for(int i = 0; i < NUMBER_OF_KEYPOINTS_PER_PASS; i++) {
         // find out which keypoint from the database we'll read
-        int dbKeypointIndex = passId * numberOfKeypointsPerPass + i;
+        int dbKeypointIndex = passId * NUMBER_OF_KEYPOINTS_PER_PASS + i;
         KeypointAddress dbAddress = KeypointAddress(dbKeypointIndex * dbPixelsPerKeypoint, 0);
 
         // read N pixels, where N = headerSize + descriptorSize

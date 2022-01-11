@@ -131,12 +131,18 @@ const bfMatcherTransfer = importShader('keypoints/knn-transfer.glsl')
                          .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
 const bfMatcher32 = importShader('keypoints/bf-knn.glsl')
-                    .withDefines({ 'DESCRIPTOR_SIZE': 32 })
-                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+                    .withDefines({
+                        'DESCRIPTOR_SIZE': 32,
+                        'NUMBER_OF_KEYPOINTS_PER_PASS': 16,
+                    })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
 const bfMatcher64 = importShader('keypoints/bf-knn.glsl')
-                    .withDefines({ 'DESCRIPTOR_SIZE': 64 })
-                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+                    .withDefines({
+                        'DESCRIPTOR_SIZE': 64,
+                        'NUMBER_OF_KEYPOINTS_PER_PASS': 8,
+                    })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
 // LSH-based KNN matching
 const lshKnnInitCandidates = importShader('keypoints/knn-init.glsl')
