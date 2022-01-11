@@ -85,7 +85,6 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Functional programming](#functional-programming)
     * [Systems of equations](#systems-of-equations)
     * [Matrix factorization](#matrix-factorization)
-    * [Misc. Utilities](#misc-utilities)
   * [Geometric transformations](#geometric-transformations)
     * [Homography](#perspective-transformation)
   * [Geometric Utilities](#geometric-utilities)
