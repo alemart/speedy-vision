@@ -95,8 +95,9 @@ export class SpeedyProgram extends Function {
      * Set data using a Uniform Buffer Object
      * @param {string} blockName uniform block name
      * @param {ArrayBufferView} data
+     * @returns {SpeedyProgram} this
      */
-    setUBO(blockName: string, data: ArrayBufferView): void;
+    setUBO(blockName: string, data: ArrayBufferView): SpeedyProgram;
     /**
      * Release the resources associated with this SpeedyProgram
      * @returns {null}

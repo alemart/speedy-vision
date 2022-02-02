@@ -1,5 +1,11 @@
 /**
- * A factory of matrices
+ * @function Matrix
+ *
+ * Create a new matrix filled with the specified size and entries
+ * @param {number} rows
+ * @param {number} [columns]
+ * @param {number[]} [entries] in column-major format
+ * @returns {SpeedyMatrix}
  */
 export class SpeedyMatrixFactory extends Function {
     /**
@@ -7,13 +13,15 @@ export class SpeedyMatrixFactory extends Function {
      */
     constructor();
     /**
+     * @private
+     *
      * Create a new matrix filled with the specified size and entries
      * @param {number} rows
      * @param {number} [columns]
      * @param {number[]} [entries] in column-major format
      * @returns {SpeedyMatrix}
      */
-    _create(rows: number, columns?: number | undefined, entries?: number[] | undefined): SpeedyMatrix;
+    private _create;
     /**
      * Create a new matrix filled with zeros with the specified size
      * @param {number} rows
@@ -36,17 +44,23 @@ export class SpeedyMatrixFactory extends Function {
      */
     Eye(rows: number, columns?: number | undefined): SpeedyMatrix;
     /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    ready(): SpeedyPromise<void>;
+    /**
      * QR decomposition
      * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
      * @param {SpeedyMatrix} R is n x n (reduced) or m x n (full), output
      * @param {SpeedyMatrix} mat is m x n, input
      * @param {object} [options]
      * @param {'reduced'|'full'} [options.mode]
-     * @returns {SpeedyPromise<void>}
+     * @returns {SpeedyPromise<[SpeedyMatrix,SpeedyMatrix]>} resolves to [Q,R]
      */
     qr(Q: SpeedyMatrix, R: SpeedyMatrix, mat: SpeedyMatrix, { mode }?: {
         mode?: "reduced" | "full" | undefined;
-    } | undefined): SpeedyPromise<void>;
+    } | undefined): SpeedyPromise<[SpeedyMatrix, SpeedyMatrix]>;
     /**
      * Solve a possibly overdetermined system of linear
      * equations Ax = b for x using ordinary least squares

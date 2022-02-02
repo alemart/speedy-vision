@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-01-01T19:06:18.344Z
+ * Date: 2022-02-02T17:43:13.417Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -796,7 +796,12 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * 2D vectors
+ * @function Vector2
+ * 
+ * Create a 2D vector
+ * @param {number} x x-coordinate
+ * @param {number} y y-coordinate
+ * @returns {SpeedyVector2}
  */
 class SpeedyPipelineVector2Factory extends Function
 {
@@ -811,6 +816,8 @@ class SpeedyPipelineVector2Factory extends Function
     }
 
     /**
+     * @private
+     * 
      * Create a 2D vector
      * @param {number} x x-coordinate
      * @param {number} y y-coordinate
@@ -3368,11 +3375,7 @@ class SpeedyPipelineNodeKeypointClipper extends _pipeline_node__WEBPACK_IMPORTED
     constructor(name = undefined)
     {
         super(name, 4, [
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints).satisfying(
-                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
-                    msg.descriptorSize == 0 &&
-                    msg.extraSize == 0
-            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.InputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints),
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__.SpeedyPipelineMessageType.Keypoints)
         ]);
 
@@ -3458,6 +3461,7 @@ class SpeedyPipelineNodeKeypointClipper extends _pipeline_node__WEBPACK_IMPORTED
         this.output().swrite(outputTexture, descriptorSize, extraSize, newEncoderLength);
     }
 }
+
 
 /***/ }),
 
@@ -3625,11 +3629,7 @@ class SpeedyPipelineNodeORBKeypointDescriptor extends _descriptor__WEBPACK_IMPOR
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
                     msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__.ImageFormat.GREY
             ),
-            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('keypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints).satisfying(
-                ( /** @type {SpeedyPipelineMessageWithKeypoints} */ msg ) =>
-                    msg.descriptorSize == 0 &&
-                    msg.extraSize == 0
-            ),
+            (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.InputPort)('keypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
             (0,_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__.OutputPort)().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineMessageType.Keypoints),
         ]);
     }
@@ -4786,12 +4786,6 @@ const PROGRAM_NAME = {
     64: 'bfMatcher64',
 };
 
-/** @type {Object<number,number>} how many (database) keypoints we analyze in each pass, indexed by descriptor size */
-const NUMBER_OF_KEYPOINTS_PER_PASS = {
-    32: 12, // this number is based on the number of texture reads performed by the shader
-    64: 8,
-};
-
 /**
  * Brute Force KNN Keypoint Matcher. Make sure to use a Keypoint Clipper before
  * invoking this (use a database of 50 keypoints or so - your mileage may vary)
@@ -4847,7 +4841,6 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEB
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('keypoints').read() );
         const database = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input('database').read() );
-        const keypoints = gpu.programs.keypoints;
         const candidatesA = this._tex[0];
         const candidatesB = this._tex[1];
         const candidatesC = this._tex[2];
@@ -4855,6 +4848,7 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEB
         const encodedMatchesA = this._tex[4];
         const encodedMatchesB = this._tex[5];
         const matchesPerKeypoint = this._matchesPerKeypoint;
+        const keypoints = gpu.programs.keypoints;
 
         // validate parameters
         if(descriptorSize !== database.descriptorSize)
@@ -4863,13 +4857,13 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEB
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.NotSupportedError(`Unsupported descriptor size (${descriptorSize}) in ${this.fullName}`);
 
         // prepare the brute force matching
+        const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
         const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_3__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
         const dbCapacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_3__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(database.descriptorSize, database.extraSize, database.encoderLength);
-        const numberOfKeypointsPerPass = NUMBER_OF_KEYPOINTS_PER_PASS[descriptorSize];
+        const numberOfKeypointsPerPass = bfMatcher.definedConstant('NUMBER_OF_KEYPOINTS_PER_PASS');
         const numberOfPasses = Math.ceil(dbCapacity / numberOfKeypointsPerPass);
         const partialMatcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
         const matcherLength = Math.max(1, Math.ceil(Math.sqrt(capacity * matchesPerKeypoint)));
-        const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
         keypoints.bfMatcherTransfer.outputs(matcherLength, matcherLength, encodedMatchesA, encodedMatchesB);
         keypoints.bfMatcherInitCandidates.outputs(partialMatcherLength, partialMatcherLength, candidatesC);
         keypoints.bfMatcherInitFilters.outputs(partialMatcherLength, partialMatcherLength, encodedFiltersA);
@@ -4887,13 +4881,14 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEB
                     encodedPartialMatches, encodedFilters, partialMatcherLength,
                     database.encodedKeypoints, database.descriptorSize, database.extraSize, database.encoderLength,
                     encodedKeypoints, descriptorSize, extraSize, encoderLength,
-                    passId, numberOfKeypointsPerPass
+                    passId
                 );
+                gpu.gl.flush();
             }
-            gpu.gl.flush();
 
             // copy the (k+1)-th best match to the filter
-            encodedPartialMatches.copyTo(encodedFilters);
+            if(matchesPerKeypoint > 1)
+                encodedPartialMatches.copyTo(encodedFilters);
 
             // aggregate matches
             encodedMatches = keypoints.bfMatcherTransfer(
@@ -5925,15 +5920,16 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
     {
         let { encodedKeypoints, descriptorSize, extraSize, encoderLength } = /** @type {SpeedyPipelineMessageWithKeypoints} */ ( this.input().read() );
         const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
-        const shuffle = gpu.programs.keypoints.shuffle.outputs(encoderLength, encoderLength, this._tex[0]);
         const maxKeypoints = this._maxKeypoints;
 
         // shuffle the keypoints (including nulls)
-        const PERMUTATION_MAXLEN = shuffle.definedConstant('PERMUTATION_MAXLEN');
-        const permutationLength = Math.min(PERMUTATION_MAXLEN, capacity);
-        const permutation = this._generatePermutation(permutationLength);
-        shuffle.setUBO('Permutation', permutation);
-        encodedKeypoints = shuffle(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        const permutationMaxLength = gpu.programs.keypoints.shuffle.definedConstant('PERMUTATION_MAXLEN');
+        const permutationLength = Math.min(permutationMaxLength, capacity);
+        const permutation = this._generatePermutation(permutationLength, permutationMaxLength);
+        encodedKeypoints = (gpu.programs.keypoints.shuffle
+            .setUBO('Permutation', permutation)
+            .outputs(encoderLength, encoderLength, this._tex[0])
+        )(encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         // sort the keypoints
         gpu.programs.keypoints.mixKeypointsInit.outputs(encoderLength, encoderLength, this._tex[1]);
@@ -5967,11 +5963,13 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
     /**
      * Generate a permutation p of { 0, 1, ..., n-1 } such that p(p(x)) = x for all x
      * @param {number} n positive integer
+     * @param {number} [bufsize] size of the output array
      * @returns {Int32Array} permutation
      */
-    _generatePermutation(n)
+    _generatePermutation(n, bufsize = n)
     {
-        const p = (new Int32Array(n)).fill(-1);
+        const array = new Int32Array(bufsize);
+        const p = array.subarray(0, n).fill(-1);
         const q = _utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.shuffle(_utils_utils__WEBPACK_IMPORTED_MODULE_5__.Utils.range(n));
 
         for(let i = 0, j = 0; i < n; i++) {
@@ -5981,9 +5979,10 @@ class SpeedyPipelineNodeKeypointShuffler extends _pipeline_node__WEBPACK_IMPORTE
             }
         }
 
-        return p;
+        return array; // padded with zeros
     }
 }
+
 
 /***/ }),
 
@@ -9568,19 +9567,22 @@ class SpeedyPipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
             // export results
-            _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
+            _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
 
                 // aggregate results by the names of the sinks
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
+
             )
 
         ).finally(() => {
+
             // clear all ports
             for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
 
             // the pipeline is no longer busy
             this._busy = false;
+
         }).turbocharge();
     }
 
@@ -10144,7 +10146,7 @@ __webpack_require__.r(__webpack_exports__);
 /** @typedef {import('./speedy-matrix').SpeedyMatrixDtype} SpeedyMatrixDtype */
 /** @typedef {import('./speedy-matrix').SpeedyMatrixBufferType} SpeedyMatrixBufferType */
 /** @typedef {import('./speedy-matrix').SpeedyMatrixBufferTypeConstructor} SpeedyMatrixBufferTypeConstructor */
-/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory} SpeedyMatrixWASMMemory */
 
 /** @typedef {Object<SpeedyMatrixDtype,SpeedyMatrixBufferTypeConstructor>} Dtype2BufferType */
 
@@ -10301,7 +10303,7 @@ class SpeedyMatrixExpr
      * Evaluate this expression
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -10354,7 +10356,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -10387,7 +10389,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
      * Compute the result of this operation
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -10424,7 +10426,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -10461,7 +10463,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
      * Compute the result of this operation
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -10489,7 +10491,7 @@ class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = operand^T
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -10520,7 +10522,7 @@ class SpeedyMatrixInvertExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = operand ^ (-1)
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -10568,7 +10570,7 @@ class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = scalar * operand
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -10597,7 +10599,7 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left + right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -10627,7 +10629,7 @@ class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left - right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -10657,7 +10659,7 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left * right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -10687,7 +10689,7 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left <compMult> right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -10746,7 +10748,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * A factory of matrices
+ * @function Matrix
+ * 
+ * Create a new matrix filled with the specified size and entries
+ * @param {number} rows
+ * @param {number} [columns]
+ * @param {number[]} [entries] in column-major format
+ * @returns {SpeedyMatrix}
  */
 class SpeedyMatrixFactory extends Function
 {
@@ -10761,6 +10769,8 @@ class SpeedyMatrixFactory extends Function
     }
 
     /**
+     * @private
+     * 
      * Create a new matrix filled with the specified size and entries
      * @param {number} rows
      * @param {number} [columns]
@@ -10806,13 +10816,23 @@ class SpeedyMatrixFactory extends Function
     }
 
     /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    ready()
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__.SpeedyMatrix.ready();
+    }
+
+    /**
      * QR decomposition
      * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
      * @param {SpeedyMatrix} R is n x n (reduced) or m x n (full), output
      * @param {SpeedyMatrix} mat is m x n, input
      * @param {object} [options]
      * @param {'reduced'|'full'} [options.mode]
-     * @returns {SpeedyPromise<void>}
+     * @returns {SpeedyPromise<[SpeedyMatrix,SpeedyMatrix]>} resolves to [Q,R]
      */
     qr(Q, R, mat, { mode = 'reduced' } = {})
     {
@@ -10830,7 +10850,7 @@ class SpeedyMatrixFactory extends Function
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`Invalid mode for QR: "${mode}"`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const Qptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, Q);
             const Rptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, R);
@@ -10853,6 +10873,9 @@ class SpeedyMatrixFactory extends Function
             _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.deallocateMat32(wasm, memory, Aptr);
             _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.deallocateMat32(wasm, memory, Rptr);
             _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.deallocateMat32(wasm, memory, Qptr);
+
+            // done!
+            return [Q, R];
         });
     }
 
@@ -10877,7 +10900,7 @@ class SpeedyMatrixFactory extends Function
         else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`Invalid shapes`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const Aptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, A);
             const bptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, b);
@@ -10930,7 +10953,7 @@ class SpeedyMatrixFactory extends Function
         else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`Invalid shapes`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // select method
             switch(method) {
                 case 'qr':
@@ -10960,7 +10983,7 @@ class SpeedyMatrixFactory extends Function
         else if(homography.rows != 3 || homography.columns != 3)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`The output of perspective() is a 3x3 homography`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const homptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11015,7 +11038,7 @@ class SpeedyMatrixFactory extends Function
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`Invalid shape of the inliers mask`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const homptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11074,7 +11097,7 @@ class SpeedyMatrixFactory extends Function
         else if(transform.rows != 3 || transform.columns != 3)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`The perspective transformation must be a 3x3 matrix`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11115,7 +11138,7 @@ class SpeedyMatrixFactory extends Function
         else if(transform.rows != 2 || transform.columns != 3)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`The output of affine() is a 2x3 matrix`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11170,7 +11193,7 @@ class SpeedyMatrixFactory extends Function
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`Invalid shape of the inliers mask`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11228,7 +11251,7 @@ class SpeedyMatrixFactory extends Function
         else if(transform.rows != 2 || transform.columns != 3)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalArgumentError(`The affine transformation must be a 2x3 matrix`);
 
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -11254,6 +11277,7 @@ class SpeedyMatrixFactory extends Function
         });
     }
 }
+
 
 /***/ }),
 
@@ -11300,17 +11324,8 @@ __webpack_require__.r(__webpack_exports__);
 
 /** @typedef {import('./speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 
-/** @type {Uint8Array} WebAssembly binary */
-const WASM_BINARY = __webpack_require__(/*! ./wasm/speedy-matrix.wasm.txt */ "./src/core/wasm/speedy-matrix.wasm.txt");
-
-/** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
-let _instance = null;
-
-/** @type {WebAssembly.Module|null} WebAssembly Module, to be loaded asynchronously */
-let _module = null;
-
 /**
- * @typedef {object} AugmentedMemory a union-like helper for accessing a WebAssembly.Memory object
+ * @typedef {object} SpeedyMatrixWASMMemory a union-like helper for accessing a WebAssembly.Memory object
  * @property {object} as
  * @property {WebAssembly.Memory} as.object
  * @property {Uint8Array} as.uint8
@@ -11320,7 +11335,23 @@ let _module = null;
  * @property {Float64Array} as.float64
  */
 
-/** @type {AugmentedMemory} Augmented WebAssembly Memory object */
+/**
+ * @typedef {object} SpeedyMatrixWASMHandle
+ * @property {WebAssembly.Instance} wasm
+ * @property {SpeedyMatrixWASMMemory} memory
+ * @property {WebAssembly.Module} module
+ */
+
+/** @type {Uint8Array} WebAssembly binary */
+const WASM_BINARY = __webpack_require__(/*! ./wasm/speedy-matrix.wasm.txt */ "./src/core/wasm/speedy-matrix.wasm.txt");
+
+/** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
+let _instance = null;
+
+/** @type {WebAssembly.Module|null} WebAssembly Module, to be loaded asynchronously */
+let _module = null;
+
+/** @type {SpeedyMatrixWASMMemory} Augmented WebAssembly Memory object */
 const _memory = (mem => ({
     as: {
         object: mem,
@@ -11342,18 +11373,34 @@ class SpeedyMatrixWASM
 {
     /**
      * Gets you the WASM instance, augmented memory & module
-     * @returns {SpeedyPromise<[WebAssembly.Instance, AugmentedMemory, WebAssembly.Module]>}
+     * @returns {SpeedyPromise<SpeedyMatrixWASMHandle>}
      */
     static ready()
     {
         return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_0__.SpeedyPromise((resolve, reject) => {
             SpeedyMatrixWASM._ready(resolve, reject);
-        }).turbocharge();
+        });
+    }
+
+    /**
+     * Synchronously gets you the WASM instance, augmented memory & module
+     * @returns {SpeedyMatrixWASMHandle}
+     */
+    static get handle()
+    {
+        if(!_instance || !_module)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.WebAssemblyError(`Can't get WASM handle: routines not yet loaded`);
+
+        return {
+            wasm: _instance,
+            memory: _memory,
+            module: _module,
+        };
     }
 
     /**
      * Gets you the WASM imports bound to a memory object
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {Object<string,Function>}
      */
     static imports(memory)
@@ -11371,7 +11418,7 @@ class SpeedyMatrixWASM
     /**
      * Allocate a Mat32 in WebAssembly memory without copying any data
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {SpeedyMatrix} matrix
      * @returns {number} pointer to the new Mat32
      */
@@ -11386,7 +11433,7 @@ class SpeedyMatrixWASM
     /**
      * Deallocate a Mat32 in WebAssembly
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to the allocated Mat32
      * @returns {number} NULL
      */
@@ -11403,7 +11450,7 @@ class SpeedyMatrixWASM
     /**
      * Copy the data of a matrix to a WebAssembly Mat32
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to a Mat32
      * @param {SpeedyMatrix} matrix
      * @returns {number} matptr
@@ -11429,7 +11476,7 @@ class SpeedyMatrixWASM
     /**
      * Copy the data of a WebAssembly Mat32 to a matrix
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to a Mat32
      * @param {SpeedyMatrix} matrix
      * @returns {number} matptr
@@ -11455,16 +11502,16 @@ class SpeedyMatrixWASM
 
     /**
      * Polls the WebAssembly instance until it's ready
-     * @param {Function} resolve
-     * @param {Function} reject
+     * @param {function(SpeedyMatrixWASMHandle): void} resolve
+     * @param {function(Error): void} reject
      * @param {number} [counter]
      */
     static _ready(resolve, reject, counter = 1000)
     {
         if(_instance !== null && _module !== null)
-            resolve([_instance, _memory, _module]);
+            resolve({ wasm: _instance, memory: _memory, module: _module });
         else if(counter <= 0)
-            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.TimeoutError(`Can't load WASM instance`));
+            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.TimeoutError(`Can't load WASM routines`));
         else
             setTimeout(SpeedyMatrixWASM._ready, 0, resolve, reject, counter - 1);
     }
@@ -11477,7 +11524,7 @@ class SpeedyMatrixWASMImports
 {
     /**
      * Constructor
-     * @param {AugmentedMemory} memory will be bound to this object
+     * @param {SpeedyMatrixWASMMemory} memory will be bound to this object
      */
     constructor(memory)
     {
@@ -11491,7 +11538,7 @@ class SpeedyMatrixWASMImports
             this[methodName] = this[methodName].bind(this);
         });
 
-        /** @type {AugmentedMemory} WASM memory */
+        /** @type {SpeedyMatrixWASMMemory} WASM memory */
         this.memory = memory;
 
         /** @type {CStringUtils} utilities related to C strings */
@@ -11549,14 +11596,14 @@ class CStringUtils
 {
     /**
      * Constructor
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      */
     constructor(memory)
     {
         /** @type {TextDecoder} */
         this._decoder = new TextDecoder('utf-8');
 
-        /** @type {AugmentedMemory} */
+        /** @type {SpeedyMatrixWASMMemory} */
         this._memory = memory;
     }
 
@@ -11580,7 +11627,7 @@ class CStringUtils
 
 /**
  * WebAssembly loader
- * @param {AugmentedMemory} memory
+ * @param {SpeedyMatrixWASMMemory} memory
  */
 (function loadWASM(memory) {
     const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));
@@ -11610,6 +11657,7 @@ class CStringUtils
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.WebAssemblyError(`Can't load the WebAssembly routines: ${err}`, err);
     });
 })(_memory);
+
 
 /***/ }),
 
@@ -11657,7 +11705,8 @@ __webpack_require__.r(__webpack_exports__);
 /** @typedef {"float32"} SpeedyMatrixDtype Matrix data type */
 /** @typedef {Float32Array} SpeedyMatrixBufferType Buffer type */
 /** @typedef {Float32ArrayConstructor} SpeedyMatrixBufferTypeConstructor Buffer class */
-/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory} SpeedyMatrixWASMMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMHandle} SpeedyMatrixWASMHandle */
 
 /**
  * Matrix class
@@ -11759,6 +11808,16 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
             data[j * rows + j] = 1;
 
         return new SpeedyMatrix(rows, columns, 1, rows, data);
+    }
+
+    /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    static ready()
+    {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(_ => void(0));
     }
 
     /**
@@ -11922,42 +11981,64 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
     /**
      * Set the contents of this matrix to the result of an expression
      * @param {SpeedyMatrixExpr} expr matrix expression
-     * @returns {SpeedyPromise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
      */
     setTo(expr)
     {
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            // evaluate the expression
-            const result = expr._evaluate(wasm, memory);
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.ready().then(_ => {
 
-            /*
-            // shallow copy the results to this matrix
-            // limitation: can't handle blocks properly
-            // (a tree-like structure could be useful)
-            this._rows = result.rows;
-            this._columns = result.columns;
-            //this._dtype = result.dtype;
-            this._data = result.data;
-            this._step0 = result.step0;
-            this._step1 = result.step1;
-            */
+            // TODO: add support for WebWorkers
+            return this.setToSync(expr);
 
-            // validate shape
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__.Utils.assert(
-                this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
-                `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
-            );
+        });
+    }
 
-            // deep copy
-            const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
+    /**
+     * Synchronously set the contents of this matrix to the result of an expression
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix} this
+     */
+    setToSync(expr)
+    {
+        const { wasm, memory } = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__.SpeedyMatrixWASM.handle;
+
+        // evaluate the expression
+        const result = expr._evaluate(wasm, memory);
+
+        /*
+        // shallow copy the results to this matrix
+        // limitation: can't handle blocks properly
+        // (a tree-like structure could be useful)
+        this._rows = result.rows;
+        this._columns = result.columns;
+        //this._dtype = result.dtype;
+        this._data = result.data;
+        this._step0 = result.step0;
+        this._step1 = result.step1;
+        */
+
+        // validate shape
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__.Utils.assert(
+            this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
+            `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
+        );
+
+        // deep copy
+        const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
+        if(step0 === rstep0 && step1 === rstep1 && this._data.length === result._data.length) {
+            // fast copy
+            this._data.set(result._data);
+        }
+        else {
+            // copy each element
             for(let column = this._columns - 1; column >= 0; column--) {
                 for(let row = this._rows - 1; row >= 0; row--)
                     this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
             }
+        }
 
-            // done!
-            return this;
-        }).turbocharge();
+        // done!
+        return this;
     }
 
     /**
@@ -11967,11 +12048,22 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
      */
     fill(value)
     {
+        this.fillSync(value);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise.resolve(this);
+    }
+
+    /**
+     * Synchronously fill this matrix with a scalar value
+     * @param {number} value
+     * @returns {SpeedyMatrix} this
+     */
+    fillSync(value)
+    {
         value = +value;
 
         if(this._rows * this._columns === this._data.length) {
             this._data.fill(value);
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise.resolve(this);
+            return this;
         }
 
         for(let column = 0; column < this._columns; column++) {
@@ -11980,13 +12072,13 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
             }
         }
 
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise.resolve(this);
+        return this;
     }
 
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -11994,6 +12086,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
         return this;
     }
 }
+
 
 /***/ }),
 
@@ -13744,12 +13837,18 @@ const bfMatcherTransfer = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.im
                          .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
 const bfMatcher32 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/bf-knn.glsl')
-                    .withDefines({ 'DESCRIPTOR_SIZE': 32 })
-                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+                    .withDefines({
+                        'DESCRIPTOR_SIZE': 32,
+                        'NUMBER_OF_KEYPOINTS_PER_PASS': 16,
+                    })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
 const bfMatcher64 = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/bf-knn.glsl')
-                    .withDefines({ 'DESCRIPTOR_SIZE': 64 })
-                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId', 'numberOfKeypointsPerPass');
+                    .withDefines({
+                        'DESCRIPTOR_SIZE': 64,
+                        'NUMBER_OF_KEYPOINTS_PER_PASS': 8,
+                    })
+                    .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
 // LSH-based KNN matching
 const lshKnnInitCandidates = (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_4__.importShader)('keypoints/knn-init.glsl')
@@ -17231,6 +17330,7 @@ class SpeedyProgram extends Function
      * Set data using a Uniform Buffer Object
      * @param {string} blockName uniform block name
      * @param {ArrayBufferView} data
+     * @returns {SpeedyProgram} this
      */
     setUBO(blockName, data)
     {
@@ -17238,6 +17338,7 @@ class SpeedyProgram extends Function
             this._ubo = new UBOHelper(this._gl, this._program);
 
         this._ubo.set(blockName, data);
+        return this;
     }
 
     /**
@@ -17653,6 +17754,7 @@ UBOHelper.prototype.release = function()
     return null;
 }
 
+
 /***/ }),
 
 /***/ "./src/gpu/speedy-texture-pool.js":
@@ -17897,12 +17999,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
+//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 
 /**
  * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
  */
-const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
+//const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -17977,14 +18080,14 @@ class SpeedyTextureReader
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
+        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+        this._pbo = (new Array(numberOfBuffers)).fill(null);
+
         /** @type {ObservableQueue<Consumable>} for async data transfers */
         this._consumer = new ObservableQueue();
 
         /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
         this._producer = new ObservableQueue();
-
-        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
-        this._pbo = (new Array(numberOfBuffers)).fill(null);
 
         /** @type {boolean} is this object initialized? */
         this._initialized = false;
@@ -18294,6 +18397,7 @@ class SpeedyTextureReader
         }
     }
 }
+
 
 /***/ }),
 
@@ -19892,7 +19996,7 @@ class SpeedyPromise
      * Setup rejection handler
      * @template U, V=never
      * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise<U>}
+     * @returns {SpeedyPromise<V>}
      */
     catch(onRejection)
     {
@@ -20804,7 +20908,7 @@ class Utils
   \****************************************************/
 /***/ ((module) => {
 
-module.exports = "#if !defined(KERNEL_SIZE) || !defined(AXIS)\n#define Must define KERNEL_SIZE and AXIS\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE@];\n#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if AXIS == 0 && KERNEL_SIZE == 3\nS(-1, 0, 2);\nS( 0, 0, 1);\nS( 1, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 3\nS( 0,-1, 2);\nS( 0, 0, 1);\nS( 0, 1, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 5\nS(-2, 0, 4);\nS(-1, 0, 3);\nS( 0, 0, 2);\nS( 1, 0, 1);\nS( 2, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 5\nS(0,-2, 4);\nS(0,-1, 3);\nS(0, 0, 2);\nS(0, 1, 1);\nS(0, 2, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 7\nS(-3, 0, 6);\nS(-2, 0, 5);\nS(-1, 0, 4);\nS( 0, 0, 3);\nS( 1, 0, 2);\nS( 2, 0, 1);\nS( 3, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 7\nS(0,-3, 6);\nS(0,-2, 5);\nS(0,-1, 4);\nS(0, 0, 3);\nS(0, 1, 2);\nS(0, 2, 1);\nS(0, 3, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 9\nS(-4, 0, 8);\nS(-3, 0, 7);\nS(-2, 0, 6);\nS(-1, 0, 5);\nS( 0, 0, 4);\nS( 1, 0, 3);\nS( 2, 0, 2);\nS( 3, 0, 1);\nS( 4, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 9\nS(0,-4, 8);\nS(0,-3, 7);\nS(0,-2, 6);\nS(0,-1, 5);\nS(0, 0, 4);\nS(0, 1, 3);\nS(0, 2, 2);\nS(0, 3, 1);\nS(0, 4, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 11\nS(-5, 0, 10);\nS(-4, 0, 9);\nS(-3, 0, 8);\nS(-2, 0, 7);\nS(-1, 0, 6);\nS( 0, 0, 5);\nS( 1, 0, 4);\nS( 2, 0, 3);\nS( 3, 0, 2);\nS( 4, 0, 1);\nS( 5, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 11\nS(0,-5, 10);\nS(0,-4, 9);\nS(0,-3, 8);\nS(0,-2, 7);\nS(0,-1, 6);\nS(0, 0, 5);\nS(0, 1, 4);\nS(0, 2, 3);\nS(0, 3, 2);\nS(0, 4, 1);\nS(0, 5, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 13\nS(-6, 0, 12);\nS(-5, 0, 11);\nS(-4, 0, 10);\nS(-3, 0, 9);\nS(-2, 0, 8);\nS(-1, 0, 7);\nS( 0, 0, 6);\nS( 1, 0, 5);\nS( 2, 0, 4);\nS( 3, 0, 3);\nS( 4, 0, 2);\nS( 5, 0, 1);\nS( 6, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 13\nS(0,-6, 12);\nS(0,-5, 11);\nS(0,-4, 10);\nS(0,-3, 9);\nS(0,-2, 8);\nS(0,-1, 7);\nS(0, 0, 6);\nS(0, 1, 5);\nS(0, 2, 4);\nS(0, 3, 3);\nS(0, 4, 2);\nS(0, 5, 1);\nS(0, 6, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 15\nS(-7, 0, 14);\nS(-6, 0, 13);\nS(-5, 0, 12);\nS(-4, 0, 11);\nS(-3, 0, 10);\nS(-2, 0, 9);\nS(-1, 0, 8);\nS( 0, 0, 7);\nS( 1, 0, 6);\nS( 2, 0, 5);\nS( 3, 0, 4);\nS( 4, 0, 3);\nS( 5, 0, 2);\nS( 6, 0, 1);\nS( 7, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 15\nS(0,-7, 14);\nS(0,-6, 13);\nS(0,-5, 12);\nS(0,-4, 11);\nS(0,-3, 10);\nS(0,-2, 9);\nS(0,-1, 8);\nS(0, 0, 7);\nS(0, 1, 6);\nS(0, 2, 5);\nS(0, 3, 4);\nS(0, 4, 3);\nS(0, 5, 2);\nS(0, 6, 1);\nS(0, 7, 0);\n#else\n#error Invalid parameters\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
+module.exports = "#if !defined(KERNEL_SIZE) || !defined(AXIS) || (AXIS != 0 && AXIS != 1)\n#error Undefined KERNEL_SIZE / AXIS\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE@];\nconst ivec2 axis = ivec2(1-AXIS, AXIS);\n#define S(x,k) result += pixelAtShortOffset(image, ivec2((x),(x)) * axis) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE == 3\nS(-1, 2);\nS( 0, 1);\nS( 1, 0);\n#elif KERNEL_SIZE == 5\nS(-2, 4);\nS(-1, 3);\nS( 0, 2);\nS( 1, 1);\nS( 2, 0);\n#elif KERNEL_SIZE == 7\nS(-3, 6);\nS(-2, 5);\nS(-1, 4);\nS( 0, 3);\nS( 1, 2);\nS( 2, 1);\nS( 3, 0);\n#elif KERNEL_SIZE == 9\nS(-4, 8);\nS(-3, 7);\nS(-2, 6);\nS(-1, 5);\nS( 0, 4);\nS( 1, 3);\nS( 2, 2);\nS( 3, 1);\nS( 4, 0);\n#elif KERNEL_SIZE == 11\nS(-5, 10);\nS(-4, 9);\nS(-3, 8);\nS(-2, 7);\nS(-1, 6);\nS( 0, 5);\nS( 1, 4);\nS( 2, 3);\nS( 3, 2);\nS( 4, 1);\nS( 5, 0);\n#elif KERNEL_SIZE == 13\nS(-6, 12);\nS(-5, 11);\nS(-4, 10);\nS(-3, 9);\nS(-2, 8);\nS(-1, 7);\nS( 0, 6);\nS( 1, 5);\nS( 2, 4);\nS( 3, 3);\nS( 4, 2);\nS( 5, 1);\nS( 6, 0);\n#elif KERNEL_SIZE == 15\nS(-7, 14);\nS(-6, 13);\nS(-5, 12);\nS(-4, 11);\nS(-3, 10);\nS(-2, 9);\nS(-1, 8);\nS( 0, 7);\nS( 1, 6);\nS( 2, 5);\nS( 3, 4);\nS( 4, 3);\nS( 5, 2);\nS( 6, 1);\nS( 7, 0);\n#else\n#error Invalid parameters\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
 
 /***/ }),
 
@@ -21014,7 +21118,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform
   \***********************************************/
 /***/ ((module) => {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\n@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedFilters;\nuniform int matcherLength;\nuniform sampler2D dbEncodedKeypoints;\nuniform int dbDescriptorSize;\nuniform int dbExtraSize;\nuniform int dbEncoderLength;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int passId;\nuniform int numberOfKeypointsPerPass;\nconst int INFINITE_DISTANCE = MATCH_MAX_DISTANCE + 1;\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch bestMatch = decodeKeypointMatch(threadPixel(encodedMatches));\nKeypointMatch filterMatch = decodeKeypointMatch(threadPixel(encodedFilters));\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nuint[DESCRIPTOR_SIZE] dbDescriptor;\nint dbPixelsPerKeypoint = sizeofEncodedKeypoint(dbDescriptorSize, dbExtraSize) / 4;\nfor(int i = 0; i < numberOfKeypointsPerPass; i++) {\nint dbKeypointIndex = passId * numberOfKeypointsPerPass + i;\nKeypointAddress dbAddress = KeypointAddress(dbKeypointIndex * dbPixelsPerKeypoint, 0);\nKeypoint dbKeypoint = decodeKeypoint(dbEncodedKeypoints, dbEncoderLength, dbAddress);\ndbDescriptor = readKeypointDescriptor(dbEncodedKeypoints, dbDescriptorSize, dbExtraSize, dbEncoderLength, dbAddress);\nint dist = !isBadKeypoint(dbKeypoint) ? distanceBetweenKeypointDescriptors(descriptor, dbDescriptor) : INFINITE_DISTANCE;\nbestMatch.index = all(bvec2(\ndist < bestMatch.dist || (dist == bestMatch.dist && dbKeypointIndex > bestMatch.index),\ndist > filterMatch.dist || (dist == filterMatch.dist && dbKeypointIndex < filterMatch.index)\n)) ? dbKeypointIndex : bestMatch.index;\nbestMatch.dist = dbKeypointIndex == bestMatch.index ? dist : bestMatch.dist;\n}\ncolor = encodeKeypointMatch(bestMatch);\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\n@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedFilters;\nuniform int matcherLength;\nuniform sampler2D dbEncodedKeypoints;\nuniform int dbDescriptorSize;\nuniform int dbExtraSize;\nuniform int dbEncoderLength;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int passId;\n#ifndef NUMBER_OF_KEYPOINTS_PER_PASS\n#error Undefined NUMBER_OF_KEYPOINTS_PER_PASS\n#endif\nconst int INFINITE_DISTANCE = MATCH_MAX_DISTANCE + 1;\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch bestMatch = decodeKeypointMatch(threadPixel(encodedMatches));\nKeypointMatch filterMatch = decodeKeypointMatch(threadPixel(encodedFilters));\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nuint[DESCRIPTOR_SIZE] dbDescriptor;\nint dbPixelsPerKeypoint = sizeofEncodedKeypoint(dbDescriptorSize, dbExtraSize) / 4;\nfor(int i = 0; i < NUMBER_OF_KEYPOINTS_PER_PASS; i++) {\nint dbKeypointIndex = passId * NUMBER_OF_KEYPOINTS_PER_PASS + i;\nKeypointAddress dbAddress = KeypointAddress(dbKeypointIndex * dbPixelsPerKeypoint, 0);\nKeypoint dbKeypoint = decodeKeypoint(dbEncodedKeypoints, dbEncoderLength, dbAddress);\ndbDescriptor = readKeypointDescriptor(dbEncodedKeypoints, dbDescriptorSize, dbExtraSize, dbEncoderLength, dbAddress);\nint dist = !isBadKeypoint(dbKeypoint) ? distanceBetweenKeypointDescriptors(descriptor, dbDescriptor) : INFINITE_DISTANCE;\nbestMatch.index = all(bvec2(\ndist < bestMatch.dist || (dist == bestMatch.dist && dbKeypointIndex > bestMatch.index),\ndist > filterMatch.dist || (dist == filterMatch.dist && dbKeypointIndex < filterMatch.index)\n)) ? dbKeypointIndex : bestMatch.index;\nbestMatch.dist = dbKeypointIndex == bestMatch.index ? dist : bestMatch.dist;\n}\ncolor = encodeKeypointMatch(bestMatch);\n}"
 
 /***/ }),
 
@@ -22122,12 +22226,18 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+/* eslint-disable no-undef */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
+
 // Constants
+
+/** @type {SpeedyMatrixFactory} */
 const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__.SpeedyMatrixFactory();
+
+/** @type {SpeedyPipelineVector2Factory} */
 const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineVector2Factory();
 
 

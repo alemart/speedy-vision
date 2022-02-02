@@ -1,7 +1,8 @@
 /** @typedef {"float32"} SpeedyMatrixDtype Matrix data type */
 /** @typedef {Float32Array} SpeedyMatrixBufferType Buffer type */
 /** @typedef {Float32ArrayConstructor} SpeedyMatrixBufferTypeConstructor Buffer class */
-/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory} SpeedyMatrixWASMMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMHandle} SpeedyMatrixWASMHandle */
 /**
  * Matrix class
  */
@@ -39,6 +40,12 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      * @returns {SpeedyMatrix}
      */
     static Eye(rows: number, columns?: number | undefined, dtype?: "float32" | undefined): SpeedyMatrix;
+    /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    static ready(): SpeedyPromise<void>;
     /**
      * @private
      *
@@ -112,15 +119,27 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
     /**
      * Set the contents of this matrix to the result of an expression
      * @param {SpeedyMatrixExpr} expr matrix expression
-     * @returns {SpeedyPromise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
      */
     setTo(expr: SpeedyMatrixExpr): SpeedyPromise<SpeedyMatrix>;
+    /**
+     * Synchronously set the contents of this matrix to the result of an expression
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix} this
+     */
+    setToSync(expr: SpeedyMatrixExpr): SpeedyMatrix;
     /**
      * Fill this matrix with a scalar value
      * @param {number} value
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
      */
     fill(value: number): SpeedyPromise<SpeedyMatrix>;
+    /**
+     * Synchronously fill this matrix with a scalar value
+     * @param {number} value
+     * @returns {SpeedyMatrix} this
+     */
+    fillSync(value: number): SpeedyMatrix;
 }
 /**
  * Matrix data type
@@ -134,6 +153,7 @@ export type SpeedyMatrixBufferType = Float32Array;
  * Buffer class
  */
 export type SpeedyMatrixBufferTypeConstructor = Float32ArrayConstructor;
-export type AugmentedMemory = import('./speedy-matrix-wasm').AugmentedMemory;
+export type SpeedyMatrixWASMMemory = import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory;
+export type SpeedyMatrixWASMHandle = import('./speedy-matrix-wasm').SpeedyMatrixWASMHandle;
 import { SpeedyMatrixExpr } from "./speedy-matrix-expr";
 import { SpeedyPromise } from "../utils/speedy-promise";

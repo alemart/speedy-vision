@@ -1,5 +1,10 @@
 /**
- * 2D vectors
+ * @function Vector2
+ *
+ * Create a 2D vector
+ * @param {number} x x-coordinate
+ * @param {number} y y-coordinate
+ * @returns {SpeedyVector2}
  */
 export class SpeedyPipelineVector2Factory extends Function {
     /**
@@ -7,12 +12,14 @@ export class SpeedyPipelineVector2Factory extends Function {
      */
     constructor();
     /**
+     * @private
+     *
      * Create a 2D vector
      * @param {number} x x-coordinate
      * @param {number} y y-coordinate
      * @returns {SpeedyVector2}
      */
-    _create(x: number, y: number): SpeedyVector2;
+    private _create;
     /**
      * Create a Vector2 sink
      * @param {string} [name]
@@ -20,5 +27,4 @@ export class SpeedyPipelineVector2Factory extends Function {
      */
     Sink(name?: string | undefined): SpeedyPipelineNodeVector2Sink;
 }
-import { SpeedyVector2 } from "../../speedy-vector";
 import { SpeedyPipelineNodeVector2Sink } from "../nodes/vector2/sink";

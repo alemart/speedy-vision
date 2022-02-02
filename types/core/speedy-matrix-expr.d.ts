@@ -85,14 +85,14 @@ export class SpeedyMatrixExpr {
      * Evaluate this expression
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
-    _evaluate(wasm: WebAssembly.Instance, memory: AugmentedMemory): SpeedyMatrix;
+    _evaluate(wasm: WebAssembly.Instance, memory: SpeedyMatrixWASMMemory): SpeedyMatrix;
 }
 export type SpeedyMatrixDtype = import('./speedy-matrix').SpeedyMatrixDtype;
 export type SpeedyMatrixBufferType = import('./speedy-matrix').SpeedyMatrixBufferType;
 export type SpeedyMatrixBufferTypeConstructor = import('./speedy-matrix').SpeedyMatrixBufferTypeConstructor;
-export type AugmentedMemory = import('./speedy-matrix-wasm').AugmentedMemory;
+export type SpeedyMatrixWASMMemory = import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory;
 export type Dtype2BufferType = any;
 import { SpeedyMatrix } from "./speedy-matrix";

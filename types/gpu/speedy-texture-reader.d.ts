@@ -40,12 +40,12 @@ export class SpeedyTextureReader {
     constructor(numberOfBuffers?: number | undefined);
     /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
     _pixelBuffer: Uint8Array[];
+    /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+    _pbo: WebGLBuffer[];
     /** @type {ObservableQueue<Consumable>} for async data transfers */
     _consumer: ObservableQueue<Consumable>;
     /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
     _producer: ObservableQueue<BufferIndex>;
-    /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
-    _pbo: WebGLBuffer[];
     /** @type {boolean} is this object initialized? */
     _initialized: boolean;
     /** @type {boolean} is the producer-consumer mechanism initialized? */
