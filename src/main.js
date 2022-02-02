@@ -92,7 +92,7 @@ export default class Speedy
 
     /**
      * Create a 2D vector
-     * @returns {(x: number, y: number) => SpeedyVector2}
+     * @returns {SpeedyPipelineVector2Factory & ((x: number, y: number) => SpeedyVector2)}
      */
     static get Vector2()
     {
@@ -123,7 +123,7 @@ export default class Speedy
 
     /**
      * Create a Matrix (entries are given in column-major format)
-     * @returns {(rows: number, columns: number, entries: number[]) => SpeedyMatrix}
+     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix)}
      */
     static get Matrix()
     {
