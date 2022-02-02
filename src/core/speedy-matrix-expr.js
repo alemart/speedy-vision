@@ -26,7 +26,7 @@ import { AbstractMethodError } from '../utils/errors';
 /** @typedef {import('./speedy-matrix').SpeedyMatrixDtype} SpeedyMatrixDtype */
 /** @typedef {import('./speedy-matrix').SpeedyMatrixBufferType} SpeedyMatrixBufferType */
 /** @typedef {import('./speedy-matrix').SpeedyMatrixBufferTypeConstructor} SpeedyMatrixBufferTypeConstructor */
-/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory} SpeedyMatrixWASMMemory */
 
 /** @typedef {Object<SpeedyMatrixDtype,SpeedyMatrixBufferTypeConstructor>} Dtype2BufferType */
 
@@ -183,7 +183,7 @@ export class SpeedyMatrixExpr
      * Evaluate this expression
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -236,7 +236,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -269,7 +269,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
      * Compute the result of this operation
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -306,7 +306,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
@@ -343,7 +343,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
      * Compute the result of this operation
      * @abstract
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -371,7 +371,7 @@ class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = operand^T
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -402,7 +402,7 @@ class SpeedyMatrixInvertExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = operand ^ (-1)
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -450,7 +450,7 @@ class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryOperationExpr
     /**
      * Compute result = scalar * operand
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} operandptr pointer to Mat32
      */
@@ -479,7 +479,7 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left + right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -509,7 +509,7 @@ class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left - right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -539,7 +539,7 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left * right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32
@@ -569,7 +569,7 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
     /**
      * Compute result = left <compMult> right
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} resultptr pointer to Mat32
      * @param {number} leftptr pointer to Mat32
      * @param {number} rightptr pointer to Mat32

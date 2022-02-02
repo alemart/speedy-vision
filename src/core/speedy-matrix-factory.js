@@ -27,7 +27,13 @@ import { Utils } from '../utils/utils';
 import { IllegalArgumentError } from '../utils/errors';
 
 /**
- * A factory of matrices
+ * @function Matrix
+ *
+ * Create a new matrix filled with the specified size and entries
+ * @param {number} rows
+ * @param {number} [columns]
+ * @param {number[]} [entries] in column-major format
+ * @returns {SpeedyMatrix}
  */
 export class SpeedyMatrixFactory extends Function
 {
@@ -42,6 +48,8 @@ export class SpeedyMatrixFactory extends Function
     }
 
     /**
+     * @private
+     *
      * Create a new matrix filled with the specified size and entries
      * @param {number} rows
      * @param {number} [columns]
@@ -87,13 +95,23 @@ export class SpeedyMatrixFactory extends Function
     }
 
     /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    ready()
+    {
+        return SpeedyMatrix.ready();
+    }
+
+    /**
      * QR decomposition
      * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
      * @param {SpeedyMatrix} R is n x n (reduced) or m x n (full), output
      * @param {SpeedyMatrix} mat is m x n, input
      * @param {object} [options]
      * @param {'reduced'|'full'} [options.mode]
-     * @returns {SpeedyPromise<void>}
+     * @returns {SpeedyPromise<[SpeedyMatrix,SpeedyMatrix]>} resolves to [Q,R]
      */
     qr(Q, R, mat, { mode = 'reduced' } = {})
     {
@@ -111,7 +129,7 @@ export class SpeedyMatrixFactory extends Function
         else
             throw new IllegalArgumentError(`Invalid mode for QR: "${mode}"`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const Qptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, Q);
             const Rptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, R);
@@ -134,6 +152,9 @@ export class SpeedyMatrixFactory extends Function
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Aptr);
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Rptr);
             SpeedyMatrixWASM.deallocateMat32(wasm, memory, Qptr);
+
+            // done!
+            return [Q, R];
         });
     }
 
@@ -158,7 +179,7 @@ export class SpeedyMatrixFactory extends Function
         else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
             throw new IllegalArgumentError(`Invalid shapes`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const Aptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, A);
             const bptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, b);
@@ -211,7 +232,7 @@ export class SpeedyMatrixFactory extends Function
         else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
             throw new IllegalArgumentError(`Invalid shapes`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // select method
             switch(method) {
                 case 'qr':
@@ -241,7 +262,7 @@ export class SpeedyMatrixFactory extends Function
         else if(homography.rows != 3 || homography.columns != 3)
             throw new IllegalArgumentError(`The output of perspective() is a 3x3 homography`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -296,7 +317,7 @@ export class SpeedyMatrixFactory extends Function
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
             throw new IllegalArgumentError(`Invalid shape of the inliers mask`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -355,7 +376,7 @@ export class SpeedyMatrixFactory extends Function
         else if(transform.rows != 3 || transform.columns != 3)
             throw new IllegalArgumentError(`The perspective transformation must be a 3x3 matrix`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -396,7 +417,7 @@ export class SpeedyMatrixFactory extends Function
         else if(transform.rows != 2 || transform.columns != 3)
             throw new IllegalArgumentError(`The output of affine() is a 2x3 matrix`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -451,7 +472,7 @@ export class SpeedyMatrixFactory extends Function
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
             throw new IllegalArgumentError(`Invalid shape of the inliers mask`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -509,7 +530,7 @@ export class SpeedyMatrixFactory extends Function
         else if(transform.rows != 2 || transform.columns != 3)
             throw new IllegalArgumentError(`The affine transformation must be a 2x3 matrix`);
 
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
+        return SpeedyMatrixWASM.ready().then(({wasm, memory}) => {
             // allocate matrices
             const matptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);

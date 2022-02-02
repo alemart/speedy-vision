@@ -99,6 +99,28 @@ describe('Matrix', function() {
             expect(() => Speedy.Matrix.Zeros(-1, -1)).toThrow();
         });
 
+        it('fills a matrix', async function() {
+            const x = 10;
+            const data = new Array(9).fill(x);
+            const matrix = Speedy.Matrix.Zeros(3);
+
+            await matrix.fill(x);
+            printm(matrix);
+
+            expect(data).toBeElementwiseEqual(matrix.read());
+        });
+
+        it('synchronously fills a matrix', function() {
+            const x = 10;
+            const data = new Array(9).fill(x);
+            const matrix = Speedy.Matrix.Zeros(3);
+
+            matrix.fillSync(x);
+            printm(matrix);
+
+            expect(data).toBeElementwiseEqual(matrix.read());
+        });
+
         it('fills a row', async function() {
             const n = 5;
             const ones = new Array(n).fill(1);
@@ -178,6 +200,18 @@ describe('Matrix', function() {
             let I = Speedy.Matrix.Eye(3);
 
             await A.setTo(await B.setTo(I));
+            printm('A:', A, 'B:', B, 'I:', I);
+
+            expect(A.read()).toBeElementwiseEqual(I.read());
+            expect(B.read()).toBeElementwiseEqual(I.read());
+        });
+
+        it('handles synchronous assignment expressions', function() {
+            let A = Speedy.Matrix.Zeros(3, 3);
+            let B = Speedy.Matrix.Zeros(3, 3);
+            let I = Speedy.Matrix.Eye(3);
+
+            A.setToSync(B.setToSync(I));
             printm('A:', A, 'B:', B, 'I:', I);
 
             expect(A.read()).toBeElementwiseEqual(I.read());

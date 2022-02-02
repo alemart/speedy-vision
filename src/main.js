@@ -35,12 +35,18 @@ import { SpeedyPipelineVector2Factory } from './core/pipeline/factories/vector2-
 import { Utils } from './utils/utils';
 import { LITTLE_ENDIAN } from './utils/globals';
 
+/* eslint-disable no-undef */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
+
 // Constants
+
+/** @type {SpeedyMatrixFactory} */
 const matrixFactory = new SpeedyMatrixFactory();
+
+/** @type {SpeedyPipelineVector2Factory} */
 const vector2Factory = new SpeedyPipelineVector2Factory();
 
 

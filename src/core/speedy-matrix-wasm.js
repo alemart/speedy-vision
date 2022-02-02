@@ -26,17 +26,8 @@ import { LITTLE_ENDIAN } from '../utils/globals';
 
 /** @typedef {import('./speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 
-/** @type {Uint8Array} WebAssembly binary */
-const WASM_BINARY = require('./wasm/speedy-matrix.wasm.txt');
-
-/** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
-let _instance = null;
-
-/** @type {WebAssembly.Module|null} WebAssembly Module, to be loaded asynchronously */
-let _module = null;
-
 /**
- * @typedef {object} AugmentedMemory a union-like helper for accessing a WebAssembly.Memory object
+ * @typedef {object} SpeedyMatrixWASMMemory a union-like helper for accessing a WebAssembly.Memory object
  * @property {object} as
  * @property {WebAssembly.Memory} as.object
  * @property {Uint8Array} as.uint8
@@ -46,7 +37,23 @@ let _module = null;
  * @property {Float64Array} as.float64
  */
 
-/** @type {AugmentedMemory} Augmented WebAssembly Memory object */
+/**
+ * @typedef {object} SpeedyMatrixWASMHandle
+ * @property {WebAssembly.Instance} wasm
+ * @property {SpeedyMatrixWASMMemory} memory
+ * @property {WebAssembly.Module} module
+ */
+
+/** @type {Uint8Array} WebAssembly binary */
+const WASM_BINARY = require('./wasm/speedy-matrix.wasm.txt');
+
+/** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
+let _instance = null;
+
+/** @type {WebAssembly.Module|null} WebAssembly Module, to be loaded asynchronously */
+let _module = null;
+
+/** @type {SpeedyMatrixWASMMemory} Augmented WebAssembly Memory object */
 const _memory = (mem => ({
     as: {
         object: mem,
@@ -68,7 +75,7 @@ export class SpeedyMatrixWASM
 {
     /**
      * Gets you the WASM instance, augmented memory & module
-     * @returns {SpeedyPromise<[WebAssembly.Instance, AugmentedMemory, WebAssembly.Module]>}
+     * @returns {SpeedyPromise<SpeedyMatrixWASMHandle>}
      */
     static ready()
     {
@@ -78,8 +85,24 @@ export class SpeedyMatrixWASM
     }
 
     /**
+     * Synchronously gets you the WASM instance, augmented memory & module
+     * @returns {SpeedyMatrixWASMHandle}
+     */
+    static get handle()
+    {
+        if(!_instance || !_module)
+            throw new WebAssemblyError(`Can't get WASM handle: routines not yet loaded`);
+
+        return {
+            wasm: _instance,
+            memory: _memory,
+            module: _module,
+        };
+    }
+
+    /**
      * Gets you the WASM imports bound to a memory object
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {Object<string,Function>}
      */
     static imports(memory)
@@ -97,7 +120,7 @@ export class SpeedyMatrixWASM
     /**
      * Allocate a Mat32 in WebAssembly memory without copying any data
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {SpeedyMatrix} matrix
      * @returns {number} pointer to the new Mat32
      */
@@ -112,7 +135,7 @@ export class SpeedyMatrixWASM
     /**
      * Deallocate a Mat32 in WebAssembly
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to the allocated Mat32
      * @returns {number} NULL
      */
@@ -129,7 +152,7 @@ export class SpeedyMatrixWASM
     /**
      * Copy the data of a matrix to a WebAssembly Mat32
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to a Mat32
      * @param {SpeedyMatrix} matrix
      * @returns {number} matptr
@@ -155,7 +178,7 @@ export class SpeedyMatrixWASM
     /**
      * Copy the data of a WebAssembly Mat32 to a matrix
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @param {number} matptr pointer to a Mat32
      * @param {SpeedyMatrix} matrix
      * @returns {number} matptr
@@ -181,16 +204,16 @@ export class SpeedyMatrixWASM
 
     /**
      * Polls the WebAssembly instance until it's ready
-     * @param {Function} resolve
-     * @param {Function} reject
+     * @param {function(SpeedyMatrixWASMHandle): void} resolve
+     * @param {function(Error): void} reject
      * @param {number} [counter]
      */
     static _ready(resolve, reject, counter = 1000)
     {
         if(_instance !== null && _module !== null)
-            resolve([_instance, _memory, _module]);
+            resolve({ wasm: _instance, memory: _memory, module: _module });
         else if(counter <= 0)
-            reject(new TimeoutError(`Can't load WASM instance`));
+            reject(new TimeoutError(`Can't load WASM routines`));
         else
             setTimeout(SpeedyMatrixWASM._ready, 0, resolve, reject, counter - 1);
     }
@@ -203,7 +226,7 @@ class SpeedyMatrixWASMImports
 {
     /**
      * Constructor
-     * @param {AugmentedMemory} memory will be bound to this object
+     * @param {SpeedyMatrixWASMMemory} memory will be bound to this object
      */
     constructor(memory)
     {
@@ -217,7 +240,7 @@ class SpeedyMatrixWASMImports
             this[methodName] = this[methodName].bind(this);
         });
 
-        /** @type {AugmentedMemory} WASM memory */
+        /** @type {SpeedyMatrixWASMMemory} WASM memory */
         this.memory = memory;
 
         /** @type {CStringUtils} utilities related to C strings */
@@ -275,14 +298,14 @@ class CStringUtils
 {
     /**
      * Constructor
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      */
     constructor(memory)
     {
         /** @type {TextDecoder} */
         this._decoder = new TextDecoder('utf-8');
 
-        /** @type {AugmentedMemory} */
+        /** @type {SpeedyMatrixWASMMemory} */
         this._memory = memory;
     }
 
@@ -306,7 +329,7 @@ class CStringUtils
 
 /**
  * WebAssembly loader
- * @param {AugmentedMemory} memory
+ * @param {SpeedyMatrixWASMMemory} memory
  */
 (function loadWASM(memory) {
     const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));

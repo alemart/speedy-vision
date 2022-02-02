@@ -1656,6 +1656,66 @@ const twos = Speedy.Matrix.Zeros(5);
 await twos.fill(2);
 ```
 
+
+
+#### Synchronous writing
+
+Speedy provides synchronous writing methods for convenience.
+
+##### Speedy.Matrix.ready()
+
+`Speedy.Matrix.ready(): SpeedyPromise<void>`
+
+This method lets you know that the matrix routines are initialized and ready to be used (the WebAssembly routines need to be loaded before usage). You should only use the synchronous writing methods when the matrix routines are ready.
+
+###### Returns
+
+A `SpeedyPromise` that resolves immediately if the matrix routines are already initialized, or as soon as they are initialized.
+
+##### SpeedyMatrix.setToSync()
+
+`SpeedyMatrix.setToSync(expr: SpeedyMatrixExpr): SpeedyMatrix`
+
+Synchronously evaluate a matrix expression and store the result in `this` matrix.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. A matrix expression.
+
+###### Returns
+
+Returns `this` matrix after setting it to the result of `expr`.
+
+###### Example
+
+```js
+Speedy.Matrix.ready().then(() => {
+    const mat = Speedy.Matrix.Eye(3); // I := identity matrix
+    const pot = 3; // power-of-two
+
+    for(let i = 0; i < pot; i++)
+        mat.setToSync(mat.plus(mat)); // mat := mat + mat
+
+    console.log(mat.toString()); // mat will be (2^pot) * I
+});
+```
+
+##### SpeedyMatrix.fillSync()
+
+`SpeedyMatrix.fillSync(value: number): SpeedyMatrix`
+
+Synchronously fill `this` matrix with a scalar.
+
+###### Arguments
+
+* `value: number`. Scalar value.
+
+###### Returns
+
+Returns `this` matrix after filling it with the provided `value`.
+
+
+
 #### Access by block
 
 Speedy lets you work with blocks of matrices. This is a very handy feature! Blocks share memory with the originating matrices. If you modify the entries of a block of a matrix *M*, you'll modify the corresponding entries of *M*. Columns and rows are examples of blocks.

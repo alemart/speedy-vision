@@ -27,7 +27,8 @@ import { Utils } from '../utils/utils';
 /** @typedef {"float32"} SpeedyMatrixDtype Matrix data type */
 /** @typedef {Float32Array} SpeedyMatrixBufferType Buffer type */
 /** @typedef {Float32ArrayConstructor} SpeedyMatrixBufferTypeConstructor Buffer class */
-/** @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory} SpeedyMatrixWASMMemory */
+/** @typedef {import('./speedy-matrix-wasm').SpeedyMatrixWASMHandle} SpeedyMatrixWASMHandle */
 
 /**
  * Matrix class
@@ -129,6 +130,16 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
             data[j * rows + j] = 1;
 
         return new SpeedyMatrix(rows, columns, 1, rows, data);
+    }
+
+    /**
+     * Returns a promise that resolves immediately if the WebAssembly routines
+     * are ready to be used, or as soon as they do become ready
+     * @returns {SpeedyPromise<void>}
+     */
+    static ready()
+    {
+        return SpeedyMatrixWASM.ready().then(_ => void(0));
     }
 
     /**
@@ -292,49 +303,64 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
     /**
      * Set the contents of this matrix to the result of an expression
      * @param {SpeedyMatrixExpr} expr matrix expression
-     * @returns {SpeedyPromise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
      */
     setTo(expr)
     {
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            // evaluate the expression
-            const result = expr._evaluate(wasm, memory);
+        return SpeedyMatrixWASM.ready().then(_ => {
 
-            /*
-            // shallow copy the results to this matrix
-            // limitation: can't handle blocks properly
-            // (a tree-like structure could be useful)
-            this._rows = result.rows;
-            this._columns = result.columns;
-            //this._dtype = result.dtype;
-            this._data = result.data;
-            this._step0 = result.step0;
-            this._step1 = result.step1;
-            */
+            // TODO: add support for WebWorkers
+            return this.setToSync(expr);
 
-            // validate shape
-            Utils.assert(
-                this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
-                `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
-            );
-
-            // deep copy
-            const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
-            if(step0 === rstep0 && step1 === rstep1 && this._data.length === result._data.length) {
-                // fast copy
-                this._data.set(result._data);
-            }
-            else {
-                // copy each element
-                for(let column = this._columns - 1; column >= 0; column--) {
-                    for(let row = this._rows - 1; row >= 0; row--)
-                        this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
-                }
-            }
-
-            // done!
-            return this;
         });
+    }
+
+    /**
+     * Synchronously set the contents of this matrix to the result of an expression
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix} this
+     */
+    setToSync(expr)
+    {
+        const { wasm, memory } = SpeedyMatrixWASM.handle;
+
+        // evaluate the expression
+        const result = expr._evaluate(wasm, memory);
+
+        /*
+        // shallow copy the results to this matrix
+        // limitation: can't handle blocks properly
+        // (a tree-like structure could be useful)
+        this._rows = result.rows;
+        this._columns = result.columns;
+        //this._dtype = result.dtype;
+        this._data = result.data;
+        this._step0 = result.step0;
+        this._step1 = result.step1;
+        */
+
+        // validate shape
+        Utils.assert(
+            this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
+            `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
+        );
+
+        // deep copy
+        const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
+        if(step0 === rstep0 && step1 === rstep1 && this._data.length === result._data.length) {
+            // fast copy
+            this._data.set(result._data);
+        }
+        else {
+            // copy each element
+            for(let column = this._columns - 1; column >= 0; column--) {
+                for(let row = this._rows - 1; row >= 0; row--)
+                    this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
+            }
+        }
+
+        // done!
+        return this;
     }
 
     /**
@@ -344,11 +370,22 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
      */
     fill(value)
     {
+        this.fillSync(value);
+        return SpeedyPromise.resolve(this);
+    }
+
+    /**
+     * Synchronously fill this matrix with a scalar value
+     * @param {number} value
+     * @returns {SpeedyMatrix} this
+     */
+    fillSync(value)
+    {
         value = +value;
 
         if(this._rows * this._columns === this._data.length) {
             this._data.fill(value);
-            return SpeedyPromise.resolve(this);
+            return this;
         }
 
         for(let column = 0; column < this._columns; column++) {
@@ -357,13 +394,13 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
             }
         }
 
-        return SpeedyPromise.resolve(this);
+        return this;
     }
 
     /**
      * Evaluate this expression
      * @param {WebAssembly.Instance} wasm
-     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrixWASMMemory} memory
      * @returns {SpeedyMatrix}
      */
     _evaluate(wasm, memory)
