@@ -23,12 +23,7 @@ import { SpeedyVector2 } from '../../speedy-vector';
 import { SpeedyPipelineNodeVector2Sink } from '../nodes/vector2/sink';
 
 /**
- * @function Vector2
- *
- * Create a 2D vector
- * @param {number} x x-coordinate
- * @param {number} y y-coordinate
- * @returns {SpeedyVector2}
+ * 2D vectors
  */
 export class SpeedyPipelineVector2Factory extends Function
 {

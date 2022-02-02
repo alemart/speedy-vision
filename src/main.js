@@ -22,8 +22,10 @@
 import { SpeedyGL } from './gpu/speedy-gl';
 import { SpeedyMedia } from './core/speedy-media';
 import { FPSCounter } from './utils/fps-counter';
+import { SpeedyVector2 } from './core/speedy-vector';
 import { SpeedyPoint2 } from './core/speedy-point';
 import { SpeedySize } from './core/speedy-size';
+import { SpeedyMatrix } from './core/speedy-matrix';
 import { SpeedyMatrixFactory } from './core/speedy-matrix-factory';
 import { SpeedyPromise } from './utils/speedy-promise';
 import { SpeedyPipeline } from './core/pipeline/pipeline';
@@ -89,8 +91,8 @@ export default class Speedy
     }
 
     /**
-     * 2D vector instantiation and related nodes
-     * @returns {SpeedyPipelineVector2Factory}
+     * Create a 2D vector
+     * @returns {(x: number, y: number) => SpeedyVector2}
      */
     static get Vector2()
     {
@@ -120,8 +122,8 @@ export default class Speedy
     }
 
     /**
-     * Matrix routines
-     * @returns {SpeedyMatrixFactory}
+     * Create a Matrix (entries are given in column-major format)
+     * @returns {(rows: number, columns: number, entries: number[]) => SpeedyMatrix}
      */
     static get Matrix()
     {

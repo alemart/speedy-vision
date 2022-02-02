@@ -17,10 +17,10 @@ export default class Speedy {
      */
     static camera(widthOrConstraints?: number | MediaStreamConstraints | undefined, height?: number | undefined): SpeedyPromise<SpeedyMedia>;
     /**
-     * 2D vector instantiation and related nodes
-     * @returns {SpeedyPipelineVector2Factory}
+     * Create a 2D vector
+     * @returns {(x: number, y: number) => SpeedyVector2}
      */
-    static get Vector2(): SpeedyPipelineVector2Factory;
+    static get Vector2(): (x: number, y: number) => SpeedyVector2;
     /**
      * Create a 2D point
      * @param {number} x
@@ -36,10 +36,10 @@ export default class Speedy {
      */
     static Size(width: number, height: number): SpeedySize;
     /**
-     * Matrix routines
-     * @returns {SpeedyMatrixFactory}
+     * Create a Matrix (entries are given in column-major format)
+     * @returns {(rows: number, columns: number, entries: number[]) => SpeedyMatrix}
      */
-    static get Matrix(): SpeedyMatrixFactory;
+    static get Matrix(): (rows: number, columns: number, entries: number[]) => SpeedyMatrix;
     /**
      * Speedy Promises
      * @returns {typeof SpeedyPromise}
@@ -96,10 +96,10 @@ export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source'
 export type SpeedyPowerPreference = import('./gpu/speedy-gl').SpeedyPowerPreference;
 import { SpeedyPromise } from "./utils/speedy-promise";
 import { SpeedyMedia } from "./core/speedy-media";
-import { SpeedyPipelineVector2Factory } from "./core/pipeline/factories/vector2-factory";
+import { SpeedyVector2 } from "./core/speedy-vector";
 import { SpeedyPoint2 } from "./core/speedy-point";
 import { SpeedySize } from "./core/speedy-size";
-import { SpeedyMatrixFactory } from "./core/speedy-matrix-factory";
+import { SpeedyMatrix } from "./core/speedy-matrix";
 import { SpeedyPipeline } from "./core/pipeline/pipeline";
 import { SpeedyPipelineImageFactory } from "./core/pipeline/factories/image-factory";
 import { SpeedyPipelineFilterFactory } from "./core/pipeline/factories/filter-factory";

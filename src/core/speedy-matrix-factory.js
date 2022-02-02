@@ -27,13 +27,7 @@ import { Utils } from '../utils/utils';
 import { IllegalArgumentError } from '../utils/errors';
 
 /**
- * @function Matrix
- *
- * Create a new matrix filled with the specified size and entries
- * @param {number} rows
- * @param {number} [columns]
- * @param {number[]} [entries] in column-major format
- * @returns {SpeedyMatrix}
+ * Matrix routines
  */
 export class SpeedyMatrixFactory extends Function
 {
