@@ -409,8 +409,9 @@ export class SpeedyTextureReader
     static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
         const status = gl.clientWaitSync(sync, flags, 0);
-        const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
+        //const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
         //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+        const nextPollInterval = pollInterval; // constant poll interval
 
         if(remainingAttempts <= 0) {
             reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
