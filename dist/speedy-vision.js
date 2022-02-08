@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-02-02T17:43:13.417Z
+ * Date: 2022-02-08T02:16:35.478Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -796,12 +796,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * @function Vector2
- * 
- * Create a 2D vector
- * @param {number} x x-coordinate
- * @param {number} y y-coordinate
- * @returns {SpeedyVector2}
+ * 2D vectors
  */
 class SpeedyPipelineVector2Factory extends Function
 {
@@ -817,7 +812,7 @@ class SpeedyPipelineVector2Factory extends Function
 
     /**
      * @private
-     * 
+     *
      * Create a 2D vector
      * @param {number} x x-coordinate
      * @param {number} y y-coordinate
@@ -838,6 +833,7 @@ class SpeedyPipelineVector2Factory extends Function
         return new _nodes_vector2_sink__WEBPACK_IMPORTED_MODULE_1__.SpeedyPipelineNodeVector2Sink(name);
     }
 }
+
 
 /***/ }),
 
@@ -10748,13 +10744,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * @function Matrix
- * 
- * Create a new matrix filled with the specified size and entries
- * @param {number} rows
- * @param {number} [columns]
- * @param {number[]} [entries] in column-major format
- * @returns {SpeedyMatrix}
+ * Matrix routines
  */
 class SpeedyMatrixFactory extends Function
 {
@@ -10770,7 +10760,7 @@ class SpeedyMatrixFactory extends Function
 
     /**
      * @private
-     * 
+     *
      * Create a new matrix filled with the specified size and entries
      * @param {number} rows
      * @param {number} [columns]
@@ -18355,9 +18345,10 @@ class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            setTimeout(() => {
+            //setTimeout(() => {
+            requestAnimationFrame(() => {
                 SpeedyTextureReader._clientWaitAsync(gl, sync, 0, resolve, reject);
-            }, 0);
+            });
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
@@ -18382,8 +18373,9 @@ class SpeedyTextureReader
     static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
         const status = gl.clientWaitSync(sync, flags, 0);
-        const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
+        //const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
         //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+        //const nextPollInterval = pollInterval; // constant poll interval
 
         if(remainingAttempts <= 0) {
             reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.TimeoutError(`_checkStatus() is taking too long.`, _utils_errors__WEBPACK_IMPORTED_MODULE_5__.GLError.from(gl)));
@@ -18393,7 +18385,8 @@ class SpeedyTextureReader
         }
         else {
             //Utils.setZeroTimeout(SpeedyTextureReader._clientWaitAsync, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
-            setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
+            //setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
+            requestAnimationFrame(() => SpeedyTextureReader._clientWaitAsync(gl, sync, flags, resolve, reject, 0, remainingAttempts - 1)); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
         }
     }
 }
@@ -22177,18 +22170,19 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu/speedy-gl */ "./src/gpu/speedy-gl.js");
 /* harmony import */ var _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./core/speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
-/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
-/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _core_speedy_vector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -22226,7 +22220,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /* eslint-disable no-undef */
+/** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
@@ -22235,10 +22231,10 @@ __webpack_require__.r(__webpack_exports__);
 // Constants
 
 /** @type {SpeedyMatrixFactory} */
-const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__.SpeedyMatrixFactory();
+const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_6__.SpeedyMatrixFactory();
 
 /** @type {SpeedyPipelineVector2Factory} */
-const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineVector2Factory();
+const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineVector2Factory();
 
 
 
@@ -22274,14 +22270,14 @@ class Speedy
             },
         });
 
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.requestCameraStream(constraints).then(
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.requestCameraStream(constraints).then(
             video => _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__.SpeedyMedia.load(video)
         );
     }
 
     /**
-     * 2D vector instantiation and related nodes
-     * @returns {SpeedyPipelineVector2Factory}
+     * Create a 2D vector
+     * @returns {SpeedyPipelineVector2Factory & ((x: number, y: number) => SpeedyVector2)}
      */
     static get Vector2()
     {
@@ -22296,7 +22292,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_3__.SpeedyPoint2(x, y);
+        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_4__.SpeedyPoint2(x, y);
     }
 
     /**
@@ -22307,12 +22303,12 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_4__.SpeedySize(width, height);
+        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_5__.SpeedySize(width, height);
     }
 
     /**
-     * Matrix routines
-     * @returns {SpeedyMatrixFactory}
+     * Create a Matrix (entries are given in column-major format)
+     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix)}
      */
     static get Matrix()
     {
@@ -22325,7 +22321,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise;
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__.SpeedyPromise;
     }
 
     /**
@@ -22334,7 +22330,7 @@ class Speedy
      */
     static Pipeline()
     {
-        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__.SpeedyPipeline();
+        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipeline();
     }
 
     /**
@@ -22343,7 +22339,7 @@ class Speedy
      */
     static get Image()
     {
-        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipelineImageFactory;
+        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineImageFactory;
     }
 
     /**
@@ -22352,7 +22348,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineFilterFactory;
+        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineFilterFactory;
     }
 
     /**
@@ -22361,7 +22357,7 @@ class Speedy
      */
     static get Transform()
     {
-        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineTransformFactory;
+        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineTransformFactory;
     }
 
     /**
@@ -22370,7 +22366,7 @@ class Speedy
      */
     static get Keypoint()
     {
-        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineKeypointFactory;
+        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineKeypointFactory;
     }
 
     /**
@@ -22414,15 +22410,15 @@ class Speedy
 }
 
 // Notice
-_utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.log(
+_utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.log(
     `Speedy Vision v${Speedy.version}. ` +
     `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
     "https://github.com/alemart/speedy-vision"
 );
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_14__.LITTLE_ENDIAN)
-    _utils_utils__WEBPACK_IMPORTED_MODULE_13__.Utils.warning('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_15__.LITTLE_ENDIAN)
+    _utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.warning('Running on a big-endian machine');
 
 })();
 

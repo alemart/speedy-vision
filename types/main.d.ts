@@ -91,6 +91,7 @@ export default class Speedy {
      */
     static get powerPreference(): import("./gpu/speedy-gl").SpeedyPowerPreference;
 }
+export type SpeedyMatrix = import('./core/speedy-matrix').SpeedyMatrix;
 export type SpeedyMediaOptions = import('./core/speedy-media').SpeedyMediaOptions;
 export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source').SpeedyMediaSourceNativeElement;
 export type SpeedyPowerPreference = import('./gpu/speedy-gl').SpeedyPowerPreference;
@@ -101,7 +102,6 @@ import { SpeedyVector2 } from "./core/speedy-vector";
 import { SpeedyPoint2 } from "./core/speedy-point";
 import { SpeedySize } from "./core/speedy-size";
 import { SpeedyMatrixFactory } from "./core/speedy-matrix-factory";
-import { SpeedyMatrix } from "./core/speedy-matrix";
 import { SpeedyPipeline } from "./core/pipeline/pipeline";
 import { SpeedyPipelineImageFactory } from "./core/pipeline/factories/image-factory";
 import { SpeedyPipelineFilterFactory } from "./core/pipeline/factories/filter-factory";
