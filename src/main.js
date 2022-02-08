@@ -25,7 +25,6 @@ import { FPSCounter } from './utils/fps-counter';
 import { SpeedyVector2 } from './core/speedy-vector';
 import { SpeedyPoint2 } from './core/speedy-point';
 import { SpeedySize } from './core/speedy-size';
-import { SpeedyMatrix } from './core/speedy-matrix';
 import { SpeedyMatrixFactory } from './core/speedy-matrix-factory';
 import { SpeedyPromise } from './utils/speedy-promise';
 import { SpeedyPipeline } from './core/pipeline/pipeline';
@@ -38,6 +37,7 @@ import { Utils } from './utils/utils';
 import { LITTLE_ENDIAN } from './utils/globals';
 
 /* eslint-disable no-undef */
+/** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
