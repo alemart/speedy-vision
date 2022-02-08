@@ -382,9 +382,10 @@ export class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            setTimeout(() => {
+            //setTimeout(() => {
+            requestAnimationFrame(() => {
                 SpeedyTextureReader._clientWaitAsync(gl, sync, 0, resolve, reject);
-            }, 0);
+            });
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
@@ -411,7 +412,7 @@ export class SpeedyTextureReader
         const status = gl.clientWaitSync(sync, flags, 0);
         //const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
         //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
-        const nextPollInterval = pollInterval; // constant poll interval
+        //const nextPollInterval = pollInterval; // constant poll interval
 
         if(remainingAttempts <= 0) {
             reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
@@ -421,7 +422,8 @@ export class SpeedyTextureReader
         }
         else {
             //Utils.setZeroTimeout(SpeedyTextureReader._clientWaitAsync, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
-            setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
+            //setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
+            requestAnimationFrame(() => SpeedyTextureReader._clientWaitAsync(gl, sync, flags, resolve, reject, 0, remainingAttempts - 1)); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
         }
     }
 }
