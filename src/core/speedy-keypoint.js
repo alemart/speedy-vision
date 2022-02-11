@@ -84,12 +84,30 @@ export class SpeedyKeypoint
     }
 
     /**
+     * The x-position of this keypoint
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._position.x = +value;
+    }
+
+    /**
      * The y-position of this keypoint
      * @returns {number}
      */
     get y()
     {
         return this._position.y;
+    }
+
+    /**
+     * The y-position of this keypoint
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._position.y = +value;
     }
 
     /**
