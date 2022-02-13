@@ -409,21 +409,20 @@ export class SpeedyTextureReader
      */
     static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
-        const status = gl.clientWaitSync(sync, flags, 0);
-        //const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
-        //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
-        //const nextPollInterval = pollInterval; // constant poll interval
+        (function poll() {
+            const status = gl.clientWaitSync(sync, flags, 0);
 
-        if(remainingAttempts <= 0) {
-            reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
-        }
-        else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
-            resolve();
-        }
-        else {
-            //Utils.setZeroTimeout(SpeedyTextureReader._clientWaitAsync, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
-            //setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
-            requestAnimationFrame(() => SpeedyTextureReader._clientWaitAsync(gl, sync, flags, resolve, reject, 0, remainingAttempts - 1)); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
-        }
+            if(remainingAttempts-- <= 0) {
+                reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
+            }
+            else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
+                resolve();
+            }
+            else {
+                //Utils.setZeroTimeout(poll); // no ~4ms delay, resource-hungry
+                //setTimeout(poll, pollInterval); // easier on the CPU
+                requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+            }
+        })();
     }
 }
