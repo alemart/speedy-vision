@@ -27,7 +27,7 @@ export class Utils {
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
-     * @param {...any} args optional arguments to be passed to fn
+     * @param {any[]} args optional arguments to be passed to fn
      */
     static setZeroTimeout(fn: Function, ...args: any[]): void;
     /**

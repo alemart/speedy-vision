@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-02-08T02:16:35.478Z
+ * Date: 2022-02-15T21:15:53.926Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9977,12 +9977,30 @@ class SpeedyKeypoint
     }
 
     /**
+     * The x-position of this keypoint
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._position.x = +value;
+    }
+
+    /**
      * The y-position of this keypoint
      * @returns {number}
      */
     get y()
     {
         return this._position.y;
+    }
+
+    /**
+     * The y-position of this keypoint
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._position.y = +value;
     }
 
     /**
@@ -18345,10 +18363,7 @@ class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            //setTimeout(() => {
-            requestAnimationFrame(() => {
-                SpeedyTextureReader._clientWaitAsync(gl, sync, 0, resolve, reject);
-            });
+            setTimeout(SpeedyTextureReader._clientWaitAsync, 10, gl, sync, 0, resolve, reject);
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
@@ -18372,25 +18387,23 @@ class SpeedyTextureReader
      */
     static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
-        const status = gl.clientWaitSync(sync, flags, 0);
-        //const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
-        //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
-        //const nextPollInterval = pollInterval; // constant poll interval
+        (function poll() {
+            const status = gl.clientWaitSync(sync, flags, 0);
 
-        if(remainingAttempts <= 0) {
-            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.TimeoutError(`_checkStatus() is taking too long.`, _utils_errors__WEBPACK_IMPORTED_MODULE_5__.GLError.from(gl)));
-        }
-        else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
-            resolve();
-        }
-        else {
-            //Utils.setZeroTimeout(SpeedyTextureReader._clientWaitAsync, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
-            //setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
-            requestAnimationFrame(() => SpeedyTextureReader._clientWaitAsync(gl, sync, flags, resolve, reject, 0, remainingAttempts - 1)); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
-        }
+            if(remainingAttempts-- <= 0) {
+                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.TimeoutError(`_checkStatus() is taking too long.`, _utils_errors__WEBPACK_IMPORTED_MODULE_5__.GLError.from(gl)));
+            }
+            else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
+                resolve();
+            }
+            else {
+                //Utils.setZeroTimeout(poll); // no ~4ms delay, resource-hungry
+                //setTimeout(poll, pollInterval); // easier on the CPU
+                requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+            }
+        })();
     }
 }
-
 
 /***/ }),
 
@@ -20486,18 +20499,17 @@ const zeroTimeoutContext = (() => {
 
     return (function() {
         if(!initialized) {
+            initialized = true;
             window.addEventListener('message', ev => {
                 if(ev.source === window) {
                     const msgId = ev.data;
                     const obj = callbacks.get(msgId);
                     if(obj !== undefined) {
-                        ev.stopPropagation();
                         obj.fn.apply(window, obj.args);
                         callbacks.delete(msgId);
                     }
                 }
-            }, true);
-            initialized = true;
+            });
         }
 
         return callbacks;
@@ -20549,12 +20561,12 @@ class Utils
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
-     * @param {...any} args optional arguments to be passed to fn
+     * @param {any[]} args optional arguments to be passed to fn
      */
     static setZeroTimeout(fn, ...args)
     {
         const ctx = zeroTimeoutContext();
-        const msgId = '0%' + Math.random();
+        const msgId = '0%' + String(Math.random());
 
         ctx.set(msgId, { fn, args });
         window.postMessage(msgId, '*');

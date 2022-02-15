@@ -34,9 +34,19 @@ export class SpeedyKeypoint {
     get position(): SpeedyPoint2;
     /**
      * The x-position of this keypoint
+     * @param {number} value
+     */
+    set x(arg: number);
+    /**
+     * The x-position of this keypoint
      * @returns {number}
      */
     get x(): number;
+    /**
+     * The y-position of this keypoint
+     * @param {number} value
+     */
+    set y(arg: number);
     /**
      * The y-position of this keypoint
      * @returns {number}
