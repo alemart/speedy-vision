@@ -382,10 +382,7 @@ export class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            //setTimeout(() => {
-            requestAnimationFrame(() => {
-                SpeedyTextureReader._clientWaitAsync(gl, sync, 0, resolve, reject);
-            });
+            setTimeout(SpeedyTextureReader._clientWaitAsync, 10, gl, sync, 0, resolve, reject);
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);

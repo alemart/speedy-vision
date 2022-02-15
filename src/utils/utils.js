@@ -32,18 +32,17 @@ const zeroTimeoutContext = (() => {
 
     return (function() {
         if(!initialized) {
+            initialized = true;
             window.addEventListener('message', ev => {
                 if(ev.source === window) {
                     const msgId = ev.data;
                     const obj = callbacks.get(msgId);
                     if(obj !== undefined) {
-                        ev.stopPropagation();
                         obj.fn.apply(window, obj.args);
                         callbacks.delete(msgId);
                     }
                 }
-            }, true);
-            initialized = true;
+            });
         }
 
         return callbacks;
@@ -95,12 +94,12 @@ export class Utils
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
-     * @param {...any} args optional arguments to be passed to fn
+     * @param {any[]} args optional arguments to be passed to fn
      */
     static setZeroTimeout(fn, ...args)
     {
         const ctx = zeroTimeoutContext();
-        const msgId = '0%' + Math.random();
+        const msgId = '0%' + String(Math.random());
 
         ctx.set(msgId, { fn, args });
         window.postMessage(msgId, '*');
