@@ -425,36 +425,35 @@ export class SpeedyProgram extends Function
         gl.linkProgram(program);
         gl.validateProgram(program);
 
-        // got an error?
-        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
-            const errors = [
-                gl.getShaderInfoLog(fragmentShader),
-                gl.getShaderInfoLog(vertexShader),
-                gl.getProgramInfoLog(program),
-            ];
+        // return on success
+        if(gl.getProgramParameter(program, gl.LINK_STATUS))
+            return program;
 
-            gl.deleteProgram(program);
-            gl.deleteShader(fragmentShader);
-            gl.deleteShader(vertexShader);
+        // display an error
+        const errors = [
+            gl.getShaderInfoLog(fragmentShader),
+            gl.getShaderInfoLog(vertexShader),
+            gl.getProgramInfoLog(program),
+        ];
 
-            // display error
-            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
-            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
-            const formattedSource = fragmentShaderSource.split('\n')
-                .map((line, no) => col(1+no) + line)
-                .join('\n');
+        gl.deleteProgram(program);
+        gl.deleteShader(fragmentShader);
+        gl.deleteShader(vertexShader);
 
-            throw new GLError(
-                `Can't create shader.\n\n` +
-                `---------- ERROR ----------\n` +
-                errors.join('\n') + '\n\n' +
-                `---------- SOURCE CODE ----------\n` +
-                formattedSource
-            );
-        }
+        // display error
+        const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+        const col = k => new Array(spaces(k)).fill(' ').join('') + k + '. ';
+        const source = errors[0] ? fragmentShaderSource : vertexShaderSource;
+        const formattedSource = source.split('\n')
+            .map((line, no) => col(1+no) + line)
+            .join('\n');
 
-        // done!
-        return program;
+        throw new GLError(
+            `\n\n---------- ERROR ----------\n\n` +
+            errors.filter(err => err).join('\n') +
+            `\n\n---------- SOURCE CODE ----------\n\n` +
+            formattedSource + '\n'
+        );
     }
 }
 
