@@ -34,10 +34,9 @@ out vec2 v_pix0, v_pix1, v_pix2,
  */
 #define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)
 
-void main()
+void vsmain()
 {
     float pot = exp2(lod);
-    setupVertexShader();
 
     v_pix0 = PIX(-1,-1); v_pix1 = PIX(0,-1); v_pix2 = PIX(1,-1);
     v_pix3 = PIX(-1,0); v_pix4 = PIX(0,0); v_pix5 = PIX(1,0);

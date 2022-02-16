@@ -30,10 +30,9 @@ out vec2 v_topLeft, v_top, v_topRight,
          v_left, v_center, v_right,
          v_bottomLeft, v_bottom, v_bottomRight;
 
-void main()
+void vsmain()
 {
     float b = float(blockSize);
-    setupVertexShader();
 
     #define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)
     v_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);

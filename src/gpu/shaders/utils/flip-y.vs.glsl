@@ -19,8 +19,7 @@
  * Flip y-axis
  */
 
-void main()
+void vsmain()
 {
-    setupVertexShader();
     gl_Position *= vec4(1,-1,1,1);
 }

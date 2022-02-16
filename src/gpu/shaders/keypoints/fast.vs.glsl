@@ -38,10 +38,9 @@ out vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,
  */
 #define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)
 
-void main()
+void vsmain()
 {
     float pot = exp2(lod);
-    setupVertexShader();
 
     #if FAST_TYPE == 916
     v_pix0 = PIX(0,3); v_pix1 = PIX(1,3), v_pix2 = PIX(2,2), v_pix3 = PIX(3,1);

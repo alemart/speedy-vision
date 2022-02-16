@@ -41,16 +41,18 @@ layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTR
 out highp vec2 texCoord;
 uniform highp vec2 texSize;
 
-#define setupVertexShader() \
+#define vsinit() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
 texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
 \n\n`;
 
-const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
+const DEFAULT_VERTEX_SHADER = `#define vsmain() ;`;
+
+const DEFAULT_VERTEX_SHADER_SUFFIX = `\n\nvoid main() { vsinit(); vsmain(); }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 
-#if !(@FS_USE_CUSTOM_PRECISION@)
+#if @FS_USE_CUSTOM_PRECISION@ == 0
 precision mediump float; // ~float16
 precision mediump sampler2D;
 precision highp int; // int32
@@ -117,8 +119,8 @@ export class ShaderDeclaration
         /** @type {string} vertex shader source code (without preprocessing) */
         this._vssource = (() => {
             switch(options.type) {
-                case 'filepath': return options.vsfilepath ? require('./shaders/' + options.vsfilepath) : DEFAULT_VERTEX_SHADER_SUFFIX;
-                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER_SUFFIX;
+                case 'filepath': return options.vsfilepath ? require('./shaders/' + options.vsfilepath) : DEFAULT_VERTEX_SHADER;
+                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER;
                 default:         return /** @type {never} */ ( '' );
              }
         })();
@@ -127,7 +129,7 @@ export class ShaderDeclaration
         this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
 
         /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource);
+        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX);
 
         /** @type {string} filepath of the fragment shader */
         this._filepath = options.type === 'filepath' ? options.filepath : '<in-memory>';
@@ -220,7 +222,7 @@ export class ShaderDeclaration
 
         // update the shaders & the uniforms
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
-        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource;
+        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX;
         this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
         this._vertexSource = ShaderPreprocessor.run(vssource, this._defines);
         this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);

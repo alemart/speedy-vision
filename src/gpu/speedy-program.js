@@ -612,7 +612,7 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
     const setValue = /** @type {Function} */ ( gl[this.setter] );
 
     // check uniform type
-    if(this.type.endsWith('sampler2D') && typeof value === 'object') {
+    if(typeof value === 'object' && this.type.endsWith('sampler2D')) {
         // set texture
         if(texNo >= gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw new NotSupportedError(`Can't activate texture unit ${texNo}: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
