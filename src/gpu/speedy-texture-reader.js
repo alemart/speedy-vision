@@ -35,6 +35,13 @@ const DEFAULT_NUMBER_OF_BUFFERS = 2;
 //const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
+ * @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame"
+ */
+const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
+    ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
+    ((fn, ...args) => requestAnimationFrame(() => fn.apply(window, args))); // reduce battery usage
+
+/**
  * A Queue that notifies observers when it's not empty
  * @template T
  */
@@ -382,7 +389,7 @@ export class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            setTimeout(SpeedyTextureReader._clientWaitAsync, 10, gl, sync, 0, resolve, reject);
+            runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
