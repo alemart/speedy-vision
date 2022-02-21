@@ -91,6 +91,19 @@ export default class Speedy
     }
 
     /**
+     * Checks if Speedy can be executed in this machine & browser
+     * @returns {boolean} true if Speedy can be executed in this machine & browser
+     */
+    static isSupported()
+    {
+        return (
+            (typeof WebAssembly !== 'undefined') &&
+            (typeof WebGL2RenderingContext !== 'undefined') &&
+            (SpeedyGL.instance.gl != null)
+        );
+    }
+
+    /**
      * Create a 2D vector
      * @returns {SpeedyPipelineVector2Factory & ((x: number, y: number) => SpeedyVector2)}
      */

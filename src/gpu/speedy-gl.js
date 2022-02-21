@@ -22,7 +22,7 @@
 import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
 import { SpeedyPromise } from '../utils/speedy-promise';
-import { NotSupportedError } from '../utils/errors';
+import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 /** @typedef {'default' | 'low-power' | 'high-performance'} SpeedyPowerPreference */
 
@@ -66,18 +66,21 @@ export class SpeedyGL extends Observable
         Utils.assert(key === SINGLETON_KEY);
         super();
 
-        // does the browser support WebGL2?
-        if(typeof WebGL2RenderingContext === 'undefined')
-            throw new NotSupportedError(`This application requires WebGL2. Please use a different browser.`);
+
+
+        /** @type {boolean} internal flag */
+        this._reinitializeOnContextLoss = true;
 
         /** @type {HTMLCanvasElement} canvas */
         this._canvas = this._createCanvas(this._reinitialize.bind(this));
 
         /** @type {WebGL2RenderingContext} WebGL rendering context */
-        this._gl = this._createContext(this._canvas);
+        this._gl = null;
 
-        /** @type {boolean} internal flag */
-        this._reinitializeOnContextLoss = true;
+
+
+        // create WebGL2 rendering context
+        this._gl = this._createContext(this._canvas);
     }
 
     /**
@@ -139,6 +142,10 @@ export class SpeedyGL extends Observable
     _createContext(canvas)
     {
         Utils.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
+
+        // does the browser support WebGL2?
+        if(typeof WebGL2RenderingContext === 'undefined')
+            throw new NotSupportedError(`This application requires WebGL2. Please use a different browser.`);
 
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
@@ -244,15 +251,17 @@ export class SpeedyGL extends Observable
      */
     static set powerPreference(value)
     {
-        if(value === 'default' || value === 'low-power' || value === 'high-performance') {
-            // the power preference should be set before we create the WebGL context
-            if(instance == null || powerPreference !== value) {
-                powerPreference = value;
+        // validate
+        if(!(value === 'default' || value === 'low-power' || value === 'high-performance'))
+            throw new IllegalArgumentError(`Invalid powerPreference: "${value}"`);
 
-                // recreate the context if it already exists. Experimental.
-                if(instance != null)
-                    instance.loseAndRestoreContext();
-            }
+        // the power preference should be set before we create the WebGL context
+        if(instance == null || powerPreference !== value) {
+            powerPreference = value;
+
+            // recreate the context if it already exists. Experimental.
+            if(instance != null)
+                instance.loseAndRestoreContext();
         }
     }
 }

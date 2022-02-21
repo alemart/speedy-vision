@@ -2739,6 +2739,23 @@ Speedy includes a frames per second (FPS) counter for testing purposes. It will 
 console.log(Speedy.fps);
 ```
 
+##### Speedy.isSupported()
+
+`Speedy.isSupported(): boolean`
+
+Checks if Speedy is supported in this machine & browser.
+
+###### Returns
+
+Returns a boolean telling whether or not Speedy is supported in the client environment.
+
+###### Example
+
+```js
+if(!Speedy.isSupported())
+    alert('This application is not supported in this browser. Please use a different browser.');
+```
+
 ##### Speedy.powerPreference
 
 `Speedy.powerPreference: "default" | "low-power" | "high-performance"`
