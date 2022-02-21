@@ -33,4 +33,8 @@ describe('Speedy', function() {
         expect(Speedy.version).toBeDefined();
     });
 
+    it('is supported', function() {
+        expect(Speedy.isSupported()).toBeTrue();
+    });
+
 });
