@@ -17,6 +17,14 @@ export class SpeedyMatrixFactory extends Function {
      */
     private _create;
     /**
+     * @private
+     *
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    private _from;
+    /**
      * Create a new matrix filled with zeros with the specified size
      * @param {number} rows
      * @param {number} [columns]

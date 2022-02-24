@@ -37,7 +37,7 @@ export class SpeedyMatrixFactory extends Function
     constructor()
     {
         // This factory can be invoked as a function
-        super('...args', 'return this._create(...args)');
+        super('...args', 'return args.length > 1 ? this._create(...args) : this._from(args[0])');
         return this.bind(this);
     }
 
@@ -53,6 +53,18 @@ export class SpeedyMatrixFactory extends Function
     _create(rows, columns = rows, entries = [])
     {
         return SpeedyMatrix.Create(rows, columns, entries);
+    }
+
+    /**
+     * @private
+     *
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    _from(expr)
+    {
+        return SpeedyMatrix.From(expr);
     }
 
     /**

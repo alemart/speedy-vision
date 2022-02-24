@@ -41,6 +41,12 @@ export class SpeedyMatrix extends SpeedyMatrixExpr {
      */
     static Eye(rows: number, columns?: number | undefined, dtype?: "float32" | undefined): SpeedyMatrix;
     /**
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    static From(expr: SpeedyMatrixExpr): SpeedyMatrix;
+    /**
      * Returns a promise that resolves immediately if the WebAssembly routines
      * are ready to be used, or as soon as they do become ready
      * @returns {SpeedyPromise<void>}

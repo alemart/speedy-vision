@@ -74,7 +74,7 @@ export class SpeedyMatrixExpr
     }
 
     /**
-     * Number of rows
+     * Number of columns
      * @returns {number}
      */
     get columns()

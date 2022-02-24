@@ -33,7 +33,7 @@ export class SpeedyMatrixExpr {
      */
     get rows(): number;
     /**
-     * Number of rows
+     * Number of columns
      * @returns {number}
      */
     get columns(): number;

@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-02-15T21:15:53.926Z
+ * Date: 2022-02-24T17:30:56.117Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -43,7 +43,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -337,7 +337,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -708,7 +708,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -774,7 +774,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -862,7 +862,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -989,7 +989,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1211,7 +1211,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1300,7 +1300,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1431,7 +1431,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1648,7 +1648,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1813,7 +1813,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1986,7 +1986,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2139,7 +2139,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2299,7 +2299,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2410,7 +2410,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2614,7 +2614,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2759,7 +2759,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2866,7 +2866,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2991,7 +2991,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3166,7 +3166,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3324,7 +3324,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3481,7 +3481,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3577,7 +3577,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3692,7 +3692,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4081,7 +4081,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4249,7 +4249,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4468,7 +4468,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4600,7 +4600,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4748,7 +4748,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4924,7 +4924,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5159,7 +5159,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5360,7 +5360,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5496,7 +5496,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5607,7 +5607,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5839,7 +5839,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6015,7 +6015,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6573,7 +6573,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6776,7 +6776,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6966,7 +6966,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7234,7 +7234,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7351,7 +7351,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7519,7 +7519,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7688,7 +7688,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7908,7 +7908,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8388,7 +8388,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8806,7 +8806,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9148,7 +9148,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9282,7 +9282,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9404,7 +9404,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9719,7 +9719,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9797,7 +9797,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9894,7 +9894,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10135,7 +10135,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10208,7 +10208,7 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Number of rows
+     * Number of columns
      * @returns {number}
      */
     get columns()
@@ -10736,7 +10736,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10772,7 +10772,7 @@ class SpeedyMatrixFactory extends Function
     constructor()
     {
         // This factory can be invoked as a function
-        super('...args', 'return this._create(...args)');
+        super('...args', 'return args.length > 1 ? this._create(...args) : this._from(args[0])');
         return this.bind(this);
     }
 
@@ -10788,6 +10788,18 @@ class SpeedyMatrixFactory extends Function
     _create(rows, columns = rows, entries = [])
     {
         return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__.SpeedyMatrix.Create(rows, columns, entries);
+    }
+
+    /**
+     * @private
+     *
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    _from(expr)
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__.SpeedyMatrix.From(expr);
     }
 
     /**
@@ -11307,7 +11319,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11687,7 +11699,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11816,6 +11828,16 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
             data[j * rows + j] = 1;
 
         return new SpeedyMatrix(rows, columns, 1, rows, data);
+    }
+
+    /**
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    static From(expr)
+    {
+        return SpeedyMatrix.Zeros(expr.rows, expr.columns, expr.dtype).setToSync(expr);
     }
 
     /**
@@ -12116,7 +12138,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12728,7 +12750,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12999,7 +13021,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13055,7 +13077,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13192,7 +13214,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13316,7 +13338,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13512,7 +13534,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13715,7 +13737,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14228,7 +14250,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14333,7 +14355,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14426,7 +14448,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14554,7 +14576,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14594,16 +14616,18 @@ layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTR
 out highp vec2 texCoord;
 uniform highp vec2 texSize;
 
-#define setupVertexShader() \
+#define vsinit() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
 texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
 \n\n`;
 
-const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
+const DEFAULT_VERTEX_SHADER = `#define vsmain() ;`;
+
+const DEFAULT_VERTEX_SHADER_SUFFIX = `\n\nvoid main() { vsinit(); vsmain(); }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 
-#if !(@FS_USE_CUSTOM_PRECISION@)
+#if @FS_USE_CUSTOM_PRECISION@ == 0
 precision mediump float; // ~float16
 precision mediump sampler2D;
 precision highp int; // int32
@@ -14670,8 +14694,8 @@ class ShaderDeclaration
         /** @type {string} vertex shader source code (without preprocessing) */
         this._vssource = (() => {
             switch(options.type) {
-                case 'filepath': return options.vsfilepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + options.vsfilepath) : DEFAULT_VERTEX_SHADER_SUFFIX;
-                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER_SUFFIX;
+                case 'filepath': return options.vsfilepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + options.vsfilepath) : DEFAULT_VERTEX_SHADER;
+                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER;
                 default:         return /** @type {never} */ ( '' );
              }
         })();
@@ -14680,7 +14704,7 @@ class ShaderDeclaration
         this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__.ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
 
         /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__.ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource);
+        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__.ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX);
 
         /** @type {string} filepath of the fragment shader */
         this._filepath = options.type === 'filepath' ? options.filepath : '<in-memory>';
@@ -14773,7 +14797,7 @@ class ShaderDeclaration
 
         // update the shaders & the uniforms
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
-        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource;
+        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX;
         this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__.ShaderPreprocessor.run(source, this._defines);
         this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__.ShaderPreprocessor.run(vssource, this._defines);
         this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
@@ -14948,7 +14972,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15174,7 +15198,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15496,7 +15520,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15612,7 +15636,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15677,18 +15701,21 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.assert(key === SINGLETON_KEY);
         super();
 
-        // does the browser support WebGL2?
-        if(typeof WebGL2RenderingContext === 'undefined')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`This application requires WebGL2. Please use a different browser.`);
+
+
+        /** @type {boolean} internal flag */
+        this._reinitializeOnContextLoss = true;
 
         /** @type {HTMLCanvasElement} canvas */
         this._canvas = this._createCanvas(this._reinitialize.bind(this));
 
         /** @type {WebGL2RenderingContext} WebGL rendering context */
-        this._gl = this._createContext(this._canvas);
+        this._gl = null;
 
-        /** @type {boolean} internal flag */
-        this._reinitializeOnContextLoss = true;
+
+
+        // create WebGL2 rendering context
+        this._gl = this._createContext(this._canvas);
     }
 
     /**
@@ -15750,6 +15777,10 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
     _createContext(canvas)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
+
+        // does the browser support WebGL2?
+        if(typeof WebGL2RenderingContext === 'undefined')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.NotSupportedError(`This application requires WebGL2. Please use a different browser.`);
 
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
@@ -15855,19 +15886,20 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
      */
     static set powerPreference(value)
     {
-        if(value === 'default' || value === 'low-power' || value === 'high-performance') {
-            // the power preference should be set before we create the WebGL context
-            if(instance == null || powerPreference !== value) {
-                powerPreference = value;
+        // validate
+        if(!(value === 'default' || value === 'low-power' || value === 'high-performance'))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.IllegalArgumentError(`Invalid powerPreference: "${value}"`);
 
-                // recreate the context if it already exists. Experimental.
-                if(instance != null)
-                    instance.loseAndRestoreContext();
-            }
+        // the power preference should be set before we create the WebGL context
+        if(instance == null || powerPreference !== value) {
+            powerPreference = value;
+
+            // recreate the context if it already exists. Experimental.
+            if(instance != null)
+                instance.loseAndRestoreContext();
         }
     }
 }
-
 
 /***/ }),
 
@@ -15894,7 +15926,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16107,7 +16139,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16701,7 +16733,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16843,7 +16875,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17003,7 +17035,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17427,36 +17459,35 @@ class SpeedyProgram extends Function
         gl.linkProgram(program);
         gl.validateProgram(program);
 
-        // got an error?
-        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
-            const errors = [
-                gl.getShaderInfoLog(fragmentShader),
-                gl.getShaderInfoLog(vertexShader),
-                gl.getProgramInfoLog(program),
-            ];
+        // return on success
+        if(gl.getProgramParameter(program, gl.LINK_STATUS))
+            return program;
 
-            gl.deleteProgram(program);
-            gl.deleteShader(fragmentShader);
-            gl.deleteShader(vertexShader);
+        // display an error
+        const errors = [
+            gl.getShaderInfoLog(fragmentShader),
+            gl.getShaderInfoLog(vertexShader),
+            gl.getProgramInfoLog(program),
+        ];
 
-            // display error
-            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
-            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
-            const formattedSource = fragmentShaderSource.split('\n')
-                .map((line, no) => col(1+no) + line)
-                .join('\n');
+        gl.deleteProgram(program);
+        gl.deleteShader(fragmentShader);
+        gl.deleteShader(vertexShader);
 
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__.GLError(
-                `Can't create shader.\n\n` +
-                `---------- ERROR ----------\n` +
-                errors.join('\n') + '\n\n' +
-                `---------- SOURCE CODE ----------\n` +
-                formattedSource
-            );
-        }
+        // display error
+        const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+        const col = k => new Array(spaces(k)).fill(' ').join('') + k + '. ';
+        const source = errors[0] ? fragmentShaderSource : vertexShaderSource;
+        const formattedSource = source.split('\n')
+            .map((line, no) => col(1+no) + line)
+            .join('\n');
 
-        // done!
-        return program;
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__.GLError(
+            `\n\n---------- ERROR ----------\n\n` +
+            errors.filter(err => err).join('\n') +
+            `\n\n---------- SOURCE CODE ----------\n\n` +
+            formattedSource + '\n'
+        );
     }
 }
 
@@ -17614,7 +17645,7 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
     const setValue = /** @type {Function} */ ( gl[this.setter] );
 
     // check uniform type
-    if(this.type.endsWith('sampler2D') && typeof value === 'object') {
+    if(typeof value === 'object' && this.type.endsWith('sampler2D')) {
         // set texture
         if(texNo >= gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__.NotSupportedError(`Can't activate texture unit ${texNo}: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
@@ -17783,7 +17814,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17982,7 +18013,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18014,6 +18045,13 @@ __webpack_require__.r(__webpack_exports__);
  */
 const DEFAULT_NUMBER_OF_BUFFERS = 2;
 //const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
+
+/**
+ * @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame"
+ */
+const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
+    ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
+    ((fn, ...args) => requestAnimationFrame(() => fn.apply(window, args))); // reduce battery usage
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -18363,7 +18401,7 @@ class SpeedyTextureReader
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            setTimeout(SpeedyTextureReader._clientWaitAsync, 10, gl, sync, 0, resolve, reject);
+            runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
@@ -18424,7 +18462,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18518,7 +18556,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19248,7 +19286,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19571,7 +19609,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19707,7 +19745,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19822,7 +19860,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19918,7 +19956,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20390,7 +20428,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20468,7 +20506,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21233,7 +21271,7 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
   \************************************************/
 /***/ ((module) => {
 
-module.exports = "uniform mediump float lod;\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nout vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid main()\n{\nfloat pot = exp2(lod);\nsetupVertexShader();\n#if FAST_TYPE == 916\nv_pix0 = PIX(0,3); v_pix1 = PIX(1,3), v_pix2 = PIX(2,2), v_pix3 = PIX(3,1);\nv_pix4 = PIX(3,0); v_pix5 = PIX(3,-1), v_pix6 = PIX(2,-2), v_pix7 = PIX(1,-3);\nv_pix8 = PIX(0,-3); v_pix9 = PIX(-1,-3), v_pix10 = PIX(-2,-2), v_pix11 = PIX(-3,-1);\nv_pix12 = PIX(-3,0); v_pix13 = PIX(-3,1), v_pix14 = PIX(-2,2), v_pix15 = PIX(-1,3);\n#endif\n}"
+module.exports = "uniform mediump float lod;\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nout vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid vsmain()\n{\nfloat pot = exp2(lod);\n#if FAST_TYPE == 916\nv_pix0 = PIX(0,3); v_pix1 = PIX(1,3), v_pix2 = PIX(2,2), v_pix3 = PIX(3,1);\nv_pix4 = PIX(3,0); v_pix5 = PIX(3,-1), v_pix6 = PIX(2,-2), v_pix7 = PIX(1,-3);\nv_pix8 = PIX(0,-3); v_pix9 = PIX(-1,-3), v_pix10 = PIX(-2,-2), v_pix11 = PIX(-3,-1);\nv_pix12 = PIX(-3,0); v_pix13 = PIX(-3,1), v_pix14 = PIX(-2,2), v_pix15 = PIX(-1,3);\n#endif\n}"
 
 /***/ }),
 
@@ -21323,7 +21361,7 @@ module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecisi
   \***************************************************************/
 /***/ ((module) => {
 
-module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\nuniform mediump int blockSize;\nout vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\nvoid main()\n{\nfloat b = float(blockSize);\nsetupVertexShader();\n#define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)\nv_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);\nv_left = V(-1,0); v_center = V(0,0); v_right = V(1,0);\nv_bottomLeft = V(-1,1); v_bottom = V(0,1); v_bottomRight = V(1,1);\n}\n#endif"
+module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\nuniform mediump int blockSize;\nout vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\nvoid vsmain()\n{\nfloat b = float(blockSize);\n#define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)\nv_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);\nv_left = V(-1,0); v_center = V(0,0); v_right = V(1,0);\nv_bottomLeft = V(-1,1); v_bottom = V(0,1); v_bottomRight = V(1,1);\n}\n#endif"
 
 /***/ }),
 
@@ -21593,7 +21631,7 @@ module.exports = "uniform float value;\nvoid main()\n{\ncolor = vec4(value);\n}"
   \**********************************************/
 /***/ ((module) => {
 
-module.exports = "void main()\n{\nsetupVertexShader();\ngl_Position *= vec4(1,-1,1,1);\n}"
+module.exports = "void vsmain()\n{\ngl_Position *= vec4(1,-1,1,1);\n}"
 
 /***/ }),
 
@@ -21623,7 +21661,7 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
   \*********************************************************/
 /***/ ((module) => {
 
-module.exports = "uniform mediump float lod;\nout vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid main()\n{\nfloat pot = exp2(lod);\nsetupVertexShader();\nv_pix0 = PIX(-1,-1); v_pix1 = PIX(0,-1); v_pix2 = PIX(1,-1);\nv_pix3 = PIX(-1,0); v_pix4 = PIX(0,0); v_pix5 = PIX(1,0);\nv_pix6 = PIX(-1,1); v_pix7 = PIX(0,1); v_pix8 = PIX(1,1);\n}"
+module.exports = "uniform mediump float lod;\nout vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid vsmain()\n{\nfloat pot = exp2(lod);\nv_pix0 = PIX(-1,-1); v_pix1 = PIX(0,-1); v_pix2 = PIX(1,-1);\nv_pix3 = PIX(-1,0); v_pix4 = PIX(0,0); v_pix5 = PIX(1,0);\nv_pix6 = PIX(-1,1); v_pix7 = PIX(0,1); v_pix8 = PIX(1,1);\n}"
 
 /***/ }),
 
@@ -22198,7 +22236,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22235,6 +22273,7 @@ __webpack_require__.r(__webpack_exports__);
 
 /* eslint-disable no-undef */
 /** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
+/** @typedef {import('./core/speedy-matrix-expr').SpeedyMatrixExpr} SpeedyMatrixExpr */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
@@ -22288,6 +22327,19 @@ class Speedy
     }
 
     /**
+     * Checks if Speedy can be executed in this machine & browser
+     * @returns {boolean} true if Speedy can be executed in this machine & browser
+     */
+    static isSupported()
+    {
+        return (
+            (typeof WebAssembly !== 'undefined') &&
+            (typeof WebGL2RenderingContext !== 'undefined') &&
+            (_gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.instance.gl != null)
+        );
+    }
+
+    /**
      * Create a 2D vector
      * @returns {SpeedyPipelineVector2Factory & ((x: number, y: number) => SpeedyVector2)}
      */
@@ -22320,7 +22372,7 @@ class Speedy
 
     /**
      * Create a Matrix (entries are given in column-major format)
-     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix)}
+     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix) & ((expr: SpeedyMatrixExpr) => SpeedyMatrix)}
      */
     static get Matrix()
     {

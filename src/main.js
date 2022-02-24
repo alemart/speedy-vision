@@ -38,6 +38,7 @@ import { LITTLE_ENDIAN } from './utils/globals';
 
 /* eslint-disable no-undef */
 /** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
+/** @typedef {import('./core/speedy-matrix-expr').SpeedyMatrixExpr} SpeedyMatrixExpr */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 /** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
@@ -136,7 +137,7 @@ export default class Speedy
 
     /**
      * Create a Matrix (entries are given in column-major format)
-     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix)}
+     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix) & ((expr: SpeedyMatrixExpr) => SpeedyMatrix)}
      */
     static get Matrix()
     {

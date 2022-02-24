@@ -133,6 +133,16 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
     }
 
     /**
+     * Evaluate an expression synchronously and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyMatrix}
+     */
+    static From(expr)
+    {
+        return SpeedyMatrix.Zeros(expr.rows, expr.columns, expr.dtype).setToSync(expr);
+    }
+
+    /**
      * Returns a promise that resolves immediately if the WebAssembly routines
      * are ready to be used, or as soon as they do become ready
      * @returns {SpeedyPromise<void>}

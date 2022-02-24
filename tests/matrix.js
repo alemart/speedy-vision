@@ -218,6 +218,19 @@ describe('Matrix', function() {
             expect(B.read()).toBeElementwiseEqual(I.read());
         });
 
+        it('creates a new matrix from an expression', function() {
+            let alpha = 0.5, beta = 2;
+            let A = Speedy.Matrix.Ones(3);
+            let B = Speedy.Matrix.Eye(3);
+            let C = Speedy.Matrix( (A.times(alpha)).plus(B.times(beta)) );
+
+            let a = A.read(), b = B.read();
+            let result = Array.from({ length: 9 }, (_, i) => a[i] * alpha + b[i] * beta);
+
+            printm('A:', A, 'B:', B, 'alpha:', alpha, 'beta:', beta, 'alpha A + beta B:', C);
+            expect(C.read()).toBeElementwiseEqual(result);
+        });
+
     });
 
 

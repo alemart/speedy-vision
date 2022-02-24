@@ -17,6 +17,11 @@ export default class Speedy {
      */
     static camera(widthOrConstraints?: number | MediaStreamConstraints | undefined, height?: number | undefined): SpeedyPromise<SpeedyMedia>;
     /**
+     * Checks if Speedy can be executed in this machine & browser
+     * @returns {boolean} true if Speedy can be executed in this machine & browser
+     */
+    static isSupported(): boolean;
+    /**
      * Create a 2D vector
      * @returns {SpeedyPipelineVector2Factory & ((x: number, y: number) => SpeedyVector2)}
      */
@@ -37,9 +42,9 @@ export default class Speedy {
     static Size(width: number, height: number): SpeedySize;
     /**
      * Create a Matrix (entries are given in column-major format)
-     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix)}
+     * @returns {SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix) & ((expr: SpeedyMatrixExpr) => SpeedyMatrix)}
      */
-    static get Matrix(): SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix);
+    static get Matrix(): SpeedyMatrixFactory & ((rows: number, columns: number, entries: number[]) => SpeedyMatrix) & ((expr: SpeedyMatrixExpr) => SpeedyMatrix);
     /**
      * Speedy Promises
      * @returns {typeof SpeedyPromise}
@@ -92,6 +97,7 @@ export default class Speedy {
     static get powerPreference(): import("./gpu/speedy-gl").SpeedyPowerPreference;
 }
 export type SpeedyMatrix = import('./core/speedy-matrix').SpeedyMatrix;
+export type SpeedyMatrixExpr = import('./core/speedy-matrix-expr').SpeedyMatrixExpr;
 export type SpeedyMediaOptions = import('./core/speedy-media').SpeedyMediaOptions;
 export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source').SpeedyMediaSourceNativeElement;
 export type SpeedyPowerPreference = import('./gpu/speedy-gl').SpeedyPowerPreference;

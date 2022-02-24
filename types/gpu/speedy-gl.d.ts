@@ -23,12 +23,12 @@ export class SpeedyGL extends Observable {
      * @private
      */
     private constructor();
+    /** @type {boolean} internal flag */
+    _reinitializeOnContextLoss: boolean;
     /** @type {HTMLCanvasElement} canvas */
     _canvas: HTMLCanvasElement;
     /** @type {WebGL2RenderingContext} WebGL rendering context */
     _gl: WebGL2RenderingContext;
-    /** @type {boolean} internal flag */
-    _reinitializeOnContextLoss: boolean;
     /**
      * The WebGL Rendering Context
      * Be careful not to cache this, as the WebGL Rendering Context may be lost!

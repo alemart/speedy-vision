@@ -1374,17 +1374,22 @@ There are two basic classes you need to be aware of: `SpeedyMatrix` and `SpeedyM
 
 `Speedy.Matrix(rows: number, columns: number, entries?: number[]): SpeedyMatrix`
 
-Create a new matrix with the specified entries.
+`Speedy.Matrix(expr: SpeedyMatrixExpr): SpeedyMatrix`
+
+First form: create a new matrix with the specified size and entries.
+
+Second form: synchronously evaluate a matrix expression and store the result in a new matrix.
 
 ###### Arguments
 
 * `rows: number`. The number of rows of the matrix.
 * `columns: number, optional`. The number of columns of the matrix. If not specified, it will be set to `rows` (i.e., you'll get a square matrix).
 * `entries: number[], optional`. The elements of the matrix in column-major format. The length of this array must be `rows * columns`.
+* `expr: SpeedyMatrixExpr`. The matrix expression to be evaluated.
 
 ###### Returns
 
-A new `SpeedyMatrix` with the specified entries.
+A new `SpeedyMatrix`.
 
 ###### Example
 
