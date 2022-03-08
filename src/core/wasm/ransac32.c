@@ -48,9 +48,10 @@ static int compareHypotheses(const void* a, const void *b, void* context)
     return h2->score - h1->score;
 }
 
+/* This is a fast implementation of a preemptive RANSAC paradigm for WebAssembly. */
+
 /**
  * Find a homography matrix using a set of correspondences with outliers
- * This is a new implementation inspired by Nister's preemptive RANSAC idea
  * @param result 3x3 output homography matrix
  * @param mask OPTIONAL 1 x n output matrix, n >= 4, an inliers mask whose i-th entry will be 1 if the i-th input point is an inlier or 0 otherwise
  * @param src 2 x n input matrix, n >= 4, source coordinates (u,v)
@@ -254,7 +255,6 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
 
 /**
  * Find an affine transform using a set of correspondences with outliers
- * This is a new implementation inspired by Nister's preemptive RANSAC idea
  * @param result 2x3 output affine transform
  * @param mask OPTIONAL 1 x n output matrix, n >= 3, an inliers mask whose i-th entry will be 1 if the i-th input point is an inlier or 0 otherwise
  * @param src 2 x n input matrix, n >= 3, source coordinates (u,v)
