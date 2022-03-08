@@ -39,11 +39,9 @@ There are plenty of [demos](#demos) available!
 
 **speedy-vision.js** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
-If you appreciate my work, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). I appreciate it!
+If my work is of value to you, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). Thank you.
 
-Need specialized help? [Contact me on Otechie](https://otechie.com/alemart). [![Otechie](https://api.otechie.com/alemart/badge.svg)](https://otechie.com/alemart)
-
-For general enquiries, contact me at alemartf `at` gmail `dot` com.
+For general enquiries, contact me at `alemartf` `at` `gmail` `dot` `com`.
 
 -----
 
