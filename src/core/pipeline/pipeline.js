@@ -33,6 +33,14 @@ import { SpeedyKeypoint } from '../speedy-keypoint';
  * @typedef {Object<string,any>} SpeedyPipelineOutput
  */
 
+/** @type {SpeedyGPU} shared GPU programs & textures */
+let gpu = null;
+
+/** @type {number} gpu reference count */
+let referenceCount = 0;
+
+
+
 /**
  * A pipeline is a network of nodes in which data flows to a sink
  */
@@ -48,9 +56,6 @@ export class SpeedyPipeline
 
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
-
-        /** @type {SpeedyGPU} GPU instance */
-        this._gpu = null;
 
         /** @type {boolean} are we running the pipeline at this moment? */
         this._busy = false;
@@ -85,8 +90,11 @@ export class SpeedyPipeline
         else if(nodes.length == 0)
             throw new IllegalArgumentError(`Can't initialize the pipeline. Please specify its nodes`);
 
-        // create a GPU instance
-        this._gpu = new SpeedyGPU();
+        // create a GPU instance and increase the reference count
+        if(0 == referenceCount++) {
+            Utils.assert(!gpu, 'Duplicate SpeedyGPU instance');
+            gpu = new SpeedyGPU();
+        }
 
         // add nodes to the network
         for(let i = 0; i < nodes.length; i++) {
@@ -101,7 +109,7 @@ export class SpeedyPipeline
 
         // initialize nodes
         for(let i = 0; i < this._sequence.length; i++)
-            this._sequence[i].init(this._gpu);
+            this._sequence[i].init(gpu);
 
         // done!
         return this;
@@ -118,12 +126,13 @@ export class SpeedyPipeline
 
         // release nodes
         for(let i = this._sequence.length - 1; i >= 0; i--)
-            this._sequence[i].release(this._gpu);
+            this._sequence[i].release(gpu);
         this._sequence.length = 0;
         this._nodes.length = 0;
 
-        // release GPU
-        this._gpu = this._gpu.release();
+        // decrease reference count and release GPU if necessary
+        if(0 == --referenceCount)
+            gpu = gpu.release();
 
         // done!
         return null;
@@ -135,7 +144,7 @@ export class SpeedyPipeline
      */
     run()
     {
-        Utils.assert(this._gpu != null, `The pipeline has not been initialized or has been released`);
+        Utils.assert(this._sequence.length > 0, `The pipeline has not been initialized or has been released`);
 
         // is the pipeline busy?
         if(this._busy) {
@@ -157,7 +166,7 @@ export class SpeedyPipeline
         const template = SpeedyPipeline._createOutputTemplate(sinks);
 
         // run the pipeline
-        return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
+        return SpeedyPipeline._runSequence(this._sequence).then(() =>
 
             // export results
             SpeedyPromise.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
@@ -180,14 +189,24 @@ export class SpeedyPipeline
     }
 
     /**
+     * @internal
+     *
+     * GPU instance
+     * @returns {SpeedyGPU}
+     */
+    get _gpu()
+    {
+        return gpu;
+    }
+
+    /**
      * Execute the tasks of a sequence of nodes
      * @param {SpeedyPipelineNode[]} sequence sequence of nodes
-     * @param {SpeedyGPU} gpu GPU instance
      * @param {number} [i] in [0,n)
      * @param {number} [n] number of nodes
      * @returns {SpeedyPromise<void>}
      */
-    static _runSequence(sequence, gpu, i = 0, n = sequence.length)
+    static _runSequence(sequence, i = 0, n = sequence.length)
     {
         for(; i < n; i++) {
             const runTask = sequence[i].execute(gpu);
@@ -196,7 +215,7 @@ export class SpeedyPipeline
             gpu.gl.flush();
 
             if(typeof runTask !== 'undefined')
-                return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
+                return runTask.then(() => SpeedyPipeline._runSequence(sequence, i+1, n));
         }
 
         return SpeedyPromise.resolve();

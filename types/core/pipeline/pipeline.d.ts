@@ -1,20 +1,15 @@
 /**
- * A dictionary indexed by the names of the sink nodes
- * @typedef {Object<string,any>} SpeedyPipelineOutput
- */
-/**
  * A pipeline is a network of nodes in which data flows to a sink
  */
 export class SpeedyPipeline {
     /**
      * Execute the tasks of a sequence of nodes
      * @param {SpeedyPipelineNode[]} sequence sequence of nodes
-     * @param {SpeedyGPU} gpu GPU instance
      * @param {number} [i] in [0,n)
      * @param {number} [n] number of nodes
      * @returns {SpeedyPromise<void>}
      */
-    static _runSequence(sequence: SpeedyPipelineNode[], gpu: SpeedyGPU, i?: number | undefined, n?: number | undefined): SpeedyPromise<void>;
+    static _runSequence(sequence: SpeedyPipelineNode[], i?: number | undefined, n?: number | undefined): SpeedyPromise<void>;
     /**
      * Topological sorting
      * @param {SpeedyPipelineNode[]} nodes
@@ -42,8 +37,6 @@ export class SpeedyPipeline {
     _nodes: SpeedyPipelineNode[];
     /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
     _sequence: SpeedyPipelineNode[];
-    /** @type {SpeedyGPU} GPU instance */
-    _gpu: SpeedyGPU;
     /** @type {boolean} are we running the pipeline at this moment? */
     _busy: boolean;
     /**
@@ -69,6 +62,13 @@ export class SpeedyPipeline {
      * @returns {SpeedyPromise<SpeedyPipelineOutput>} results are indexed by the names of the sink nodes
      */
     run(): SpeedyPromise<SpeedyPipelineOutput>;
+    /**
+     * @private
+     *
+     * GPU instance
+     * @returns {SpeedyGPU}
+     */
+    private get _gpu();
 }
 /**
  * A dictionary indexed by the names of the sink nodes
@@ -77,5 +77,4 @@ export type SpeedyPipelineOutput = {
     [x: string]: any;
 };
 import { SpeedyPipelineNode } from "./pipeline-node";
-import { SpeedyGPU } from "../../gpu/speedy-gpu";
 import { SpeedyPromise } from "../../utils/speedy-promise";

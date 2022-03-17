@@ -59,6 +59,7 @@ const PROGRAM_HELPERS = Object.freeze({
 
 });
 
+
 /**
  * SpeedyProgramGroup
  * A semantically correlated group
@@ -96,7 +97,6 @@ export class SpeedyProgramGroup
             get: (() => {
                 // Why cast a symbol to symbol?
                 // Suppress error TS9005: Declaration emit for this file requires using private name 'key'.
-                //const key = Symbol(name);
                 const key = /** @type {symbol} */ ( Symbol(name) );
                 return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
             })()
