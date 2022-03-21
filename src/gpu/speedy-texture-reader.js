@@ -423,7 +423,6 @@ export class SpeedyTextureReader
                 resolve();
             }
             else {
-                //Utils.setZeroTimeout(poll); // no ~4ms delay, resource-hungry
                 //setTimeout(poll, pollInterval); // easier on the CPU
                 requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
             }
