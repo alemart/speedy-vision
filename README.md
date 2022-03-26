@@ -2730,7 +2730,13 @@ promise.then(() => {
 
 `Speedy.Settings.powerPreference: "default" | "low-power" | "high-performance"`
 
-The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices). Experimental.
+**Experimental**. The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices).
+
+##### Speedy.Settings.gpuPollingMode
+
+`Speedy.Settings.gpuPollingMode: "raf" | "asap"`
+
+**Experimental**. GPU polling mode. `"asap"` has slightly better performance than `"raf"`, at the cost of higher CPU usage.
 
 
 

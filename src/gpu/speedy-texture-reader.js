@@ -21,9 +21,11 @@
 
 import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
+import { Settings } from '../core/settings';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
+import { asap } from '../utils/asap';
 import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
 //const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
@@ -381,11 +383,16 @@ export class SpeedyTextureReader
 
         // wait for the commands to be processed by the GPU
         return new SpeedyPromise((resolve, reject) => {
+
             // according to the WebGL2 spec sec 3.7.14 Sync objects,
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+            if(Settings.gpuPollingMode != 'asap')
+                runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+            else
+                asap(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
@@ -413,14 +420,17 @@ export class SpeedyTextureReader
             const status = gl.clientWaitSync(sync, flags, 0);
 
             if(remainingAttempts-- <= 0) {
-                reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
+                reject(new TimeoutError(`GPU polling timeout`, GLError.from(gl)));
             }
             else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
                 resolve();
             }
             else {
-                //setTimeout(poll, pollInterval); // easier on the CPU
-                requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+                //setTimeout(poll, pollInterval);
+                if(Settings.gpuPollingMode != 'asap')
+                    requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+                else
+                    asap(poll);
             }
         })();
     }

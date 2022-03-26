@@ -24,7 +24,7 @@ import { Observable } from '../utils/observable';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
-/** @typedef {'default' | 'low-power' | 'high-performance'} SpeedyPowerPreference */
+/** @typedef {'default' | 'low-power' | 'high-performance'} PowerPreference */
 
 // Constants
 const SINGLETON_KEY = Symbol();
@@ -46,7 +46,7 @@ const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 /** @type {SpeedyGL} Singleton */
 let instance = null;
 
-/** @type {SpeedyPowerPreference} power preference */
+/** @type {PowerPreference} power preference */
 let powerPreference = DEFAULT_POWER_PREFERENCE;
 
 
@@ -238,7 +238,7 @@ export class SpeedyGL extends Observable
 
     /**
      * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * @returns {PowerPreference}
      */
     static get powerPreference()
     {
@@ -247,7 +247,7 @@ export class SpeedyGL extends Observable
 
     /**
      * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
+     * @param {PowerPreference} value
      */
     static set powerPreference(value)
     {

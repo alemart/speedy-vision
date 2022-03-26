@@ -21,8 +21,17 @@
 
 import { SpeedyNamespace } from './speedy-namespace';
 import { SpeedyGL } from '../gpu/speedy-gl';
+import { IllegalArgumentError } from '../utils/errors';
 
-/** @typedef {import('../gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
+/** @typedef {import('../gpu/speedy-gl').PowerPreference} PowerPreference */
+/** @typedef {"raf" | "asap"} GPUPollingMode */
+
+
+/** @type {GPUPollingMode} Default GPU polling mode */
+const DEFAULT_GPU_POLLING_MODE = 'raf';
+
+/** @type {GPUPollingMode} GPU polling mode */
+let gpuPollingMode = DEFAULT_GPU_POLLING_MODE;
 
 
 
@@ -33,7 +42,7 @@ export class Settings extends SpeedyNamespace
 {
     /**
      * Power preference of the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * @returns {PowerPreference}
      */
     static get powerPreference()
     {
@@ -42,10 +51,31 @@ export class Settings extends SpeedyNamespace
 
     /**
      * Power preference of the WebGL context
-     * @param {SpeedyPowerPreference} value
+     * @param {PowerPreference} value
      */
     static set powerPreference(value)
     {
         SpeedyGL.powerPreference = value;
+    }
+
+    /**
+     * GPU polling mode
+     * @returns {GPUPollingMode}
+     */
+    static get gpuPollingMode()
+    {
+        return gpuPollingMode;
+    }
+
+    /**
+     * GPU polling mode
+     * @param {GPUPollingMode} value
+     */
+    static set gpuPollingMode(value)
+    {
+        if(value !== 'raf' && value !== 'asap')
+            throw new IllegalArgumentError(`Invalid GPU polling mode: "${value}"`);
+
+        gpuPollingMode = value;
     }
 }
