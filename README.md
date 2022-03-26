@@ -275,6 +275,12 @@ function createCanvas(width, height)
 
 The media source associated with the `SpeedyMedia` object.
 
+##### SpeedyMedia.type
+
+`SpeedyMedia.type: string, read-only`
+
+The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"bitmap"`.
+
 ##### SpeedyMedia.width
 
 `SpeedyMedia.width: number, read-only`
@@ -287,11 +293,11 @@ The width of the media source, in pixels.
 
 The height of the media source, in pixels.
 
-##### SpeedyMedia.type
+##### SpeedyMedia.size
 
-`SpeedyMedia.type: string, read-only`
+`SpeedyMedia.size: SpeedySize, read-only`
 
-The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"bitmap"`.
+The size of the media, in pixels.
 
 ##### SpeedyMedia.options
 
@@ -314,16 +320,6 @@ Draws the media to a canvas.
 * `y: number, optional`. Y-position in the canvas. Defaults to `0`.
 * `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
 * `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
-
-##### SpeedyMedia.size()
-
-`SpeedyMedia.size(): SpeedySize`
-
-The size of the media, in pixels.
-
-###### Returns
-
-A `SpeedySize` object.
 
 ##### SpeedyMedia.clone()
 

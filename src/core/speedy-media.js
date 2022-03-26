@@ -111,24 +111,6 @@ export class SpeedyMedia
     }
 
     /**
-     * Gets the width of the media
-     * @returns {number} media width
-     */
-    get width()
-    {
-        return this._source ? this._source.width : 0;
-    }
-
-    /**
-     * Gets the height of the media
-     * @returns {number} media height
-     */
-    get height()
-    {
-        return this._source ? this._source.height : 0;
-    }
-
-    /**
      * The type of the media attached to this SpeedyMedia object
      * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
      */
@@ -156,6 +138,33 @@ export class SpeedyMedia
     }
 
     /**
+     * Gets the width of the media
+     * @returns {number} media width
+     */
+    get width()
+    {
+        return this._source ? this._source.width : 0;
+    }
+
+    /**
+     * Gets the height of the media
+     * @returns {number} media height
+     */
+    get height()
+    {
+        return this._source ? this._source.height : 0;
+    }
+
+    /**
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
+     */
+    get size()
+    {
+        return this._source ? new SpeedySize(this._source.width, this._source.height) : new SpeedySize(0, 0);
+    }
+
+    /**
      * Returns a read-only object featuring advanced options
      * related to this SpeedyMedia object
      * @returns {SpeedyMediaOptions}
@@ -163,15 +172,6 @@ export class SpeedyMedia
     get options()
     {
         return this._options;
-    }
-
-    /**
-     * The size of this media, in pixels
-     * @returns {SpeedySize}
-     */
-    size()
-    {
-        return new SpeedySize(this.width, this.height);
     }
 
     /**
