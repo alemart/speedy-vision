@@ -27,19 +27,15 @@ import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
 //const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
-
-/**
- * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
- */
-const DEFAULT_NUMBER_OF_BUFFERS = 2;
 //const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
-/**
- * @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame"
- */
+/** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
+const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+
+/** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
 const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
     ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
-    ((fn, ...args) => requestAnimationFrame(() => fn.apply(window, args))); // reduce battery usage
+    ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
 
 /**
  * A Queue that notifies observers when it's not empty
