@@ -21,6 +21,7 @@
 
 import { SpeedyGL } from './gpu/speedy-gl';
 import { SpeedyMedia } from './core/speedy-media';
+import { Settings } from './core/settings';
 import { FPSCounter } from './utils/fps-counter';
 import { SpeedyVector2 } from './core/speedy-vector';
 import { SpeedyPoint2 } from './core/speedy-point';
@@ -41,7 +42,6 @@ import { LITTLE_ENDIAN } from './utils/globals';
 /** @typedef {import('./core/speedy-matrix-expr').SpeedyMatrixExpr} SpeedyMatrixExpr */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
-/** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
 
 // Constants
@@ -220,21 +220,12 @@ export default class Speedy
     }
 
     /**
-     * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * Global settings
+     * @returns {typeof Settings}
      */
-    static get powerPreference()
+    static get Settings()
     {
-        return SpeedyGL.powerPreference;
-    }
-
-    /**
-     * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
-     */
-    static set powerPreference(value)
-    {
-        SpeedyGL.powerPreference = value;
+        return Settings;
     }
 }
 

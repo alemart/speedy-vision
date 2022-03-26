@@ -2722,6 +2722,18 @@ promise.then(() => {
 });
 ```
 
+
+
+#### Settings
+
+##### Speedy.Settings.powerPreference
+
+`Speedy.Settings.powerPreference: "default" | "low-power" | "high-performance"`
+
+The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices). Experimental.
+
+
+
 #### Utilities
 
 ##### Speedy.version
@@ -2758,9 +2770,3 @@ Returns a boolean telling whether or not Speedy is supported in the client envir
 if(!Speedy.isSupported())
     alert('This application is not supported in this browser. Please use a different browser.');
 ```
-
-##### Speedy.powerPreference
-
-`Speedy.powerPreference: "default" | "low-power" | "high-performance"`
-
-The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices). Experimental.
