@@ -135,7 +135,7 @@ describe('SpeedyMedia', function() {
         const media = await Speedy.load(image);
         const canvas = createCanvas(image.naturalWidth, image.naturalHeight);
 
-        media.draw(canvas);
+        draw(media, canvas);
         const error = imerr(image, canvas);
 
         display(image, 'Original image');
@@ -153,7 +153,7 @@ describe('SpeedyMedia', function() {
         const media = await Speedy.load(bitmap);
         const canvas = createCanvas(bitmap.width, bitmap.height);
 
-        media.draw(canvas);
+        draw(media, canvas);
         const error = imerr(bitmap, canvas);
 
         display(bitmap, 'Original bitmap');

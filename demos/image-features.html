@@ -88,7 +88,7 @@ window.onload = async function()
         const { keypoints } = await pipeline.run();
 
         // render features
-        media.draw(canvas);
+        draw(media, canvas);
         renderFeatures(canvas, keypoints);
         renderStatus(keypoints);
     }
@@ -140,6 +140,12 @@ function renderStatus(features)
 {
     const status = document.getElementById('status');
     status.innerText = `Keypoints: ${features.length}`;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

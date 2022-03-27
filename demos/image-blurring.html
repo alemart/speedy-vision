@@ -99,7 +99,7 @@ window.onload = async function()
 
         const { image } = await pipeline.run();
 
-        image.draw(canvas);
+        draw(image, canvas);
     }
     render();
 }
@@ -116,6 +116,12 @@ function createCanvas(width, height, title)
         document.body.appendChild(canvas);
 
     return canvas;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

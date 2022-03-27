@@ -69,7 +69,7 @@ window.onload = async function()
 
     // render the feature points
     const canvas = createCanvas(media.width, media.height, image.title);
-    media.draw(canvas);
+    draw(media, canvas);
     renderFeatures(canvas, keypoints);
 }
 
@@ -94,6 +94,12 @@ function renderFeatures(canvas, features, size = 1, color = 'yellow')
 
     context.strokeStyle = color;
     context.stroke();
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

@@ -115,7 +115,7 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                image.draw(canvas);
+                draw(image, canvas);
             }
 
             frameReady = false;
@@ -145,6 +145,12 @@ function renderStatus()
 {
     const status = document.getElementById('status');
     status.innerText = `FPS: ${Speedy.fps}`;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

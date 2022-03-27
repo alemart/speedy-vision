@@ -65,7 +65,7 @@ window.onload = async function()
 
     // Display the result
     const canvas = createCanvas(image.width, image.height, img.title);
-    image.draw(canvas);
+    draw(image, canvas);
 }
 
 function createCanvas(width, height, title)
@@ -80,6 +80,12 @@ function createCanvas(width, height, title)
         document.body.appendChild(canvas);
 
     return canvas;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

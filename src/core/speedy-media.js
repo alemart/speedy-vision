@@ -215,29 +215,6 @@ export class SpeedyMedia
     }
 
     /**
-     * Draws the media to a canvas
-     * @param {HTMLCanvasElement} canvas canvas element
-     * @param {number} [x] x-position
-     * @param {number} [y] y-position
-     * @param {number} [width] desired width
-     * @param {number} [height] desired height
-     */
-    draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
-    {
-        // fail silently if the media been released
-        if(this.isReleased())
-            return;
-
-        // validate parameters
-        width = Math.max(+width, 0);
-        height = Math.max(+height, 0);
-
-        // draw
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(this._source.data, +x, +y, width, height);
-    }
-
-    /**
      * Converts the media to an ImageBitmap
      * @returns {SpeedyPromise<ImageBitmap>}
      */

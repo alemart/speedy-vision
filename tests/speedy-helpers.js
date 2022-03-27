@@ -389,13 +389,13 @@ function createCanvasFromSpeedyMedia(media, title = '')
 
     if(isAnimated) {
         function animate() {
-            media.draw(canvas);
+            draw(media, canvas);
             requestAnimationFrame(animate);
         }
         animate();
     }
     else
-        media.draw(canvas);
+        draw(media, canvas);
 
     return canvas;
 }
@@ -410,6 +410,12 @@ function createCanvasFromPixels(width, height, pixels, title = '')
     ctx.putImageData(imageData, 0, 0);
 
     return canvas;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
 
 // Custom matchers for Jasmine

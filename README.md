@@ -181,9 +181,15 @@ pipeline.init(source, sink, greyscale);
 // Run the pipeline
 const { image } = await pipeline.run(); // image is a SpeedyMedia
 
+// Create a <canvas> to display the result
+const canvas = document.createElement('canvas');
+canvas.width = image.width;
+canvas.height = image.height;
+document.body.appendChild(canvas);
+
 // Display the result
-const canvas = createCanvas(image.width, image.height);
-image.draw(canvas);
+const ctx = canvas.getContext('2d');
+ctx.drawImage(media.source, 0, 0);
 ```
 
 Speedy provides many types of nodes. You can connect these nodes in a way that is suitable to your application, and Speedy will bring back the results you ask for.
@@ -245,10 +251,11 @@ A `SpeedyPromise<SpeedyMedia>` that resolves as soon as the media source is load
 window.onload = async function() {
     const media = await Speedy.camera();
     const canvas = createCanvas(media.width, media.height);
+    const ctx = canvas.getContext('2d');
 
     function render()
     {
-        media.draw(canvas);
+        ctx.drawImage(media.source, 0, 0);
         requestAnimationFrame(render);
     }
 
@@ -266,6 +273,16 @@ function createCanvas(width, height)
     return canvas;
 }
 ```
+
+##### SpeedyMedia.release()
+
+`SpeedyMedia.release(): null`
+
+Releases internal resources associated with this `SpeedyMedia`.
+
+###### Returns
+
+Returns `null`.
 
 #### Media properties
 
@@ -307,20 +324,6 @@ Read-only object defined when [loading the media](#speedyload). Deprecated.
 
 #### Playing with your media
 
-##### SpeedyMedia.draw()
-
-`SpeedyMedia.draw(canvas: HTMLCanvasElement, x?: number, y?: number, width?: number, height?: number): void`
-
-Draws the media to a canvas.
-
-###### Arguments
-
-* `canvas: HTMLCanvasElement`. The canvas element to which you'll draw.
-* `x: number, optional`. X-position in the canvas. Defaults to `0`.
-* `y: number, optional`. Y-position in the canvas. Defaults to `0`.
-* `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
-* `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
-
 ##### SpeedyMedia.clone()
 
 `SpeedyMedia.clone(): SpeedyPromise<SpeedyMedia>`
@@ -346,16 +349,6 @@ Converts the media to an `ImageBitmap`.
 ###### Returns
 
 A `SpeedyPromise` that resolves to an `ImageBitmap`.
-
-##### SpeedyMedia.release()
-
-`SpeedyMedia.release(): null`
-
-Releases internal resources associated with this `SpeedyMedia`.
-
-###### Returns
-
-Returns `null`.
 
 ### Pipeline
 

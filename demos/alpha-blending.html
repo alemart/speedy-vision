@@ -97,8 +97,8 @@ window.onload = async function()
                 speed.y = Math.abs(speed.y);
 
             // draw animation
-            background.draw(animatedCanvas);
-            sprite.draw(animatedCanvas, position.x, position.y);
+            draw(background, animatedCanvas);
+            draw(sprite, animatedCanvas, position.x, position.y);
             requestAnimationFrame(animate);
         }
 
@@ -148,7 +148,7 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                blended.draw(canvas);
+                draw(blended, canvas);
             }
 
             frameReady = false;
@@ -178,6 +178,12 @@ function renderStatus()
 {
     const status = document.getElementById('status');
     status.innerText = `FPS: ${Speedy.fps}`;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

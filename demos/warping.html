@@ -274,7 +274,7 @@ window.onload = async function()
         {
             if(frameReady) {
                 // render the warped image
-                image.draw(canvas);
+                draw(image, canvas);
 
                 // render the vertices
                 const TWO_PI = Math.PI * 2;
@@ -333,6 +333,12 @@ function renderStatus()
 {
     const status = document.getElementById('status');
     status.innerText = `FPS: ${Speedy.fps}`;
+}
+
+function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
+{
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(media.source, x, y, width, height);
 }
 
 function cursorPosition(canvas, event)
