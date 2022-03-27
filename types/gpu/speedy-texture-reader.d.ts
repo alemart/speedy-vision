@@ -138,6 +138,6 @@ declare class ObservableQueue<T> extends Observable {
 }
 import { SpeedyGPU } from "./speedy-gpu";
 import { SpeedyDrawableTexture } from "./speedy-texture";
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "../core/speedy-promise";
 import { Observable } from "../utils/observable";
 export {};

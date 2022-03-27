@@ -112,11 +112,6 @@ export class SpeedyTexture {
      */
     isReleased(): boolean;
     /**
-     * The size of this texture, in bytes
-     * @returns {number}
-     */
-    size(): number;
-    /**
      * The internal WebGLTexture
      * @returns {WebGLTexture}
      */

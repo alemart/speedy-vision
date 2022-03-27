@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-03-17T17:28:03.995Z
+ * Date: 2022-03-27T00:29:02.240Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -857,7 +857,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /*
  * speedy-vision.js
@@ -985,7 +985,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1207,7 +1207,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1296,7 +1296,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1427,7 +1427,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1644,7 +1644,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1809,7 +1809,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1982,7 +1982,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2134,7 +2134,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
@@ -2295,7 +2295,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2406,7 +2406,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2610,7 +2610,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2755,7 +2755,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_media_source__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-media-source */ "./src/core/speedy-media-source.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2829,7 +2829,7 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
     {
         const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__.SpeedyPromise(resolve => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_9__.SpeedyPromise(resolve => {
             const canvas = gpu.renderToCanvas(image);
             createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap => {
                 this._bitmap = bitmap;
@@ -2862,7 +2862,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2987,7 +2987,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3162,7 +3162,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3320,7 +3320,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3571,7 +3571,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
 /* harmony import */ var _descriptor__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./descriptor */ "./src/core/pipeline/nodes/keypoints/descriptors/descriptor.js");
 /*
@@ -3687,7 +3687,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
@@ -4076,7 +4076,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
@@ -4244,7 +4244,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
@@ -4461,7 +4461,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
@@ -4593,7 +4593,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
@@ -4744,7 +4744,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4879,8 +4879,9 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends _pipeline_node__WEB
                     encodedKeypoints, descriptorSize, extraSize, encoderLength,
                     passId
                 );
-                gpu.gl.flush();
+                //gpu.gl.flush();
             }
+            gpu.gl.flush();
 
             // copy the (k+1)-th best match to the filter
             if(matchesPerKeypoint > 1)
@@ -4920,7 +4921,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5154,7 +5155,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _gpu_speedy_lsh__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../gpu/speedy-lsh */ "./src/gpu/speedy-lsh.js");
 /*
  * speedy-vision.js
@@ -5356,7 +5357,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5492,7 +5493,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5603,7 +5604,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5835,7 +5836,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6006,7 +6007,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
 /* harmony import */ var _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../../../speedy-keypoint-descriptor */ "./src/core/speedy-keypoint-descriptor.js");
 /* harmony import */ var _speedy_keypoint_match__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../speedy-keypoint-match */ "./src/core/speedy-keypoint-match.js");
@@ -6153,7 +6154,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends _pipeline_node__WEBPACK_IMP
      */
     export()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__.SpeedyPromise.resolve(this._keypoints);
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_11__.SpeedyPromise.resolve(this._keypoints);
     }
 
     /**
@@ -6567,7 +6568,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
 /*
@@ -6772,7 +6773,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6961,7 +6962,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
@@ -7228,7 +7229,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /*
@@ -7345,7 +7346,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /*
@@ -7515,7 +7516,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -7683,7 +7684,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
 /*
  * speedy-vision.js
@@ -7792,7 +7793,7 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     export()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__.SpeedyPromise.resolve(this._vectors);
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_7__.SpeedyPromise.resolve(this._vectors);
     }
 
     /**
@@ -8378,7 +8379,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _pipeline_port__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pipeline-port */ "./src/core/pipeline/pipeline-port.js");
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
@@ -9394,7 +9395,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "SpeedyPipeline": () => (/* binding */ SpeedyPipeline)
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pipeline-node */ "./src/core/pipeline/pipeline-node.js");
 /* harmony import */ var _pipeline_port__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pipeline-port */ "./src/core/pipeline/pipeline-port.js");
@@ -9552,7 +9553,7 @@ class SpeedyPipeline
         // is the pipeline busy?
         if(this._busy) {
             // if so, we need to wait 'til it finishes
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
+            return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
                 setTimeout(() => this.run().then(resolve, reject), 0);
             });
         }
@@ -9572,7 +9573,7 @@ class SpeedyPipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>
 
             // export results
-            _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
+            _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
 
                 // aggregate results by the names of the sinks
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
@@ -9592,7 +9593,7 @@ class SpeedyPipeline
     }
 
     /**
-     * @private
+     * @internal
      *
      * GPU instance
      * @returns {SpeedyGPU}
@@ -9621,7 +9622,7 @@ class SpeedyPipeline
                 return runTask.then(() => SpeedyPipeline._runSequence(sequence, i+1, n));
         }
 
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.resolve();
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise.resolve();
     }
 
     /**
@@ -9721,6 +9722,104 @@ class SpeedyPipeline
     }
 }
 
+
+/***/ }),
+
+/***/ "./src/core/settings.js":
+/*!******************************!*\
+  !*** ./src/core/settings.js ***!
+  \******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "Settings": () => (/* binding */ Settings)
+/* harmony export */ });
+/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../gpu/speedy-gl */ "./src/gpu/speedy-gl.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * settings.js
+ * Global settings
+ */
+
+
+
+
+
+/** @typedef {import('../gpu/speedy-gl').PowerPreference} PowerPreference */
+/** @typedef {"raf" | "asap"} GPUPollingMode */
+
+
+/** @type {GPUPollingMode} Default GPU polling mode */
+const DEFAULT_GPU_POLLING_MODE = 'raf';
+
+/** @type {GPUPollingMode} GPU polling mode */
+let gpuPollingMode = DEFAULT_GPU_POLLING_MODE;
+
+
+
+/**
+ * Global settings
+ */
+class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__.SpeedyNamespace
+{
+    /**
+     * Power preference of the WebGL context
+     * @returns {PowerPreference}
+     */
+    static get powerPreference()
+    {
+        return _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__.SpeedyGL.powerPreference;
+    }
+
+    /**
+     * Power preference of the WebGL context
+     * @param {PowerPreference} value
+     */
+    static set powerPreference(value)
+    {
+        _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__.SpeedyGL.powerPreference = value;
+    }
+
+    /**
+     * GPU polling mode
+     * @returns {GPUPollingMode}
+     */
+    static get gpuPollingMode()
+    {
+        return gpuPollingMode;
+    }
+
+    /**
+     * GPU polling mode
+     * @param {GPUPollingMode} value
+     */
+    static set gpuPollingMode(value)
+    {
+        if(value !== 'raf' && value !== 'asap')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__.IllegalArgumentError(`Invalid GPU polling mode: "${value}"`);
+
+        gpuPollingMode = value;
+    }
+}
 
 /***/ }),
 
@@ -10749,7 +10848,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-matrix-expr */ "./src/core/speedy-matrix-expr.js");
 /* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix-wasm */ "./src/core/speedy-matrix-wasm.js");
 /* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-matrix */ "./src/core/speedy-matrix.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
@@ -11331,7 +11430,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "SpeedyMatrixWASM": () => (/* binding */ SpeedyMatrixWASM)
 /* harmony export */ });
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
@@ -11416,7 +11515,7 @@ class SpeedyMatrixWASM
      */
     static ready()
     {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_0__.SpeedyPromise((resolve, reject) => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_0__.SpeedyPromise((resolve, reject) => {
             SpeedyMatrixWASM._ready(resolve, reject);
         });
     }
@@ -11676,7 +11775,7 @@ class CStringUtils
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__.NotSupportedError(`Can't run WebAssembly code: not in a little-endian machine!`);
 
     // Load the WASM binary
-    _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_0__.SpeedyPromise.resolve(WASM_BINARY)
+    _speedy_promise__WEBPACK_IMPORTED_MODULE_0__.SpeedyPromise.resolve(WASM_BINARY)
     .then(data => base64decode(data))
     .then(bytes => WebAssembly.instantiate(bytes, {
         env: {
@@ -11713,7 +11812,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-matrix-expr */ "./src/core/speedy-matrix-expr.js");
 /* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix-wasm */ "./src/core/speedy-matrix-wasm.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -12098,7 +12197,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__.Spee
     fill(value)
     {
         this.fillSync(value);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise.resolve(this);
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise.resolve(this);
     }
 
     /**
@@ -12151,7 +12250,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "SpeedyMediaSource": () => (/* binding */ SpeedyMediaSource)
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /*
@@ -12313,7 +12412,7 @@ class SpeedyMediaSource
      */
     static _waitUntil(element, eventName, timeout = 30000)
     {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
             _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.log(`Waiting for ${eventName} to be triggered in ${element}...`);
 
             const timer = setTimeout(() => {
@@ -12406,7 +12505,7 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
             this.release();
 
         if(image.complete && image.naturalWidth !== 0) { // already loaded?
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
+            return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
                 this._data = image;
                 resolve(this);
             });
@@ -12510,7 +12609,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
             this.release();
 
         if(video.readyState >= 4) { // already loaded?
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
+            return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
                 this._data = video;
                 resolve(this);
             });
@@ -12615,7 +12714,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
             this._data = canvas;
             resolve(this);
         });
@@ -12695,7 +12794,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__.IllegalOperationError(`Media not loaded`);
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
             createImageBitmap(this._data).then(
                 newBitmap => {
                     const newSource = new SpeedyBitmapMediaSource(PRIVATE_TOKEN);
@@ -12728,7 +12827,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise(resolve => {
             this._data = bitmap;
             resolve(this);
         });
@@ -12764,7 +12863,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-media-source */ "./src/core/speedy-media-source.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
 /*
  * speedy-vision.js
@@ -12879,24 +12978,6 @@ class SpeedyMedia
     }
 
     /**
-     * Gets the width of the media
-     * @returns {number} media width
-     */
-    get width()
-    {
-        return this._source ? this._source.width : 0;
-    }
-
-    /**
-     * Gets the height of the media
-     * @returns {number} media height
-     */
-    get height()
-    {
-        return this._source ? this._source.height : 0;
-    }
-
-    /**
      * The type of the media attached to this SpeedyMedia object
      * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
      */
@@ -12924,6 +13005,33 @@ class SpeedyMedia
     }
 
     /**
+     * Gets the width of the media
+     * @returns {number} media width
+     */
+    get width()
+    {
+        return this._source ? this._source.width : 0;
+    }
+
+    /**
+     * Gets the height of the media
+     * @returns {number} media height
+     */
+    get height()
+    {
+        return this._source ? this._source.height : 0;
+    }
+
+    /**
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
+     */
+    get size()
+    {
+        return this._source ? new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(this._source.width, this._source.height) : new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(0, 0);
+    }
+
+    /**
      * Returns a read-only object featuring advanced options
      * related to this SpeedyMedia object
      * @returns {SpeedyMediaOptions}
@@ -12931,15 +13039,6 @@ class SpeedyMedia
     get options()
     {
         return this._options;
-    }
-
-    /**
-     * The size of this media, in pixels
-     * @returns {SpeedySize}
-     */
-    size()
-    {
-        return new _speedy_size__WEBPACK_IMPORTED_MODULE_7__.SpeedySize(this.width, this.height);
     }
 
     /**
@@ -12979,30 +13078,7 @@ class SpeedyMedia
         const clone = new SpeedyMedia(PRIVATE_TOKEN, this._source, this._options);
 
         // done!
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise.resolve(clone);
-    }
-
-    /**
-     * Draws the media to a canvas
-     * @param {HTMLCanvasElement} canvas canvas element
-     * @param {number} [x] x-position
-     * @param {number} [y] y-position
-     * @param {number} [width] desired width
-     * @param {number} [height] desired height
-     */
-    draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
-    {
-        // fail silently if the media been released
-        if(this.isReleased())
-            return;
-
-        // validate parameters
-        width = Math.max(+width, 0);
-        height = Math.max(+height, 0);
-
-        // draw
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(this._source.data, +x, +y, width, height);
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise.resolve(clone);
     }
 
     /**
@@ -13016,9 +13092,9 @@ class SpeedyMedia
         else if(!this._source.isLoaded())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__.IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
         else if(this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__.MediaType.Bitmap)
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise.resolve(this._source.data);
+            return _speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise.resolve(this._source.data);
         else
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
+            return new _speedy_promise__WEBPACK_IMPORTED_MODULE_6__.SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 }
 
@@ -13216,6 +13292,475 @@ class SpeedyPoint2
         return this.x === p.x && this.y === p.y;
     }
 }
+
+/***/ }),
+
+/***/ "./src/core/speedy-promise.js":
+/*!************************************!*\
+  !*** ./src/core/speedy-promise.js ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SpeedyPromise": () => (/* binding */ SpeedyPromise)
+/* harmony export */ });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-promise.js
+ * Speedy Promises: a fast implementation of Promises
+ */
+
+const PENDING = 0;
+const FULFILLED = 1;
+const REJECTED = 2;
+
+const SUSPEND_ASYNC = 1;
+const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
+             (typeof process !== 'undefined' && process.nextTick) || // node.js
+             (f => Promise.resolve().then(() => f())); // most compatible
+
+/**
+ * SpeedyPromise: Super Fast Promises. SpeedyPromises can
+ * interoperate with ES6 Promises. This implementation is
+ * based on the Promises/A+ specification.
+ * @template T
+ */
+class SpeedyPromise
+{
+    /**
+     * Constructor
+     * @param {function(function(T=): void, function(Error): void): void} callback
+     */
+    constructor(callback)
+    {
+        this._state = PENDING;
+        this._value = undefined;
+
+        this._onFulfillment = null;
+        this._onRejection = null;
+        this._children = 0;
+        this[0] = this;
+        this._parent = undefined;
+        this._flags = 0;
+
+        this._fulfill = this._fulfill.bind(this);
+        this._reject = this._reject.bind(this);
+        this._resolve = this._resolve.bind(this);
+        this._broadcastIfAsync = this._broadcastIfAsync.bind(this);
+
+        callback(this._fulfill, this._reject);
+    }
+
+    /**
+     * Setup handlers
+     * @template U, V=never
+     * @param {null|undefined|(function(T): U|PromiseLike<U>|SpeedyPromise<U>)} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise<U>}
+     */
+    then(onFulfillment, onRejection = null)
+    {
+        const child = new SpeedyPromise(this._nop);
+        child._onFulfillment = typeof onFulfillment === 'function' && onFulfillment;
+        child._onRejection = typeof onRejection === 'function' && onRejection;
+        child._parent = this;
+
+        this[this._children++] = child; // attach child
+        this._flags &= ~SUSPEND_ASYNC; // restore the async behavior
+        this._notify();
+
+        return child;
+    }
+
+    /**
+     * Setup rejection handler
+     * @template U, V=never
+     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise<V>}
+     */
+    catch(onRejection)
+    {
+        return this.then(null, onRejection);
+    }
+
+    /**
+     * Execute a callback when the promise is settled
+     * (i.e., fulfilled or rejected)
+     * @param {function(): void} onFinally
+     * @returns {SpeedyPromise<T>}
+     */
+    finally(onFinally)
+    {
+        const fn = val => { onFinally(); return val; };
+        return this.then(fn, fn);
+    }
+
+    /**
+     * Start the computation immediately, synchronously.
+     * Can't afford to spend any time at all waiting for micro-tasks, etc.
+     * @returns {SpeedyPromise<T>} this
+     */
+    turbocharge()
+    {
+        let my = this;
+
+        // suspend the async behavior
+        this._flags |= SUSPEND_ASYNC;
+        while(my._parent !== undefined) {
+            my = my._parent;
+            my._flags |= SUSPEND_ASYNC;
+        }
+
+        // notify the children of the root
+        my._notify(); // will be synchronous
+
+        // return this SpeedyPromise
+        return this;
+    }
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        switch(this._state) {
+            case PENDING:
+                return `SpeedyPromise { <pending> }`;
+            case FULFILLED:
+                return `SpeedyPromise { <fulfilled> ${this._value} }`;
+            case REJECTED:
+                return `SpeedyPromise { <rejected> ${this._value} }`;
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Symbol.toStringTag
+     * @returns {string}
+     */
+    get [Symbol.toStringTag]()
+    {
+        return 'SpeedyPromise';
+    }
+
+    /**
+     * Creates a resolved SpeedyPromise
+     * @template U
+     * @param {U} [value]
+     * @returns {SpeedyPromise<U>}
+     */
+    static resolve(value)
+    {
+        const promise = new SpeedyPromise(this._snop);
+
+        if((typeof value === 'object' && value !== null && 'then' in value) || (typeof value === 'function' && 'then' in value)) {
+            // resolve asynchronously
+            promise._resolve(value);
+        }
+        else {
+            // fulfill synchronously
+            promise._value = value;
+            promise._state = FULFILLED;
+        }
+
+        return promise;
+    }
+
+    /**
+     * Creates a rejected SpeedyPromise
+     * @template U
+     * @param {Error} reason
+     * @returns {SpeedyPromise<U>}
+     */
+    static reject(reason)
+    {
+        const promise = new SpeedyPromise(this._snop);
+        promise._value = reason;
+        promise._state = REJECTED;
+        return promise;
+    }
+
+    /**
+     * Returns a SpeedyPromise that resolves to an array
+     * containing the results of the input promises/values,
+     * in their given order. The returned SpeedyPromise will
+     * resolve if all input promises resolve, or reject if
+     * any input promise rejects.
+     * @template U
+     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
+     * @returns {SpeedyPromise<U[]>}
+     *
+     * FIXME iterables need not be all <U>
+     */
+    static all(iterable)
+    {
+        return new SpeedyPromise((resolve, reject) => {
+            const input = [];
+
+            // get elements
+            for(const element of iterable)
+                input.push(element);
+
+            // resolve synchronously if there are no elements
+            const length = input.length;
+            if(length == 0) {
+                resolve([]);
+                return;
+            }
+
+            // resolve asynchronously
+            let counter = length;
+            const output = new Array(length);
+            const partialResolve = i => (val => { output[i] = val; if(0 == --counter) resolve(output); });
+            for(let i = 0; i < length; i++) {
+                const element = input[i];
+                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
+                    element.then(partialResolve(i), reject);
+                else
+                    SpeedyPromise.resolve(element).then(partialResolve(i), reject);
+            }
+        });
+    }
+
+    /**
+     * Returns a promise that gets fulfilled or rejected as soon
+     * as the first promise in the iterable gets fulfilled or
+     * rejected (with its value/reason).
+     * @template U
+     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
+     * @returns {SpeedyPromise<U>}
+     */
+    static race(iterable)
+    {
+        return new SpeedyPromise((resolve, reject) => {
+            const input = [];
+
+            // get elements
+            for(const element of iterable)
+                input.push(element);
+
+            // if the iterable is empty, the promise
+            // will be pending forever...
+
+            // resolve asynchronously
+            const length = input.length;
+            for(let i = 0; i < length; i++) {
+                const element = input[i];
+                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
+                    element.then(resolve, reject);
+                else
+                    SpeedyPromise.resolve(element).then(resolve, reject);
+            }
+        });
+    }
+
+    /**
+     * Fulfill this promise with a value
+     * @param {T} value
+     */
+    _fulfill(value)
+    {
+        this._setState(FULFILLED, value);
+    }
+
+    /**
+     * Reject this promise with a reason
+     * @param {Error} reason
+     */
+    _reject(reason)
+    {
+        this._setState(REJECTED, reason);
+    }
+
+    /**
+     * Set the state and the value of this promise
+     * @param {number} state
+     * @param {T|Error} value
+     */
+    _setState(state, value)
+    {
+        // the promise is already fulfilled or rejected
+        if(this._state != PENDING)
+            return;
+
+        // set the new state
+        this._state = state;
+        this._value = value;
+        this._notify();
+    }
+
+    /**
+     * Notify my children that this promise is no
+     * longer pending. This is an async operation:
+     * my childen will be notified "as soon
+     * as possible" (it will be scheduled).
+     * We may force this to be synchronous, though
+     */
+    _notify()
+    {
+        // nothing to do
+        if(this._state == PENDING)
+            return;
+
+        // have we turbocharged this promise?
+        if(this._flags & SUSPEND_ASYNC) {
+            this._broadcast(); // execute synchronously
+            return;
+        }
+
+        // install a timer (default behavior)
+        asap(this._broadcastIfAsync);
+    }
+
+    /**
+     * Helper method
+     */
+    _broadcastIfAsync()
+    {
+        // we may have installed a timer at some
+        // point, but turbocharged the promise later
+        if(!(this._flags & SUSPEND_ASYNC))
+            this._broadcast();
+    }
+
+    /**
+     * Tell my children that this promise
+     * is either fulfilled or rejected.
+     * This is a synchronous operation
+     */
+    _broadcast()
+    {
+        const children = this._children;
+        const state = this._state;
+
+        if(state === FULFILLED) {
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onFulfillment;
+
+                try {
+                    if(callback) {
+                        if(callback !== child._nop) {
+                            child._resolve(callback(this._value)); // promise resolution procedure
+                            child._onFulfillment = child._nop; // will not be called again
+                        }
+                    }
+                    else
+                        child._fulfill(this._value);
+                }
+                catch(e) {
+                    child._reject(e);
+                }
+            }
+        }
+        else if(state === REJECTED) {
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onRejection;
+
+                try {
+                    if(callback) {
+                        if(callback !== child._nop) {
+                            child._resolve(callback(this._value)); // promise resolution procedure
+                            child._onRejection = child._nop; // will not be called again
+                        }
+                    }
+                    else
+                        child._reject(this._value);
+                }
+                catch(e) {
+                    child._reject(e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Promise Resolution Procedure
+     * based on the Promises/A+ spec
+     * @param {T} x
+     */
+    _resolve(x)
+    {
+        if((typeof x !== 'object' && typeof x !== 'function') || (x === null)) { // if(x !== Object(x))
+            this._fulfill(x);
+            return;
+        }
+
+        if(x === this)
+            throw new TypeError(); // Circular reference
+
+        if(x.__proto__ === SpeedyPromise.prototype || x.__proto__ === Promise.prototype) {
+            x.then(this._resolve, this._reject);
+            return;
+        }
+
+        try {
+            const then = x.then;
+            if(typeof then === 'function') {
+                let resolve = this._resolve, reject = this._reject;
+                try {
+                    then.call(x,
+                        y => { resolve(y); resolve = reject = this._nop; },
+                        r => { reject(r); resolve = reject = this._nop; }
+                    );
+                }
+                catch(e) {
+                    if(resolve !== this._nop && reject !== this._nop)
+                        this._reject(e);
+                }
+            }
+            else {
+                this._fulfill(x);
+            }
+        }
+        catch(e) {
+            this._reject(e);
+        }
+    }
+
+    /**
+     * No-operation
+     */
+    _nop()
+    {
+    }
+
+    /**
+     * Static no-operation
+     */
+    static _snop()
+    {
+    }
+}
+
+//module.exports = { SpeedyPromise };
+
+/*
+// Uncomment to test performance with regular Promises
+module.exports = { SpeedyPromise: Promise };
+Promise.prototype.turbocharge = function() { return this };
+*/
+
 
 /***/ }),
 
@@ -15650,7 +16195,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
@@ -15678,7 +16223,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-/** @typedef {'default' | 'low-power' | 'high-performance'} SpeedyPowerPreference */
+/** @typedef {'default' | 'low-power' | 'high-performance'} PowerPreference */
 
 // Constants
 const SINGLETON_KEY = Symbol();
@@ -15700,7 +16245,7 @@ const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 /** @type {SpeedyGL} Singleton */
 let instance = null;
 
-/** @type {SpeedyPowerPreference} power preference */
+/** @type {PowerPreference} power preference */
 let powerPreference = DEFAULT_POWER_PREFERENCE;
 
 
@@ -15880,7 +16425,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
         const ms = Math.max(secondsToRestore, 0) * 1000;
         const ext = this.loseContext();
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise(resolve => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_2__.SpeedyPromise(resolve => {
             setTimeout(() => {
                 //ext.restoreContext();
                 this._reinitializeOnContextLoss = true;
@@ -15892,7 +16437,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
 
     /**
      * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * @returns {PowerPreference}
      */
     static get powerPreference()
     {
@@ -15901,7 +16446,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
 
     /**
      * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
+     * @param {PowerPreference} value
      */
     static set powerPreference(value)
     {
@@ -15939,7 +16484,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_texture_pool__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-texture-pool */ "./src/gpu/speedy-texture-pool.js");
 /* harmony import */ var _speedy_texture_uploader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture-uploader */ "./src/gpu/speedy-texture-uploader.js");
 /* harmony import */ var _core_speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../core/speedy-media-source */ "./src/core/speedy-media-source.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
 /*
@@ -17047,7 +17592,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "SpeedyProgram": () => (/* binding */ SpeedyProgram)
 /* harmony export */ });
 /* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
@@ -18025,10 +18570,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
-/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/settings */ "./src/core/settings.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_asap__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/asap */ "./src/utils/asap.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -18057,20 +18604,18 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 
-/**
- * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
- */
-const DEFAULT_NUMBER_OF_BUFFERS = 2;
+
+//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 //const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
-/**
- * @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame"
- */
+/** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
+const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+
+/** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
 const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
     ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
-    ((fn, ...args) => requestAnimationFrame(() => fn.apply(window, args))); // reduce battery usage
+    ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -18115,7 +18660,7 @@ class ObservableQueue extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Obs
     dequeue()
     {
         if(this._data.length == 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalOperationError(`Empty queue`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalOperationError(`Empty queue`);
 
         return this._data.shift();
     }
@@ -18257,7 +18802,7 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+            return _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
@@ -18285,7 +18830,7 @@ class SpeedyTextureReader
         }, this, gl, fbo, x, y, width, height, sizeofBuffer);
 
         // CPU needs to consume data
-        const promise = new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise(resolve => {
+        const promise = new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise(resolve => {
             function consume(resolve) {
                 this._consumer.unsubscribe(consume, this);
 
@@ -18415,18 +18960,23 @@ class SpeedyTextureReader
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise((resolve, reject) => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise((resolve, reject) => {
+
             // according to the WebGL2 spec sec 3.7.14 Sync objects,
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+            if(_core_settings__WEBPACK_IMPORTED_MODULE_2__.Settings.gpuPollingMode != 'asap')
+                runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+            else
+                (0,_utils_asap__WEBPACK_IMPORTED_MODULE_6__.asap)(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
@@ -18448,15 +18998,17 @@ class SpeedyTextureReader
             const status = gl.clientWaitSync(sync, flags, 0);
 
             if(remainingAttempts-- <= 0) {
-                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_5__.TimeoutError(`_checkStatus() is taking too long.`, _utils_errors__WEBPACK_IMPORTED_MODULE_5__.GLError.from(gl)));
+                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.TimeoutError(`GPU polling timeout`, _utils_errors__WEBPACK_IMPORTED_MODULE_7__.GLError.from(gl)));
             }
             else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
                 resolve();
             }
             else {
-                //Utils.setZeroTimeout(poll); // no ~4ms delay, resource-hungry
-                //setTimeout(poll, pollInterval); // easier on the CPU
-                requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+                //setTimeout(poll, pollInterval);
+                if(_core_settings__WEBPACK_IMPORTED_MODULE_2__.Settings.gpuPollingMode != 'asap')
+                    requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+                else
+                    (0,_utils_asap__WEBPACK_IMPORTED_MODULE_6__.asap)(poll);
             }
         })();
     }
@@ -18862,16 +19414,6 @@ class SpeedyTexture
     }
 
     /**
-     * The size of this texture, in bytes
-     * @returns {number}
-     */
-    size()
-    {
-        // RGBA8: 32 bits per pixel
-        return 4 * this._width * this._height;
-    }
-
-    /**
      * The internal WebGLTexture
      * @returns {WebGLTexture}
      */
@@ -19274,6 +19816,75 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         return texture;
     }
+}
+
+/***/ }),
+
+/***/ "./src/utils/asap.js":
+/*!***************************!*\
+  !*** ./src/utils/asap.js ***!
+  \***************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "asap": () => (/* binding */ asap)
+/* harmony export */ });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * asap.js
+ * Schedule a function to run "as soon as possible"
+ */
+
+/** callbacks */
+const callbacks = /** @type {Function[]} */ ( [] );
+
+/** arguments to be passed to the callbacks */
+const args = /** @type {any[][]} */ ( [] );
+
+/** asap key */
+const ASAP_KEY = 'asap' + Math.random().toString(36).substr(1);
+
+// Register an event listener
+window.addEventListener('message', event => {
+    if(event.source !== window || event.data !== ASAP_KEY)
+        return;
+
+    event.stopPropagation();
+    if(callbacks.length == 0)
+        return;
+
+    const fn = callbacks.pop();
+    const argArray = args.pop();
+    fn.apply(undefined, argArray);
+}, true);
+
+/**
+ * Schedule a function to run "as soon as possible"
+ * @param {Function} fn callback
+ * @param {any[]} params optional parameters
+ */
+function asap(fn, ...params)
+{
+    callbacks.unshift(fn);
+    args.unshift(params);
+    window.postMessage(ASAP_KEY, '*');
 }
 
 /***/ }),
@@ -19961,475 +20572,6 @@ class Observable
 
 /***/ }),
 
-/***/ "./src/utils/speedy-promise.js":
-/*!*************************************!*\
-  !*** ./src/utils/speedy-promise.js ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyPromise": () => (/* binding */ SpeedyPromise)
-/* harmony export */ });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-promise.js
- * Speedy Promises: a fast implementation of Promises
- */
-
-const PENDING = 0;
-const FULFILLED = 1;
-const REJECTED = 2;
-
-const SUSPEND_ASYNC = 1;
-const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
-             (typeof process !== 'undefined' && process.nextTick) || // node.js
-             (f => Promise.resolve().then(() => f())); // most compatible
-
-/**
- * SpeedyPromise: Super Fast Promises. SpeedyPromises can
- * interoperate with ES6 Promises. This implementation is
- * based on the Promises/A+ specification.
- * @template T
- */
-class SpeedyPromise
-{
-    /**
-     * Constructor
-     * @param {function(function(T=): void, function(Error): void): void} callback
-     */
-    constructor(callback)
-    {
-        this._state = PENDING;
-        this._value = undefined;
-
-        this._onFulfillment = null;
-        this._onRejection = null;
-        this._children = 0;
-        this[0] = this;
-        this._parent = undefined;
-        this._flags = 0;
-
-        this._fulfill = this._fulfill.bind(this);
-        this._reject = this._reject.bind(this);
-        this._resolve = this._resolve.bind(this);
-        this._broadcastIfAsync = this._broadcastIfAsync.bind(this);
-
-        callback(this._fulfill, this._reject);
-    }
-
-    /**
-     * Setup handlers
-     * @template U, V=never
-     * @param {null|undefined|(function(T): U|PromiseLike<U>|SpeedyPromise<U>)} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise<U>}
-     */
-    then(onFulfillment, onRejection = null)
-    {
-        const child = new SpeedyPromise(this._nop);
-        child._onFulfillment = typeof onFulfillment === 'function' && onFulfillment;
-        child._onRejection = typeof onRejection === 'function' && onRejection;
-        child._parent = this;
-
-        this[this._children++] = child; // attach child
-        this._flags &= ~SUSPEND_ASYNC; // restore the async behavior
-        this._notify();
-
-        return child;
-    }
-
-    /**
-     * Setup rejection handler
-     * @template U, V=never
-     * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise<V>}
-     */
-    catch(onRejection)
-    {
-        return this.then(null, onRejection);
-    }
-
-    /**
-     * Execute a callback when the promise is settled
-     * (i.e., fulfilled or rejected)
-     * @param {function(): void} onFinally
-     * @returns {SpeedyPromise<T>}
-     */
-    finally(onFinally)
-    {
-        const fn = val => { onFinally(); return val; };
-        return this.then(fn, fn);
-    }
-
-    /**
-     * Start the computation immediately, synchronously.
-     * Can't afford to spend any time at all waiting for micro-tasks, etc.
-     * @returns {SpeedyPromise<T>} this
-     */
-    turbocharge()
-    {
-        let my = this;
-
-        // suspend the async behavior
-        this._flags |= SUSPEND_ASYNC;
-        while(my._parent !== undefined) {
-            my = my._parent;
-            my._flags |= SUSPEND_ASYNC;
-        }
-
-        // notify the children of the root
-        my._notify(); // will be synchronous
-
-        // return this SpeedyPromise
-        return this;
-    }
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        switch(this._state) {
-            case PENDING:
-                return `SpeedyPromise { <pending> }`;
-            case FULFILLED:
-                return `SpeedyPromise { <fulfilled> ${this._value} }`;
-            case REJECTED:
-                return `SpeedyPromise { <rejected> ${this._value} }`;
-            default:
-                return '';
-        }
-    }
-
-    /**
-     * Symbol.toStringTag
-     * @returns {string}
-     */
-    get [Symbol.toStringTag]()
-    {
-        return 'SpeedyPromise';
-    }
-
-    /**
-     * Creates a resolved SpeedyPromise
-     * @template U
-     * @param {U} [value]
-     * @returns {SpeedyPromise<U>}
-     */
-    static resolve(value)
-    {
-        const promise = new SpeedyPromise(this._snop);
-
-        if((typeof value === 'object' && value !== null && 'then' in value) || (typeof value === 'function' && 'then' in value)) {
-            // resolve asynchronously
-            promise._resolve(value);
-        }
-        else {
-            // fulfill synchronously
-            promise._value = value;
-            promise._state = FULFILLED;
-        }
-
-        return promise;
-    }
-
-    /**
-     * Creates a rejected SpeedyPromise
-     * @template U
-     * @param {Error} reason
-     * @returns {SpeedyPromise<U>}
-     */
-    static reject(reason)
-    {
-        const promise = new SpeedyPromise(this._snop);
-        promise._value = reason;
-        promise._state = REJECTED;
-        return promise;
-    }
-
-    /**
-     * Returns a SpeedyPromise that resolves to an array
-     * containing the results of the input promises/values,
-     * in their given order. The returned SpeedyPromise will
-     * resolve if all input promises resolve, or reject if
-     * any input promise rejects.
-     * @template U
-     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
-     * @returns {SpeedyPromise<U[]>}
-     *
-     * FIXME iterables need not be all <U>
-     */
-    static all(iterable)
-    {
-        return new SpeedyPromise((resolve, reject) => {
-            const input = [];
-
-            // get elements
-            for(const element of iterable)
-                input.push(element);
-
-            // resolve synchronously if there are no elements
-            const length = input.length;
-            if(length == 0) {
-                resolve([]);
-                return;
-            }
-
-            // resolve asynchronously
-            let counter = length;
-            const output = new Array(length);
-            const partialResolve = i => (val => { output[i] = val; if(0 == --counter) resolve(output); });
-            for(let i = 0; i < length; i++) {
-                const element = input[i];
-                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
-                    element.then(partialResolve(i), reject);
-                else
-                    SpeedyPromise.resolve(element).then(partialResolve(i), reject);
-            }
-        });
-    }
-
-    /**
-     * Returns a promise that gets fulfilled or rejected as soon
-     * as the first promise in the iterable gets fulfilled or
-     * rejected (with its value/reason).
-     * @template U
-     * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
-     * @returns {SpeedyPromise<U>}
-     */
-    static race(iterable)
-    {
-        return new SpeedyPromise((resolve, reject) => {
-            const input = [];
-
-            // get elements
-            for(const element of iterable)
-                input.push(element);
-
-            // if the iterable is empty, the promise
-            // will be pending forever...
-
-            // resolve asynchronously
-            const length = input.length;
-            for(let i = 0; i < length; i++) {
-                const element = input[i];
-                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
-                    element.then(resolve, reject);
-                else
-                    SpeedyPromise.resolve(element).then(resolve, reject);
-            }
-        });
-    }
-
-    /**
-     * Fulfill this promise with a value
-     * @param {T} value
-     */
-    _fulfill(value)
-    {
-        this._setState(FULFILLED, value);
-    }
-
-    /**
-     * Reject this promise with a reason
-     * @param {Error} reason
-     */
-    _reject(reason)
-    {
-        this._setState(REJECTED, reason);
-    }
-
-    /**
-     * Set the state and the value of this promise
-     * @param {number} state
-     * @param {T|Error} value
-     */
-    _setState(state, value)
-    {
-        // the promise is already fulfilled or rejected
-        if(this._state != PENDING)
-            return;
-
-        // set the new state
-        this._state = state;
-        this._value = value;
-        this._notify();
-    }
-
-    /**
-     * Notify my children that this promise is no
-     * longer pending. This is an async operation:
-     * my childen will be notified "as soon
-     * as possible" (it will be scheduled).
-     * We may force this to be synchronous, though
-     */
-    _notify()
-    {
-        // nothing to do
-        if(this._state == PENDING)
-            return;
-
-        // have we turbocharged this promise?
-        if(this._flags & SUSPEND_ASYNC) {
-            this._broadcast(); // execute synchronously
-            return;
-        }
-
-        // install a timer (default behavior)
-        asap(this._broadcastIfAsync);
-    }
-
-    /**
-     * Helper method
-     */
-    _broadcastIfAsync()
-    {
-        // we may have installed a timer at some
-        // point, but turbocharged the promise later
-        if(!(this._flags & SUSPEND_ASYNC))
-            this._broadcast();
-    }
-
-    /**
-     * Tell my children that this promise
-     * is either fulfilled or rejected.
-     * This is a synchronous operation
-     */
-    _broadcast()
-    {
-        const children = this._children;
-        const state = this._state;
-
-        if(state === FULFILLED) {
-            for(let i = 0; i < children; i++) {
-                const child = this[i];
-                const callback = child._onFulfillment;
-
-                try {
-                    if(callback) {
-                        if(callback !== child._nop) {
-                            child._resolve(callback(this._value)); // promise resolution procedure
-                            child._onFulfillment = child._nop; // will not be called again
-                        }
-                    }
-                    else
-                        child._fulfill(this._value);
-                }
-                catch(e) {
-                    child._reject(e);
-                }
-            }
-        }
-        else if(state === REJECTED) {
-            for(let i = 0; i < children; i++) {
-                const child = this[i];
-                const callback = child._onRejection;
-
-                try {
-                    if(callback) {
-                        if(callback !== child._nop) {
-                            child._resolve(callback(this._value)); // promise resolution procedure
-                            child._onRejection = child._nop; // will not be called again
-                        }
-                    }
-                    else
-                        child._reject(this._value);
-                }
-                catch(e) {
-                    child._reject(e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Promise Resolution Procedure
-     * based on the Promises/A+ spec
-     * @param {T} x
-     */
-    _resolve(x)
-    {
-        if((typeof x !== 'object' && typeof x !== 'function') || (x === null)) { // if(x !== Object(x))
-            this._fulfill(x);
-            return;
-        }
-
-        if(x === this)
-            throw new TypeError(); // Circular reference
-
-        if(x.__proto__ === SpeedyPromise.prototype || x.__proto__ === Promise.prototype) {
-            x.then(this._resolve, this._reject);
-            return;
-        }
-
-        try {
-            const then = x.then;
-            if(typeof then === 'function') {
-                let resolve = this._resolve, reject = this._reject;
-                try {
-                    then.call(x,
-                        y => { resolve(y); resolve = reject = this._nop; },
-                        r => { reject(r); resolve = reject = this._nop; }
-                    );
-                }
-                catch(e) {
-                    if(resolve !== this._nop && reject !== this._nop)
-                        this._reject(e);
-                }
-            }
-            else {
-                this._fulfill(x);
-            }
-        }
-        catch(e) {
-            this._reject(e);
-        }
-    }
-
-    /**
-     * No-operation
-     */
-    _nop()
-    {
-    }
-
-    /**
-     * Static no-operation
-     */
-    static _snop()
-    {
-    }
-}
-
-//module.exports = { SpeedyPromise };
-
-/*
-// Uncomment to test performance with regular Promises
-module.exports = { SpeedyPromise: Promise };
-Promise.prototype.turbocharge = function() { return this };
-*/
-
-
-/***/ }),
-
 /***/ "./src/utils/types.js":
 /*!****************************!*\
   !*** ./src/utils/types.js ***!
@@ -20521,7 +20663,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Utils": () => (/* binding */ Utils)
 /* harmony export */ });
 /* harmony import */ var _errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./errors */ "./src/utils/errors.js");
-/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -20543,35 +20685,6 @@ __webpack_require__.r(__webpack_exports__);
  * Generic utilities
  */
 
-
-
-
-/** @typedef {{fn: Function, args: any[]}} ZeroTimeoutCallback */
-/** @typedef {Map<string,ZeroTimeoutCallback>} ZeroTimeoutContext */
-
-/** @type {function(): ZeroTimeoutContext} helper for setZeroTimeout */
-const zeroTimeoutContext = (() => {
-    const callbacks = /** @type {ZeroTimeoutContext} */ ( new Map() );
-    let initialized = false;
-
-    return (function() {
-        if(!initialized) {
-            initialized = true;
-            window.addEventListener('message', ev => {
-                if(ev.source === window) {
-                    const msgId = ev.data;
-                    const obj = callbacks.get(msgId);
-                    if(obj !== undefined) {
-                        obj.fn.apply(window, obj.args);
-                        callbacks.delete(msgId);
-                    }
-                }
-            });
-        }
-
-        return callbacks;
-    });
-})();
 
 
 
@@ -20610,23 +20723,6 @@ class Utils
     {
         if(!expr)
             throw new _errors__WEBPACK_IMPORTED_MODULE_0__.AssertionError(text);
-    }
-
-    /**
-     * Similar to setTimeout(fn, 0), but without the ~4ms delay.
-     * Although much faster than setTimeout, this may be resource-hungry
-     * (heavy on battery) if used in a loop. Use with caution.
-     * Implementation based on David Baron's, but adapted for ES6 classes
-     * @param {Function} fn
-     * @param {any[]} args optional arguments to be passed to fn
-     */
-    static setZeroTimeout(fn, ...args)
-    {
-        const ctx = zeroTimeoutContext();
-        const msgId = '0%' + String(Math.random());
-
-        ctx.set(msgId, { fn, args });
-        window.postMessage(msgId, '*');
     }
 
     /**
@@ -20941,7 +21037,7 @@ class Utils
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             throw new _errors__WEBPACK_IMPORTED_MODULE_0__.NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()');
 
-        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__.SpeedyPromise((resolve, reject) => {
             navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
                 video.onloadedmetadata = () => {
@@ -22238,20 +22334,21 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu/speedy-gl */ "./src/gpu/speedy-gl.js");
 /* harmony import */ var _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./core/speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _core_speedy_vector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/speedy-vector */ "./src/core/speedy-vector.js");
-/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
-/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
-/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./core/settings */ "./src/core/settings.js");
+/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/fps-counter */ "./src/utils/fps-counter.js");
+/* harmony import */ var _core_speedy_vector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _core_speedy_point__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _core_speedy_size__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/speedy-promise */ "./src/core/speedy-promise.js");
+/* harmony import */ var _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./core/pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./core/pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./core/pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./core/pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -22290,21 +22387,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /* eslint-disable no-undef */
 /** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 /** @typedef {import('./core/speedy-matrix-expr').SpeedyMatrixExpr} SpeedyMatrixExpr */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
-/** @typedef {import('./gpu/speedy-gl').SpeedyPowerPreference} SpeedyPowerPreference */
 
 
 // Constants
 
 /** @type {SpeedyMatrixFactory} */
-const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_6__.SpeedyMatrixFactory();
+const matrixFactory = new _core_speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_7__.SpeedyMatrixFactory();
 
 /** @type {SpeedyPipelineVector2Factory} */
-const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineVector2Factory();
+const vector2Factory = new _core_pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_14__.SpeedyPipelineVector2Factory();
 
 
 
@@ -22340,7 +22437,7 @@ class Speedy
             },
         });
 
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.requestCameraStream(constraints).then(
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_15__.Utils.requestCameraStream(constraints).then(
             video => _core_speedy_media__WEBPACK_IMPORTED_MODULE_1__.SpeedyMedia.load(video)
         );
     }
@@ -22375,7 +22472,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_4__.SpeedyPoint2(x, y);
+        return new _core_speedy_point__WEBPACK_IMPORTED_MODULE_5__.SpeedyPoint2(x, y);
     }
 
     /**
@@ -22386,7 +22483,7 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_5__.SpeedySize(width, height);
+        return new _core_speedy_size__WEBPACK_IMPORTED_MODULE_6__.SpeedySize(width, height);
     }
 
     /**
@@ -22404,7 +22501,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__.SpeedyPromise;
+        return _core_speedy_promise__WEBPACK_IMPORTED_MODULE_8__.SpeedyPromise;
     }
 
     /**
@@ -22413,7 +22510,7 @@ class Speedy
      */
     static Pipeline()
     {
-        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_8__.SpeedyPipeline();
+        return new _core_pipeline_pipeline__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipeline();
     }
 
     /**
@@ -22422,7 +22519,7 @@ class Speedy
      */
     static get Image()
     {
-        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_9__.SpeedyPipelineImageFactory;
+        return _core_pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineImageFactory;
     }
 
     /**
@@ -22431,7 +22528,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_10__.SpeedyPipelineFilterFactory;
+        return _core_pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineFilterFactory;
     }
 
     /**
@@ -22440,7 +22537,7 @@ class Speedy
      */
     static get Transform()
     {
-        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_11__.SpeedyPipelineTransformFactory;
+        return _core_pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineTransformFactory;
     }
 
     /**
@@ -22449,7 +22546,7 @@ class Speedy
      */
     static get Keypoint()
     {
-        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_12__.SpeedyPipelineKeypointFactory;
+        return _core_pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_13__.SpeedyPipelineKeypointFactory;
     }
 
     /**
@@ -22470,38 +22567,29 @@ class Speedy
      */
     static get fps()
     {
-        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__.FPSCounter.instance.fps;
+        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_3__.FPSCounter.instance.fps;
     }
 
     /**
-     * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * Global settings
+     * @returns {typeof Settings}
      */
-    static get powerPreference()
+    static get Settings()
     {
-        return _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.powerPreference;
-    }
-
-    /**
-     * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
-     */
-    static set powerPreference(value)
-    {
-        _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__.SpeedyGL.powerPreference = value;
+        return _core_settings__WEBPACK_IMPORTED_MODULE_2__.Settings;
     }
 }
 
 // Notice
-_utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.log(
+_utils_utils__WEBPACK_IMPORTED_MODULE_15__.Utils.log(
     `Speedy Vision v${Speedy.version}. ` +
     `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
     "https://github.com/alemart/speedy-vision"
 );
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_15__.LITTLE_ENDIAN)
-    _utils_utils__WEBPACK_IMPORTED_MODULE_14__.Utils.warning('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_16__.LITTLE_ENDIAN)
+    _utils_utils__WEBPACK_IMPORTED_MODULE_15__.Utils.warning('Running on a big-endian machine');
 
 })();
 

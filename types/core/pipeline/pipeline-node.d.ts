@@ -154,6 +154,6 @@ declare function OutputPortDictionary(ports: SpeedyPipelineOutputPort[]): Output
 import { SpeedyPipelineInputPort } from "./pipeline-port";
 import { SpeedyPipelineOutputPort } from "./pipeline-port";
 import { SpeedyGPU } from "../../gpu/speedy-gpu";
-import { SpeedyPromise } from "../../utils/speedy-promise";
+import { SpeedyPromise } from "../speedy-promise";
 import { SpeedyPipelinePortBuilder } from "./pipeline-portbuilder";
 export {};

@@ -72,4 +72,4 @@ import { SpeedyTexturePool } from "./speedy-texture-pool";
 import { SpeedyTextureUploader } from "./speedy-texture-uploader";
 import { SpeedyTexture } from "./speedy-texture";
 import { SpeedyMediaSource } from "../core/speedy-media-source";
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "../core/speedy-promise";

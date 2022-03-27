@@ -86,22 +86,16 @@ export default class Speedy {
      */
     static get fps(): number;
     /**
-     * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
+     * Global settings
+     * @returns {typeof Settings}
      */
-    static set powerPreference(arg: import("./gpu/speedy-gl").SpeedyPowerPreference);
-    /**
-     * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
-     */
-    static get powerPreference(): import("./gpu/speedy-gl").SpeedyPowerPreference;
+    static get Settings(): typeof Settings;
 }
 export type SpeedyMatrix = import('./core/speedy-matrix').SpeedyMatrix;
 export type SpeedyMatrixExpr = import('./core/speedy-matrix-expr').SpeedyMatrixExpr;
 export type SpeedyMediaOptions = import('./core/speedy-media').SpeedyMediaOptions;
 export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source').SpeedyMediaSourceNativeElement;
-export type SpeedyPowerPreference = import('./gpu/speedy-gl').SpeedyPowerPreference;
-import { SpeedyPromise } from "./utils/speedy-promise";
+import { SpeedyPromise } from "./core/speedy-promise";
 import { SpeedyMedia } from "./core/speedy-media";
 import { SpeedyPipelineVector2Factory } from "./core/pipeline/factories/vector2-factory";
 import { SpeedyVector2 } from "./core/speedy-vector";
@@ -113,3 +107,4 @@ import { SpeedyPipelineImageFactory } from "./core/pipeline/factories/image-fact
 import { SpeedyPipelineFilterFactory } from "./core/pipeline/factories/filter-factory";
 import { SpeedyPipelineTransformFactory } from "./core/pipeline/factories/transform-factory";
 import { SpeedyPipelineKeypointFactory } from "./core/pipeline/factories/keypoint-factory";
+import { Settings } from "./core/settings";

@@ -126,6 +126,6 @@ import { SpeedyPipelineSinkNode } from "../../pipeline-node";
 import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
 import { SpeedyGPU } from "../../../../gpu/speedy-gpu";
 import { SpeedyDrawableTexture } from "../../../../gpu/speedy-texture";
-import { SpeedyPromise } from "../../../../utils/speedy-promise";
+import { SpeedyPromise } from "../../../speedy-promise";
 import { SpeedyTexture } from "../../../../gpu/speedy-texture";
 export {};

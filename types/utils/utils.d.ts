@@ -22,15 +22,6 @@ export class Utils {
      */
     static assert(expr: boolean, text?: string | undefined): void;
     /**
-     * Similar to setTimeout(fn, 0), but without the ~4ms delay.
-     * Although much faster than setTimeout, this may be resource-hungry
-     * (heavy on battery) if used in a loop. Use with caution.
-     * Implementation based on David Baron's, but adapted for ES6 classes
-     * @param {Function} fn
-     * @param {any[]} args optional arguments to be passed to fn
-     */
-    static setZeroTimeout(fn: Function, ...args: any[]): void;
-    /**
      * Gets the names of the arguments of the specified function
      * @param {Function} fun
      * @returns {string[]}
@@ -121,9 +112,4 @@ export class Utils {
      */
     static requestCameraStream(constraints?: MediaStreamConstraints | undefined): SpeedyPromise<HTMLVideoElement>;
 }
-export type ZeroTimeoutCallback = {
-    fn: Function;
-    args: any[];
-};
-export type ZeroTimeoutContext = Map<string, ZeroTimeoutCallback>;
-import { SpeedyPromise } from "./speedy-promise";
+import { SpeedyPromise } from "../core/speedy-promise";

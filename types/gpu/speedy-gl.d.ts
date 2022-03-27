@@ -9,14 +9,14 @@ export class SpeedyGL extends Observable {
     static get instance(): SpeedyGL;
     /**
      * Power preference for the WebGL context
-     * @param {SpeedyPowerPreference} value
+     * @param {PowerPreference} value
      */
-    static set powerPreference(arg: SpeedyPowerPreference);
+    static set powerPreference(arg: PowerPreference);
     /**
      * Power preference for the WebGL context
-     * @returns {SpeedyPowerPreference}
+     * @returns {PowerPreference}
      */
-    static get powerPreference(): SpeedyPowerPreference;
+    static get powerPreference(): PowerPreference;
     /**
      * Constructor
      * @param {Symbol} key
@@ -69,6 +69,6 @@ export class SpeedyGL extends Observable {
      */
     loseAndRestoreContext(secondsToRestore?: number | undefined): SpeedyPromise<WEBGL_lose_context>;
 }
-export type SpeedyPowerPreference = 'default' | 'low-power' | 'high-performance';
+export type PowerPreference = 'default' | 'low-power' | 'high-performance';
 import { Observable } from "../utils/observable";
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "../core/speedy-promise";

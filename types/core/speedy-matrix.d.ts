@@ -162,4 +162,4 @@ export type SpeedyMatrixBufferTypeConstructor = Float32ArrayConstructor;
 export type SpeedyMatrixWASMMemory = import('./speedy-matrix-wasm').SpeedyMatrixWASMMemory;
 export type SpeedyMatrixWASMHandle = import('./speedy-matrix-wasm').SpeedyMatrixWASMHandle;
 import { SpeedyMatrixExpr } from "./speedy-matrix-expr";
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "./speedy-promise";

@@ -81,4 +81,4 @@ export type SpeedyMatrixWASMHandle = {
     memory: SpeedyMatrixWASMMemory;
     module: WebAssembly.Module;
 };
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "./speedy-promise";

@@ -31,6 +31,11 @@ export class SpeedyMedia {
      */
     get source(): import("./speedy-media-source").SpeedyMediaSourceNativeElement;
     /**
+     * The type of the media attached to this SpeedyMedia object
+     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
+     */
+    get type(): "canvas" | "video" | "image" | "unknown" | "bitmap";
+    /**
      * Gets the width of the media
      * @returns {number} media width
      */
@@ -41,21 +46,16 @@ export class SpeedyMedia {
      */
     get height(): number;
     /**
-     * The type of the media attached to this SpeedyMedia object
-     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
+     * The size of this media, in pixels
+     * @returns {SpeedySize}
      */
-    get type(): "canvas" | "video" | "image" | "unknown" | "bitmap";
+    get size(): SpeedySize;
     /**
      * Returns a read-only object featuring advanced options
      * related to this SpeedyMedia object
      * @returns {SpeedyMediaOptions}
      */
     get options(): SpeedyMediaOptions;
-    /**
-     * The size of this media, in pixels
-     * @returns {SpeedySize}
-     */
-    size(): SpeedySize;
     /**
      * Releases resources associated with this media
      * @returns {null}
@@ -72,15 +72,6 @@ export class SpeedyMedia {
      */
     clone(): SpeedyPromise<SpeedyMedia>;
     /**
-     * Draws the media to a canvas
-     * @param {HTMLCanvasElement} canvas canvas element
-     * @param {number} [x] x-position
-     * @param {number} [y] y-position
-     * @param {number} [width] desired width
-     * @param {number} [height] desired height
-     */
-    draw(canvas: HTMLCanvasElement, x?: number | undefined, y?: number | undefined, width?: number | undefined, height?: number | undefined): void;
-    /**
      * Converts the media to an ImageBitmap
      * @returns {SpeedyPromise<ImageBitmap>}
      */
@@ -96,4 +87,4 @@ export type SpeedyMediaOptions = {
 import { SpeedyMediaSource } from "./speedy-media-source";
 import { ImageFormat } from "../utils/types";
 import { SpeedySize } from "./speedy-size";
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "./speedy-promise";

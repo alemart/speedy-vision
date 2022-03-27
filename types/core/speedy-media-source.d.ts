@@ -74,4 +74,4 @@ export class SpeedyMediaSource {
     _load(element: SpeedyMediaSourceNativeElement): SpeedyPromise<SpeedyMediaSource>;
 }
 export type SpeedyMediaSourceNativeElement = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap;
-import { SpeedyPromise } from "../utils/speedy-promise";
+import { SpeedyPromise } from "./speedy-promise";

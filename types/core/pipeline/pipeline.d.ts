@@ -63,12 +63,12 @@ export class SpeedyPipeline {
      */
     run(): SpeedyPromise<SpeedyPipelineOutput>;
     /**
-     * @private
+     * @internal
      *
      * GPU instance
      * @returns {SpeedyGPU}
      */
-    private get _gpu();
+    get _gpu(): SpeedyGPU;
 }
 /**
  * A dictionary indexed by the names of the sink nodes
@@ -77,4 +77,5 @@ export type SpeedyPipelineOutput = {
     [x: string]: any;
 };
 import { SpeedyPipelineNode } from "./pipeline-node";
-import { SpeedyPromise } from "../../utils/speedy-promise";
+import { SpeedyPromise } from "../speedy-promise";
+import { SpeedyGPU } from "../../gpu/speedy-gpu";
