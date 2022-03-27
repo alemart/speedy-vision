@@ -20,7 +20,7 @@
  */
 
 import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from '../core/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError } from '../utils/errors';

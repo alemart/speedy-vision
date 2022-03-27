@@ -28,7 +28,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { ImageFormat } from '../../../../utils/types';
 import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /** @typedef {"quadratic1d"|"taylor2d"|"bicubic-upsample"|"bilinear-upsample"} SubpixelRefinementMethod */
 

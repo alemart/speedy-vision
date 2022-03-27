@@ -27,7 +27,7 @@ import { SpeedySize } from '../../../speedy-size';
 import { SpeedyVector2 } from '../../../speedy-vector';
 import { Utils } from '../../../../utils/utils';
 import { NotSupportedError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /**
  * Default kernels for different sizes: 3x3, 5x5, 7x7... (use sigma_x = sigma_y)

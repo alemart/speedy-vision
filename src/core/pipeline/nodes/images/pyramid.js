@@ -27,7 +27,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { PYRAMID_MAX_LEVELS } from '../../../../utils/globals';
 import { ImageFormat } from '../../../../utils/types';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 // Constants
 const MAX_LEVELS = PYRAMID_MAX_LEVELS; //14; // supposing image size <= 8K = 2^13 (downto 1)

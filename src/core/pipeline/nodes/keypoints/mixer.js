@@ -28,7 +28,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { IllegalOperationError } from '../../../../utils/errors';
 import { MAX_ENCODER_CAPACITY } from '../../../../utils/globals';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /**
  * Keypoint Mixer: merges two sets of keypoints

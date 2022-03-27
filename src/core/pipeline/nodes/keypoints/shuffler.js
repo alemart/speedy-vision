@@ -25,7 +25,7 @@ import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '.
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { Utils } from '../../../../utils/utils';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 
 /**

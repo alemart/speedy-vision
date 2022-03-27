@@ -29,7 +29,7 @@ import { IllegalArgumentError } from '../../../../utils/errors';
 import { ImageFormat } from '../../../../utils/types';
 import { SpeedySize } from '../../../speedy-size';
 import { SpeedyVector2 } from '../../../speedy-vector';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /** @typedef {"bilinear"|"nearest"} SpeedyPipelineNodeResizeMethod */
 

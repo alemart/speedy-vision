@@ -27,7 +27,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../../speedy-media';
 import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /** @type {string[]} the names of the input ports indexed by their number */
 const INPUT_PORT = [ 'in0', 'in1' ];

@@ -25,7 +25,7 @@ import { SpeedyPipelinePortBuilder } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, DEFAULT_ENCODER_CAPACITY, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
 
 // Constants

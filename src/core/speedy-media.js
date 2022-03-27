@@ -25,7 +25,7 @@ import { MediaType, ImageFormat } from '../utils/types'
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from './speedy-promise';
 import { SpeedySize } from './speedy-size';
 
 /** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */

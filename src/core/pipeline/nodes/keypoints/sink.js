@@ -30,7 +30,7 @@ import { SpeedyMedia } from '../../../speedy-media';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 import { SpeedyKeypoint, SpeedyTrackedKeypoint, SpeedyMatchedKeypoint } from '../../../speedy-keypoint';
 import { SpeedyKeypointDescriptor } from '../../../speedy-keypoint-descriptor';
 import { SpeedyKeypointMatch } from '../../../speedy-keypoint-match';

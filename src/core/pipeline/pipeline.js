@@ -20,7 +20,7 @@
  */
 
 import { Utils } from '../../utils/utils';
-import { SpeedyPromise } from '../../utils/speedy-promise';
+import { SpeedyPromise } from '../speedy-promise';
 import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode, SpeedyPipelineSinkNode } from './pipeline-node';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';

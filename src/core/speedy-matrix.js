@@ -21,7 +21,7 @@
 
 import { SpeedyMatrixExpr } from './speedy-matrix-expr';
 import { SpeedyMatrixWASM } from './speedy-matrix-wasm';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from './speedy-promise';
 import { Utils } from '../utils/utils';
 
 /** @typedef {"float32"} SpeedyMatrixDtype Matrix data type */

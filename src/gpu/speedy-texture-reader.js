@@ -23,7 +23,7 @@ import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
 import { Settings } from '../core/settings';
 import { SpeedyGPU } from './speedy-gpu';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from '../core/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { asap } from '../utils/asap';
 import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';

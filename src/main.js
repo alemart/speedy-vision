@@ -27,7 +27,7 @@ import { SpeedyVector2 } from './core/speedy-vector';
 import { SpeedyPoint2 } from './core/speedy-point';
 import { SpeedySize } from './core/speedy-size';
 import { SpeedyMatrixFactory } from './core/speedy-matrix-factory';
-import { SpeedyPromise } from './utils/speedy-promise';
+import { SpeedyPromise } from './core/speedy-promise';
 import { SpeedyPipeline } from './core/pipeline/pipeline';
 import { SpeedyPipelineImageFactory } from './core/pipeline/factories/image-factory';
 import { SpeedyPipelineFilterFactory } from './core/pipeline/factories/filter-factory';

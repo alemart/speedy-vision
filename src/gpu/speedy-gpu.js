@@ -25,7 +25,7 @@ import { SpeedyProgramCenter } from './speedy-program-center';
 import { SpeedyTexturePool } from './speedy-texture-pool';
 import { SpeedyTextureUploader } from './speedy-texture-uploader';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from '../core/speedy-promise';
 import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
 

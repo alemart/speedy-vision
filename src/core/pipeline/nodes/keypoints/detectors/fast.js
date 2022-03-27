@@ -27,7 +27,7 @@ import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
 import { ImageFormat } from '../../../../../utils/types';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalOperationError } from '../../../../../utils/errors';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants

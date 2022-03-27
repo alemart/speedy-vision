@@ -28,7 +28,7 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { IllegalArgumentError, IllegalOperationError } from '../../../../../utils/errors';
 import { Utils } from '../../../../../utils/utils';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import {
     SpeedyLSH,
     LSH_DEFAULT_HASH_SIZE, LSH_DEFAULT_NUMBER_OF_TABLES,

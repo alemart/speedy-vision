@@ -22,7 +22,7 @@
 import { SpeedyMatrixExpr } from './speedy-matrix-expr';
 import { SpeedyMatrixWASM } from './speedy-matrix-wasm';
 import { SpeedyMatrix } from './speedy-matrix';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from './speedy-promise';
 import { Utils } from '../utils/utils';
 import { IllegalArgumentError } from '../utils/errors';
 

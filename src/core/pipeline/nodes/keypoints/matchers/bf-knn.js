@@ -27,7 +27,7 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalArgumentError, NotSupportedError } from '../../../../../utils/errors';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 
 /** @type {Object<number,string>} program name indexed by descriptor size */
 const PROGRAM_NAME = {

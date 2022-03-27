@@ -28,7 +28,7 @@ import { ImageFormat } from '../../../../../utils/types';
 import { SpeedySize } from '../../../../speedy-size';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalOperationError, IllegalArgumentError } from '../../../../../utils/errors';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import { PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 /** Window size helper */

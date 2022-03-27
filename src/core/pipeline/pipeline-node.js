@@ -21,7 +21,7 @@
 
 import { Utils } from '../../utils/utils';
 import { LITTLE_ENDIAN } from '../../utils/globals';
-import { SpeedyPromise } from '../../utils/speedy-promise';
+import { SpeedyPromise } from '../speedy-promise';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
 import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';

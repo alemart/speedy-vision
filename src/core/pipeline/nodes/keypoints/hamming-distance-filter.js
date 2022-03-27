@@ -26,7 +26,7 @@ import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 import { SpeedyMatrix } from '../../../speedy-matrix';
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../../../utils/errors';
 import { MAX_DESCRIPTOR_SIZE } from '../../../../utils/globals';

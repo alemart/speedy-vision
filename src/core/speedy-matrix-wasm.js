@@ -19,7 +19,7 @@
  * WebAssembly bridge
  */
 
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from './speedy-promise';
 import { WebAssemblyError, TimeoutError, NotSupportedError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';

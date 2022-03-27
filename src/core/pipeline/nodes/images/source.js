@@ -28,7 +28,7 @@ import { SpeedyMedia } from '../../../speedy-media';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { IllegalArgumentError, IllegalOperationError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 // Constants
 const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data

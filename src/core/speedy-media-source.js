@@ -20,7 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from './speedy-promise';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
 import { MediaType } from '../utils/types'
 

@@ -27,7 +27,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { ImageFormat, PixelComponent, ColorComponentId } from '../../../../utils/types';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /**
  * @typedef {"high"|"medium"|"low"} NightvisionQualityLevel

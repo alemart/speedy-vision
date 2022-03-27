@@ -28,7 +28,7 @@ import { SpeedySize } from '../../../speedy-size';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 // Median programs
 const MEDIAN = {

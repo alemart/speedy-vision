@@ -28,7 +28,7 @@ import { SpeedyLSH, LSH_ACCEPTABLE_DESCRIPTOR_SIZES, LSH_ACCEPTABLE_HASH_SIZES }
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../../utils/errors';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 
 /** @typedef {'fastest' | 'default' | 'demanding'} LSHKNNQualityLevel quality of the approximate matching */
 

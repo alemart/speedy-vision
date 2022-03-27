@@ -29,7 +29,7 @@ import { ImageFormat } from '../../../../../utils/types';
 import { SpeedySize } from '../../../../speedy-size';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalOperationError, NotSupportedError } from '../../../../../utils/errors';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants

@@ -20,7 +20,7 @@
  */
 
 import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError } from './errors'
-import { SpeedyPromise } from './speedy-promise';
+import { SpeedyPromise } from '../core/speedy-promise';
 
 /**
  * Generic utilities

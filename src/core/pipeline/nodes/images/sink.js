@@ -28,7 +28,7 @@ import { SpeedyMedia } from '../../../speedy-media';
 import { SpeedyMediaSource } from '../../../speedy-media-source';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 
 /**
  * Gets an image out of a pipeline

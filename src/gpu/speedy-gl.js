@@ -21,7 +21,7 @@
 
 import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
-import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPromise } from '../core/speedy-promise';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 /** @typedef {'default' | 'low-power' | 'high-performance'} PowerPreference */

@@ -28,7 +28,7 @@ import { SpeedySize } from '../../../speedy-size';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, IllegalArgumentError } from '../../../../utils/errors';
-import { SpeedyPromise } from '../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../speedy-promise';
 import { SpeedyMatrix } from '../../../speedy-matrix';
 
 // 2D convolution programs

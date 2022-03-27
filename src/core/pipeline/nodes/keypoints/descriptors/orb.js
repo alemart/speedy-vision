@@ -26,7 +26,7 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { ImageFormat } from '../../../../../utils/types';
 import { Utils } from '../../../../../utils/utils';
-import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { SpeedyPromise } from '../../../../speedy-promise';
 import { SpeedyPipelineNodeKeypointDetector } from '../detectors/detector';
 import { SpeedyPipelineNodeKeypointDescriptor } from './descriptor';
 
