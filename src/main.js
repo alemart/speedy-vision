@@ -229,9 +229,12 @@ export default class Speedy
     }
 }
 
-// Notice
+// Freeze the namespace
+Object.freeze(Speedy);
+
+// Display a notice
 Utils.log(
-    `Speedy Vision v${Speedy.version}. ` +
+    `Speedy Vision version ${Speedy.version}. ` +
     `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
     __SPEEDY_WEBSITE__
 );
