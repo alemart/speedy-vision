@@ -171,6 +171,16 @@ export class SpeedyMatrixExpr
     }
 
     /**
+     * Left division: A \ b, which is equivalent to (pseudo-)inverse(A) * b
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    ldiv(expr)
+    {
+        return new SpeedyMatrixLdivExpr(this, expr);
+    }
+
+    /**
      * Returns a human-readable string representation of the matrix expression
      * @returns {string}
      */
@@ -577,5 +587,38 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
     _compute(wasm, memory, resultptr, leftptr, rightptr)
     {
         wasm.exports.Mat32_compmult(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Left-division. A \ b is equivalent to (pseudo-)inverse(A) * b
+ */
+class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        const m = left.rows, n = left.columns;
+
+        // TODO right doesn't need to be a column vector
+        Utils.assert(m >= n && right.rows === m && right.columns === 1);
+        super(n, 1, left, right);
+    }
+
+    /**
+     * Compute result = left \ right
+     * @param {WebAssembly.Instance} wasm
+     * @param {SpeedyMatrixWASMMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_qr_ols(resultptr, leftptr, rightptr, 2);
     }
 }

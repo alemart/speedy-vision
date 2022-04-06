@@ -1979,6 +1979,22 @@ Compute the inverse of `this` matrix expression. Make sure it's square.
 
 A `SpeedyMatrixExpr` representing the inverse of `this` matrix expression.
 
+##### SpeedyMatrixExpr.ldiv()
+
+`SpeedyMatrixExpr.ldiv(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Left division `this` \ `expr`. This is equivalent to solving a system of linear equations *Ax = b*, where *A* is `this` and *b* is `expr` (in a least squares sense if *A* is not square). The number of rows of `this` must be greater or equal than its number of columns. `expr` must be a column vector.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the left division.
+
+
+
 #### Systems of equations
 
 ##### Speedy.Matrix.solve()

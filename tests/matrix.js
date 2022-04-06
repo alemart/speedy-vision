@@ -1297,6 +1297,9 @@ describe('Matrix', function() {
                     expect(x.read()).toBeElementwiseNearlyEqual(soln);
                     expect(norm(r.read())).toBeCloseTo(0);
                 });
+
+                xit('find via matrix expression', async function() {
+                });
             });
         });
     });
