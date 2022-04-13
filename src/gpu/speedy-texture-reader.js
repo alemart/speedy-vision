@@ -20,7 +20,6 @@
  */
 
 import { Utils } from '../utils/utils';
-import { Observable } from '../utils/observable';
 import { Settings } from '../core/settings';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../core/speedy-promise';
@@ -28,73 +27,13 @@ import { SpeedyDrawableTexture } from './speedy-texture';
 import { asap } from '../utils/asap';
 import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
-//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
-//const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
-
 /** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
-const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
 /** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
 const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
     ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
     ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
-
-/**
- * A Queue that notifies observers when it's not empty
- * @template T
- */
-class ObservableQueue extends Observable
-{
-    /**
-     * Constructor
-     */
-    constructor()
-    {
-        super();
-
-        /** @type {T[]} elements of the queue */
-        this._data = [];
-    }
-
-    /**
-     * Number of elements in the queue
-     * @returns {number}
-     */
-    get size()
-    {
-        return this._data.length;
-    }
-
-    /**
-     * Enqueue an element
-     * @param {T} x
-     */
-    enqueue(x)
-    {
-        this._data.push(x);
-        this._notify();
-    }
-
-    /**
-     * Remove and return the first element of the queue
-     * @returns {T}
-     */
-    dequeue()
-    {
-        if(this._data.length == 0)
-            throw new IllegalOperationError(`Empty queue`);
-
-        return this._data.shift();
-    }
-}
-
-/** @typedef {number} BufferIndex */
-
-/**
- * @typedef {object} Consumable helper for async GPU-CPU transfers
- * @property {BufferIndex} bufferIndex
- * @property {Uint8Array} pixelBuffer
- */
 
 /**
  * Reads data from textures
@@ -109,23 +48,26 @@ export class SpeedyTextureReader
     {
         Utils.assert(numberOfBuffers > 0);
 
+        /** @type {boolean} is this object initialized? */
+        this._initialized = false;
+
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
         /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
         this._pbo = (new Array(numberOfBuffers)).fill(null);
 
-        /** @type {ObservableQueue<Consumable>} for async data transfers */
-        this._consumer = new ObservableQueue();
+        /** @type {number} the index of the buffer that will be consumed in this frame */
+        this._bufferIndex = 0;
 
-        /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
-        this._producer = new ObservableQueue();
+        /** @type {SpeedyPromise[]} promise queue */
+        this._promise = Array.from({ length: numberOfBuffers }, (_, i) => SpeedyPromise.resolve(this._pixelBuffer[i]));
 
-        /** @type {boolean} is this object initialized? */
-        this._initialized = false;
+        /** @type {boolean[]} are the contents of the ith buffer being produced? */
+        this._busy = (new Array(numberOfBuffers)).fill(false);
 
-        /** @type {boolean} is the producer-consumer mechanism initialized? */
-        this._initializedProducerConsumer = false;
+        /** @type {boolean[]} can the ith buffer be consumed? */
+        this._ready = (new Array(numberOfBuffers)).fill(false).fill(true, 0, 1);
     }
 
     /**
@@ -234,54 +176,38 @@ export class SpeedyTextureReader
             );
         }
 
-        //console.log("------------- new frame");
+        // Hide latency with a Producer-Consumer mechanism
+        const numberOfBuffers = this._pixelBuffer.length;
+        const currentBufferIndex = this._bufferIndex;
+        const nextBufferIndex = (currentBufferIndex + 1) % numberOfBuffers;
 
         // GPU needs to produce data
-        this._producer.subscribe(function produce(gl, fbo, x, y, width, height, sizeofBuffer) {
-            this._producer.unsubscribe(produce, this);
+        if(!this._busy[nextBufferIndex]) {
+            const pbo = this._pbo[nextBufferIndex];
+            const pixelBuffer = this._pixelBuffer[nextBufferIndex].subarray(0, sizeofBuffer);
 
-            const bufferIndex = this._producer.dequeue();
-            const pixelBuffer = this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer);
-
-            //console.log("will produce",bufferIndex);
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], pixelBuffer, fbo, x, y, width, height).then(() => {
-                //console.log("has produced",bufferIndex);
-                // this._pixelBuffer[bufferIndex] is ready to be consumed
-                this._consumer.enqueue({ bufferIndex, pixelBuffer });
+            this._busy[nextBufferIndex] = true;
+            this._promise[nextBufferIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
+                this._busy[nextBufferIndex] = false;
+                this._ready[nextBufferIndex] = true;
             });
-        }, this, gl, fbo, x, y, width, height, sizeofBuffer);
+        }
+        //else console.log("busy",nextBufferIndex);
+        else /* skip frame */ ;
 
         // CPU needs to consume data
-        const promise = new SpeedyPromise(resolve => {
-            function consume(resolve) {
-                this._consumer.unsubscribe(consume, this);
-
-                const obj = this._consumer.dequeue();
-                const bufferIndex = obj.bufferIndex, pixelBuffer = obj.pixelBuffer;
-
-                //console.log("will CONSUME",bufferIndex);
-                resolve(pixelBuffer);
-
-                this._producer.enqueue(bufferIndex); // enqueue AFTER resolve()
-            }
-
-            if(this._consumer.size > 0)
-                consume.call(this, resolve);
-            else
-                this._consumer.subscribe(consume, this, resolve);
-        });
-
-        // initialize the producer-consumer mechanism
-        if(!this._initializedProducerConsumer) {
-            this._initializedProducerConsumer = true;
-            for(let i = this._pixelBuffer.length - 1; i >= 0; i--)
-                this._consumer.enqueue({ bufferIndex: i, pixelBuffer: this._pixelBuffer[i] });
+        if(!this._ready[currentBufferIndex]) {
+            //console.log("wait",currentBufferIndex);
+            return this._promise[currentBufferIndex].then(() => {
+                this._bufferIndex = nextBufferIndex;
+                this._ready[currentBufferIndex] = false;
+                return this._pixelBuffer[currentBufferIndex];
+            });
         }
 
-        //console.log("====== end of frame");
-
-        // done!
-        return promise;
+        this._bufferIndex = nextBufferIndex;
+        this._ready[currentBufferIndex] = false;
+        return SpeedyPromise.resolve(this._pixelBuffer[currentBufferIndex]);
     }
 
     /**
