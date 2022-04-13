@@ -60,8 +60,8 @@ export class SpeedyTextureReader
         /** @type {number} the index of the buffer that will be consumed in this frame */
         this._bufferIndex = 0;
 
-        /** @type {SpeedyPromise[]} promise queue */
-        this._promise = Array.from({ length: numberOfBuffers }, (_, i) => SpeedyPromise.resolve(this._pixelBuffer[i]));
+        /** @type {SpeedyPromise<void>[]} producer-consumer promises */
+        this._promise = Array.from({ length: numberOfBuffers }, () => SpeedyPromise.resolve());
 
         /** @type {boolean[]} are the contents of the ith buffer being produced? */
         this._busy = (new Array(numberOfBuffers)).fill(false);
