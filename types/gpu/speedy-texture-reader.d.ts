@@ -39,9 +39,11 @@ export class SpeedyTextureReader {
     /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
     _pbo: WebGLBuffer[];
     /** @type {number} the index of the buffer that will be consumed in this frame */
-    _bufferIndex: number;
-    /** @type {SpeedyPromise[]} promise queue */
-    _promise: SpeedyPromise<any>[];
+    _consumerIndex: number;
+    /** @type {number} the index of the buffer that will be produced next */
+    _producerIndex: number;
+    /** @type {SpeedyPromise<void>[]} producer-consumer promises */
+    _promise: SpeedyPromise<void>[];
     /** @type {boolean[]} are the contents of the ith buffer being produced? */
     _busy: boolean[];
     /** @type {boolean[]} can the ith buffer be consumed? */

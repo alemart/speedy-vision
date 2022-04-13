@@ -132,9 +132,9 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
                     encodedKeypoints, descriptorSize, extraSize, encoderLength,
                     passId
                 );
-                //gpu.gl.flush();
+                gpu.gl.flush();
             }
-            gpu.gl.flush();
+            //gpu.gl.flush();
 
             // copy the (k+1)-th best match to the filter
             if(matchesPerKeypoint > 1)

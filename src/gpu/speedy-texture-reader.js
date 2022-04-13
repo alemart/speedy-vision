@@ -58,7 +58,10 @@ export class SpeedyTextureReader
         this._pbo = (new Array(numberOfBuffers)).fill(null);
 
         /** @type {number} the index of the buffer that will be consumed in this frame */
-        this._bufferIndex = 0;
+        this._consumerIndex = 0;
+
+        /** @type {number} the index of the buffer that will be produced next */
+        this._producerIndex = numberOfBuffers - 1;
 
         /** @type {SpeedyPromise<void>[]} producer-consumer promises */
         this._promise = Array.from({ length: numberOfBuffers }, () => SpeedyPromise.resolve());
@@ -67,7 +70,7 @@ export class SpeedyTextureReader
         this._busy = (new Array(numberOfBuffers)).fill(false);
 
         /** @type {boolean[]} can the ith buffer be consumed? */
-        this._ready = (new Array(numberOfBuffers)).fill(false).fill(true, 0, 1);
+        this._ready = (new Array(numberOfBuffers)).fill(true);
     }
 
     /**
@@ -178,36 +181,44 @@ export class SpeedyTextureReader
 
         // Hide latency with a Producer-Consumer mechanism
         const numberOfBuffers = this._pixelBuffer.length;
-        const currentBufferIndex = this._bufferIndex;
-        const nextBufferIndex = (currentBufferIndex + 1) % numberOfBuffers;
 
         // GPU needs to produce data
-        if(!this._busy[nextBufferIndex]) {
-            const pbo = this._pbo[nextBufferIndex];
-            const pixelBuffer = this._pixelBuffer[nextBufferIndex].subarray(0, sizeofBuffer);
+        const producerIndex = this._producerIndex;
 
-            this._busy[nextBufferIndex] = true;
-            this._promise[nextBufferIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
-                this._busy[nextBufferIndex] = false;
-                this._ready[nextBufferIndex] = true;
+        if(!this._busy[producerIndex]) {
+            const pbo = this._pbo[producerIndex];
+            const pixelBuffer = this._pixelBuffer[producerIndex].subarray(0, sizeofBuffer);
+
+            this._producerIndex = (producerIndex + 1) % numberOfBuffers;
+
+            this._ready[producerIndex] = false;
+            this._busy[producerIndex] = true;
+            //console.time("produce "+producerIndex);
+            this._promise[producerIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
+                //console.timeEnd("produce "+producerIndex);
+                this._busy[producerIndex] = false;
+                this._ready[producerIndex] = true;
             });
         }
-        //else console.log("busy",nextBufferIndex);
+        //else console.log("skip",producerIndex);
         else /* skip frame */ ;
 
         // CPU needs to consume data
-        if(!this._ready[currentBufferIndex]) {
-            //console.log("wait",currentBufferIndex);
-            return this._promise[currentBufferIndex].then(() => {
-                this._bufferIndex = nextBufferIndex;
-                this._ready[currentBufferIndex] = false;
-                return this._pixelBuffer[currentBufferIndex];
+        const consumerIndex = this._consumerIndex;
+        this._consumerIndex = (consumerIndex + 1) % numberOfBuffers;
+
+        if(!this._ready[consumerIndex]) {
+            //console.time("consume "+consumerIndex);
+            return this._promise[consumerIndex].then(() => {
+                //console.timeEnd("consume "+consumerIndex);
+                this._ready[consumerIndex] = false;
+                return this._pixelBuffer[consumerIndex];
             });
         }
 
-        this._bufferIndex = nextBufferIndex;
-        this._ready[currentBufferIndex] = false;
-        return SpeedyPromise.resolve(this._pixelBuffer[currentBufferIndex]);
+        //console.log("NO WAIT "+consumerIndex);
+        this._ready[consumerIndex] = false;
+        return SpeedyPromise.resolve(this._pixelBuffer[consumerIndex]);
     }
 
     /**
