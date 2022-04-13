@@ -6,7 +6,7 @@
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  *
- * Date: 2022-03-27T00:29:02.240Z
+ * Date: 2022-04-13T13:16:32.831Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -10423,6 +10423,16 @@ class SpeedyMatrixExpr
     }
 
     /**
+     * Left division: A \ b, which is equivalent to (pseudo-)inverse(A) * b
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    ldiv(expr)
+    {
+        return new SpeedyMatrixLdivExpr(this, expr);
+    }
+
+    /**
      * Returns a human-readable string representation of the matrix expression
      * @returns {string}
      */
@@ -10829,6 +10839,39 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
     _compute(wasm, memory, resultptr, leftptr, rightptr)
     {
         wasm.exports.Mat32_compmult(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Left-division. A \ b is equivalent to (pseudo-)inverse(A) * b
+ */
+class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        const m = left.rows, n = left.columns;
+
+        // TODO right doesn't need to be a column vector
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__.Utils.assert(m >= n && right.rows === m && right.columns === 1);
+        super(n, 1, left, right);
+    }
+
+    /**
+     * Compute result = left \ right
+     * @param {WebAssembly.Instance} wasm
+     * @param {SpeedyMatrixWASMMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_qr_ols(resultptr, leftptr, rightptr, 2);
     }
 }
 
@@ -18569,13 +18612,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "SpeedyTextureReader": () => (/* binding */ SpeedyTextureReader)
 /* harmony export */ });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
-/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/settings */ "./src/core/settings.js");
-/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
-/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_asap__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/asap */ "./src/utils/asap.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/settings */ "./src/core/settings.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/speedy-promise */ "./src/core/speedy-promise.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_asap__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/asap */ "./src/utils/asap.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -18605,74 +18647,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-//const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
-//const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
-
 /** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
-const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
 /** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
 const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
     ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
     ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
-
-/**
- * A Queue that notifies observers when it's not empty
- * @template T
- */
-class ObservableQueue extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__.Observable
-{
-    /**
-     * Constructor
-     */
-    constructor()
-    {
-        super();
-
-        /** @type {T[]} elements of the queue */
-        this._data = [];
-    }
-
-    /**
-     * Number of elements in the queue
-     * @returns {number}
-     */
-    get size()
-    {
-        return this._data.length;
-    }
-
-    /**
-     * Enqueue an element
-     * @param {T} x
-     */
-    enqueue(x)
-    {
-        this._data.push(x);
-        this._notify();
-    }
-
-    /**
-     * Remove and return the first element of the queue
-     * @returns {T}
-     */
-    dequeue()
-    {
-        if(this._data.length == 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalOperationError(`Empty queue`);
-
-        return this._data.shift();
-    }
-}
-
-/** @typedef {number} BufferIndex */
-
-/**
- * @typedef {object} Consumable helper for async GPU-CPU transfers
- * @property {BufferIndex} bufferIndex
- * @property {Uint8Array} pixelBuffer
- */
 
 /**
  * Reads data from textures
@@ -18687,23 +18668,26 @@ class SpeedyTextureReader
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__.Utils.assert(numberOfBuffers > 0);
 
+        /** @type {boolean} is this object initialized? */
+        this._initialized = false;
+
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
         /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
         this._pbo = (new Array(numberOfBuffers)).fill(null);
 
-        /** @type {ObservableQueue<Consumable>} for async data transfers */
-        this._consumer = new ObservableQueue();
+        /** @type {number} the index of the buffer that will be consumed in this frame */
+        this._bufferIndex = 0;
 
-        /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
-        this._producer = new ObservableQueue();
+        /** @type {SpeedyPromise[]} promise queue */
+        this._promise = Array.from({ length: numberOfBuffers }, (_, i) => _core_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise.resolve(this._pixelBuffer[i]));
 
-        /** @type {boolean} is this object initialized? */
-        this._initialized = false;
+        /** @type {boolean[]} are the contents of the ith buffer being produced? */
+        this._busy = (new Array(numberOfBuffers)).fill(false);
 
-        /** @type {boolean} is the producer-consumer mechanism initialized? */
-        this._initializedProducerConsumer = false;
+        /** @type {boolean[]} can the ith buffer be consumed? */
+        this._ready = (new Array(numberOfBuffers)).fill(false).fill(true, 0, 1);
     }
 
     /**
@@ -18802,7 +18786,7 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+            return _core_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
@@ -18812,54 +18796,38 @@ class SpeedyTextureReader
             );
         }
 
-        //console.log("------------- new frame");
+        // Hide latency with a Producer-Consumer mechanism
+        const numberOfBuffers = this._pixelBuffer.length;
+        const currentBufferIndex = this._bufferIndex;
+        const nextBufferIndex = (currentBufferIndex + 1) % numberOfBuffers;
 
         // GPU needs to produce data
-        this._producer.subscribe(function produce(gl, fbo, x, y, width, height, sizeofBuffer) {
-            this._producer.unsubscribe(produce, this);
+        if(!this._busy[nextBufferIndex]) {
+            const pbo = this._pbo[nextBufferIndex];
+            const pixelBuffer = this._pixelBuffer[nextBufferIndex].subarray(0, sizeofBuffer);
 
-            const bufferIndex = this._producer.dequeue();
-            const pixelBuffer = this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer);
-
-            //console.log("will produce",bufferIndex);
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], pixelBuffer, fbo, x, y, width, height).then(() => {
-                //console.log("has produced",bufferIndex);
-                // this._pixelBuffer[bufferIndex] is ready to be consumed
-                this._consumer.enqueue({ bufferIndex, pixelBuffer });
+            this._busy[nextBufferIndex] = true;
+            this._promise[nextBufferIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
+                this._busy[nextBufferIndex] = false;
+                this._ready[nextBufferIndex] = true;
             });
-        }, this, gl, fbo, x, y, width, height, sizeofBuffer);
+        }
+        //else console.log("busy",nextBufferIndex);
+        else /* skip frame */ ;
 
         // CPU needs to consume data
-        const promise = new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise(resolve => {
-            function consume(resolve) {
-                this._consumer.unsubscribe(consume, this);
-
-                const obj = this._consumer.dequeue();
-                const bufferIndex = obj.bufferIndex, pixelBuffer = obj.pixelBuffer;
-
-                //console.log("will CONSUME",bufferIndex);
-                resolve(pixelBuffer);
-
-                this._producer.enqueue(bufferIndex); // enqueue AFTER resolve()
-            }
-
-            if(this._consumer.size > 0)
-                consume.call(this, resolve);
-            else
-                this._consumer.subscribe(consume, this, resolve);
-        });
-
-        // initialize the producer-consumer mechanism
-        if(!this._initializedProducerConsumer) {
-            this._initializedProducerConsumer = true;
-            for(let i = this._pixelBuffer.length - 1; i >= 0; i--)
-                this._consumer.enqueue({ bufferIndex: i, pixelBuffer: this._pixelBuffer[i] });
+        if(!this._ready[currentBufferIndex]) {
+            //console.log("wait",currentBufferIndex);
+            return this._promise[currentBufferIndex].then(() => {
+                this._bufferIndex = nextBufferIndex;
+                this._ready[currentBufferIndex] = false;
+                return this._pixelBuffer[currentBufferIndex];
+            });
         }
 
-        //console.log("====== end of frame");
-
-        // done!
-        return promise;
+        this._bufferIndex = nextBufferIndex;
+        this._ready[currentBufferIndex] = false;
+        return _core_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise.resolve(this._pixelBuffer[currentBufferIndex]);
     }
 
     /**
@@ -18960,23 +18928,23 @@ class SpeedyTextureReader
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_4__.SpeedyPromise((resolve, reject) => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_3__.SpeedyPromise((resolve, reject) => {
 
             // according to the WebGL2 spec sec 3.7.14 Sync objects,
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            if(_core_settings__WEBPACK_IMPORTED_MODULE_2__.Settings.gpuPollingMode != 'asap')
+            if(_core_settings__WEBPACK_IMPORTED_MODULE_1__.Settings.gpuPollingMode != 'asap')
                 runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
             else
-                (0,_utils_asap__WEBPACK_IMPORTED_MODULE_6__.asap)(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+                (0,_utils_asap__WEBPACK_IMPORTED_MODULE_5__.asap)(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
 
         }).then(() => {
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__.IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
@@ -18998,17 +18966,17 @@ class SpeedyTextureReader
             const status = gl.clientWaitSync(sync, flags, 0);
 
             if(remainingAttempts-- <= 0) {
-                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_7__.TimeoutError(`GPU polling timeout`, _utils_errors__WEBPACK_IMPORTED_MODULE_7__.GLError.from(gl)));
+                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_6__.TimeoutError(`GPU polling timeout`, _utils_errors__WEBPACK_IMPORTED_MODULE_6__.GLError.from(gl)));
             }
             else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
                 resolve();
             }
             else {
                 //setTimeout(poll, pollInterval);
-                if(_core_settings__WEBPACK_IMPORTED_MODULE_2__.Settings.gpuPollingMode != 'asap')
+                if(_core_settings__WEBPACK_IMPORTED_MODULE_1__.Settings.gpuPollingMode != 'asap')
                     requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
                 else
-                    (0,_utils_asap__WEBPACK_IMPORTED_MODULE_6__.asap)(poll);
+                    (0,_utils_asap__WEBPACK_IMPORTED_MODULE_5__.asap)(poll);
             }
         })();
     }
@@ -22580,9 +22548,12 @@ class Speedy
     }
 }
 
-// Notice
+// Freeze the namespace
+Object.freeze(Speedy);
+
+// Display a notice
 _utils_utils__WEBPACK_IMPORTED_MODULE_15__.Utils.log(
-    `Speedy Vision v${Speedy.version}. ` +
+    `Speedy Vision version ${Speedy.version}. ` +
     `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
     "https://github.com/alemart/speedy-vision"
 );

@@ -77,6 +77,12 @@ export class SpeedyMatrixExpr {
      */
     compMult(expr: SpeedyMatrixExpr): SpeedyMatrixExpr;
     /**
+     * Left division: A \ b, which is equivalent to (pseudo-)inverse(A) * b
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    ldiv(expr: SpeedyMatrixExpr): SpeedyMatrixExpr;
+    /**
      * Returns a human-readable string representation of the matrix expression
      * @returns {string}
      */

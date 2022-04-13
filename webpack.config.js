@@ -57,7 +57,7 @@ module.exports = (env, argv) => ({
     mode: argv.mode == 'development' ? 'development' : 'production',
     devtool: argv.mode == 'development' ? 'source-map' : undefined,
     devServer: {
-        host: env.HOST || 'localhost',
+        host: env.HOST || '0.0.0.0',
         port: env.PORT || 8080,
         static: ['assets', 'demos', 'tests'].map(dir => ({
             directory: path.resolve(__dirname, dir),
