@@ -17,14 +17,13 @@ module.exports = (env, argv) => ({
     },
     plugins: [
         new webpack.BannerPlugin({
-            banner: (({ name, version, homepage, description, year, author, license, date }) => [
-                `${name} v${version}`,
+            banner: (({ version, homepage, description, year, author, license, date }) => [
+                `Speedy Vision version ${version}`,
                 `${description}`,
+                `Copyright ${year} ${author}`,
                 `${homepage}`,
                 ``,
-                `Copyright ${year} ${author}`,
                 `@license ${license}`,
-                ``,
                 `Date: ${date}`,
             ].join('\n'))(Object.assign({}, pack, {
                 'date': (new Date()).toISOString(),
