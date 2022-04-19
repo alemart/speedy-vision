@@ -23,10 +23,22 @@ import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, No
 import { SpeedyPromise } from '../core/speedy-promise';
 
 /**
+ * @typedef {Object} LoggingOptions
+ * @property {boolean} [logs.debug] Enables `Utils.log()` calls. Default is true.
+ * @property {boolean} [logs.warn] Enables `Utils.warn()` calls. Default is true.
+ */
+
+/**
  * Generic utilities
  */
 export class Utils
 {
+    /** @type {LoggingOptions} */
+    static logging = {
+        debug: true,
+        warn: true
+    };
+
     /**
      * Generates a warning
      * @param {string} text message text
@@ -34,7 +46,9 @@ export class Utils
      */
     static warning(text, ...args)
     {
-        console.warn('[speedy-vision]', text, ...args);
+        if(this.logging.warn){
+            console.warn('[speedy-vision]', text, ...args);
+        }
     }
 
     /**
@@ -44,7 +58,9 @@ export class Utils
      */
     static log(text, ...args)
     {
-        console.log('[speedy-vision]', text, ...args);
+        if(this.logging.debug){
+            console.log('[speedy-vision]', text, ...args);
+        }
     }
 
     /**

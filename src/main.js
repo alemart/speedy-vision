@@ -41,6 +41,7 @@ import { LITTLE_ENDIAN } from './utils/globals';
 /** @typedef {import('./core/speedy-matrix').SpeedyMatrix} SpeedyMatrix */
 /** @typedef {import('./core/speedy-matrix-expr').SpeedyMatrixExpr} SpeedyMatrixExpr */
 /** @typedef {import('./core/speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
+/** @typedef {import('./utils/utils').LoggingOptions} LoggingOptions */
 /** @typedef {import('./core/speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
 
 
@@ -70,6 +71,21 @@ export default class Speedy
         return SpeedyMedia.load(sourceElement, options);
     }
 
+    /**
+     * Configures the global logging settings.
+     * @param {LoggingOptions} options logging options.
+     */
+    static setLogging = (options) => {
+        if(options.debug !== undefined){
+            Utils.logging.debug = options.debug;
+        }
+        
+        if(options.warn !== undefined){
+            Utils.logging.warn = options.warn;
+        }
+    };
+
+    
     /**
      * Loads a camera stream
      * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
