@@ -1,12 +1,11 @@
 /*!
- * speedy-vision v0.9.0-wip
+ * Speedy Vision version 0.9.0-wip
  * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
- *
- * Date: 2022-04-13T17:07:19.988Z
+ * Date: 2022-04-19T18:11:01.441Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
