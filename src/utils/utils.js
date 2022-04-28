@@ -21,6 +21,7 @@
 
 import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError } from './errors'
 import { SpeedyPromise } from '../core/speedy-promise';
+import { Settings } from '../core/settings';
 
 /**
  * Generic utilities
@@ -34,7 +35,9 @@ export class Utils
      */
     static warning(text, ...args)
     {
-        console.warn('[speedy-vision]', text, ...args);
+        if(Settings.logging === 'default'){
+            console.warn('[speedy-vision]', text, ...args);
+        }
     }
 
     /**
@@ -44,7 +47,9 @@ export class Utils
      */
     static log(text, ...args)
     {
-        console.log('[speedy-vision]', text, ...args);
+        if(Settings.logging !== 'none'){
+            console.log('[speedy-vision]', text, ...args);
+        }
     }
 
     /**
