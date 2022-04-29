@@ -2743,8 +2743,11 @@ promise.then(() => {
 
 **Experimental**. GPU polling mode. `"asap"` has slightly better performance than `"raf"`, at the cost of higher CPU usage.
 
+##### Speedy.Settings.logging
 
+`Speedy.Settings.logging: "default" | "none"`
 
+Configures the logging mode. `default` shows debug and warnings messages while `none` hides them all.
 #### Utilities
 
 ##### Speedy.version
