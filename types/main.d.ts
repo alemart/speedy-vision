@@ -94,6 +94,7 @@ export default class Speedy {
 export type SpeedyMatrix = import('./core/speedy-matrix').SpeedyMatrix;
 export type SpeedyMatrixExpr = import('./core/speedy-matrix-expr').SpeedyMatrixExpr;
 export type SpeedyMediaOptions = import('./core/speedy-media').SpeedyMediaOptions;
+export type LoggingOptions = import('./utils/utils').LoggingOptions;
 export type SpeedyMediaSourceNativeElement = import('./core/speedy-media-source').SpeedyMediaSourceNativeElement;
 import { SpeedyPromise } from "./core/speedy-promise";
 import { SpeedyMedia } from "./core/speedy-media";

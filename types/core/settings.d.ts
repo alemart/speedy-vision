@@ -22,7 +22,18 @@ export class Settings extends SpeedyNamespace {
      * @returns {GPUPollingMode}
      */
     static get gpuPollingMode(): GPUPollingMode;
+    /**
+     * Logging mode
+     * @param {LoggingMode} mode
+     */
+    static set logging(arg: LoggingMode);
+    /**
+     * Logging mode
+     * @returns {LoggingMode}
+     */
+    static get logging(): LoggingMode;
 }
 export type PowerPreference = import('../gpu/speedy-gl').PowerPreference;
 export type GPUPollingMode = "raf" | "asap";
+export type LoggingMode = 'default' | 'none';
 import { SpeedyNamespace } from "./speedy-namespace";
