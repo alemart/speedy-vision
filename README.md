@@ -1,8 +1,12 @@
-# speedy-vision.js
+# Speedy Vision
 
-Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Vision library for JavaScript.
+Build real-time stuff with **Speedy Vision**, a GPU-accelerated Computer Vision library for JavaScript.
 
 [<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision/demos/best-features.html "Click to open a demo")
+
+Speedy Vision is [developed independently](#author).
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/alemart)
 
 ## Features
 
@@ -14,7 +18,8 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * KLT feature tracker
   * LK optical flow
 * Feature matching
-  * Soon
+  * Fast approximate k-nearest neighbors (kNN)
+  * Brute force matching
 * Geometric transformations
   * Homography matrix
   * Affine transform
@@ -37,11 +42,9 @@ There are plenty of [demos](#demos) available!
 
 ## Author
 
-**speedy-vision.js** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+**Speedy Vision** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
-If my work is of value to you, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). Thank you.
-
-For general enquiries, contact me at `alemartf` `at` `gmail` `dot` `com`.
+If you came here looking for Augmented Reality, [check my other project](https://github.com/alemart/martins-js) instead!
 
 -----
 
@@ -65,6 +68,7 @@ For general enquiries, contact me at `alemartf` `at` `gmail` `dot` `com`.
     * [Image filters](#image-filters)
     * [General transformations](#general-transformations)
   * [Keypoints and descriptors](#keypoints-and-descriptors)
+    * [Keypoint types](#keypoint-types)
     * [Keypoint basics](#keypoint-basics)
     * [Keypoint detection](#keypoint-detection)
     * [Keypoint description](#keypoint-description)
@@ -125,7 +129,7 @@ Try the demos and take a look at their source code:
 
 ## Installation
 
-Download the latest release of speedy-vision.js and include it in the `<head>` section of your HTML page:
+Download the latest release of Speedy Vision and include it in the `<head>` section of your HTML page:
 
 ```html
 <script src="dist/speedy-vision.min.js"></script>
@@ -135,7 +139,7 @@ Once you import the library, the `Speedy` object will be exposed. Check out the 
 
 ## Motivation
 
-Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
+Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for Speedy Vision, is a JavaScript library created to address this issue.
 
 Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its GPU implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
@@ -793,7 +797,7 @@ There are different ways to detect and describe keypoints. For example, in order
 
 Speedy offers different options for processing keypoints in multiple ways. A novelty of this work is that Speedy's implementations have been either adapted from the literature or conceived from scratch to work on the GPU. Therefore, keypoint processing is done in parallel and is often very fast.
 
-#### Keypoint basics
+#### Keypoint types
 
 ##### SpeedyKeypoint
 
@@ -819,25 +823,25 @@ The y position of the keypoint in the image. A shortcut to `position.y`.
 
 ###### SpeedyKeypoint.lod
 
-`SpeedyKeypoint.lod: number`
+`SpeedyKeypoint.lod: number, read-only`
 
 The level-of-detail (pyramid level) from which the keypoint was extracted, starting from zero. Defaults to `0.0`.
 
 ###### SpeedyKeypoint.scale
 
-`SpeedyKeypoint.scale: number`
+`SpeedyKeypoint.scale: number, read-only`
 
 The scale of the keypoint. This is equivalent to *2 ^ lod*. Defaults to `1.0`.
 
 ###### SpeedyKeypoint.rotation
 
-`SpeedyKeypoint.rotation: number`
+`SpeedyKeypoint.rotation: number, read-only`
 
-The orientation angle of the keypoint, in radians. Defaults to `0.0`.
+The rotation angle / orientation of the keypoint, in radians. Defaults to `0.0`.
 
 ###### SpeedyKeypoint.score
 
-`SpeedyKeypoint.score: number`
+`SpeedyKeypoint.score: number, read-only`
 
 The score is a measure associated with the keypoint. Although different detection methods employ different measurement strategies, the larger the score, the "better" the keypoint is considered to be. The score is always a positive value.
 
@@ -875,9 +879,40 @@ A `SpeedyTrackedKeypoint` is a `SpeedyKeypoint` with the following additional pr
 
 ###### SpeedyTrackerKeypoint.flow
 
-`SpeedyTrackedKeypoint.flow: SpeedyVector2`
+`SpeedyTrackedKeypoint.flow: SpeedyVector2, read-only`
 
 A displacement vector associated with the tracked keypoint.
+
+##### SpeedyMatchedKeypoint
+
+A `SpeedyMatchedKeypoint` is a `SpeedyKeypoint` with the following additional properties:
+
+###### SpeedyMatchedKeypoint.matches
+
+`SpeedyMatchedKeypoint.matches: SpeedyKeypointMatch[], read-only`
+
+A list of keypoint matches associated with the keypoint. They will be sorted by increasing distance (better matches come first).
+
+See also: [SpeedyKeypointMatch](#SpeedyKeypointMatch).
+
+##### SpeedyKeypointMatch
+
+A `SpeedyKeypointMatch` represents a keypoint match.
+
+###### SpeedyKeypointMatch.index
+
+`SpeedyKeypointMatch.index: number, read-only`
+
+The non-negative index of the matched keypoint in a database of keypoints, or `-1` if there is no match.
+
+###### SpeedyKeypointMatch.distance
+
+`SpeedyKeypointMatch.distance: number, read-only`
+
+A distance metric between the keypoint and the matched keypoint. The lower the distance, the better the match. If there is no match, then this field will be set to infinity.
+
+
+#### Keypoint basics
 
 ##### Speedy.Keypoint.Source()
 
@@ -912,23 +947,6 @@ Creates a sink of keypoints using the specified name. If the name is not specifi
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
 | `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
-
-##### Speedy.Keypoint.SinkOfTrackedKeypoints()
-
-`Speedy.Keypoint.SinkOfTrackedKeypoints(name?: string): SpeedyPipelineNodeTrackedKeypointSink`
-
-Creates a sink of tracked keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyTrackedKeypoint` objects will be exported from the pipeline.
-
-###### Parameters
-
-The same as `SpeedyPipelineNodeKeypointSink`.
-
-###### Ports
-
-| Port name | Data type | Description |
-|-----------|-----------|-------------|
-| `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
-| `"flow"`  | Vector2   | A set of displacement vectors associated with each keypoint. |
 
 ##### Speedy.Keypoint.Clipper()
 
@@ -1245,6 +1263,25 @@ Keypoint tracking is the process of tracking keypoints across a sequence of imag
 
 Speedy uses sparse optical-flow algorithms to track keypoints in a video. Applications of optical-flow are numerous: you may get a sense of how objects are moving in a scene, estimate how the camera itself is moving, detect a transition in a film (a cut between two shots), and so on.
 
+##### Speedy.Keypoint.SinkOfTrackedKeypoints()
+
+`Speedy.Keypoint.SinkOfTrackedKeypoints(name?: string): SpeedyPipelineNodeTrackedKeypointSink`
+
+Creates a sink of tracked keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyTrackedKeypoint` objects will be exported from the pipeline.
+
+See also: [SpeedyTrackedKeypoint](#SpeedyTrackedKeypoint).
+
+###### Parameters
+
+The same as `SpeedyPipelineNodeKeypointSink`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
+| `"flow"`  | Vector2   | A set of displacement vectors associated with each keypoint. |
+
 ##### Speedy.Keypoint.Tracker.LK()
 
 `Speedy.Keypoint.Tracker.LK(name?: string): SpeedyPipelineNodeLKKeypointTracker`
@@ -1273,7 +1310,93 @@ Pyramid-based LK optical-flow.
 
 #### Keypoint matching
 
-Soon!
+Keypoint matching is the process of matching keypoints based on their descriptors. A distance metric is established in descriptor space. Two keypoints are said to be "matched" if the distance between their respective descriptors is minimized according to some criteria. Since Speedy uses binary descriptors, in practice we use the Hamming distance, i.e., the number of differing bits in two descriptors of the same size.
+
+Keypoint matching is useful for object recognition, object tracking, rectification of images, and more.
+
+##### Speedy.Keypoint.SinkOfMatchedKeypoints()
+
+`Speedy.Keypoint.SinkOfMatchedKeypoints(name?: string): SpeedyPipelineNodeMatchedKeypointSink`
+
+Create a sink of matched keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyMatchedKeypoint` objects will be exported from the pipeline.
+
+See also: [SpeedyMatchedKeypoint](#SpeedyMatchedKeypoint).
+
+###### Parameters
+
+The same as `SpeedyPipelineNodeKeypointSink`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
+| `"matches"` | KeypointMatches | A set of keypoint matches associated with each keypoint. |
+
+##### Speedy.Keypoint.Matcher.BFKNN()
+
+`Speedy.Keypoint.Matcher.BFKNN(name?: string): SpeedyPipelineNodeBruteForceKNNKeypointMatcher`
+
+Brute-force k-nearest neighbors keypoint matcher.
+
+###### Parameters
+
+* `k: number`. The desired number of matches per keypoint. Defaults to `1` (i.e., it will get you only the best match for each keypoint). Setting it to two gets you the first and the second best matches, and so on.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"keypoints"` | Keypoints | The input keypoints that you want to match. |
+| `"database"` | Keypoints | A collection of keypoints to be matched against. |
+| `"out"` | KeypointMatches | The `k` best matches for all elements of `"keypoints"`. |
+
+**Note:** I suggest using brute-force to match two sets containing no more than a few hundreds of keypoints. Your mileage may vary. If you need to match thousands of keypoints or more, consider using an approximate matcher.
+
+**Note 2:** make sure that you use as input two sets of keypoints with the same type of descriptors.
+
+##### Speedy.Keypoint.Matcher.LSHKNN()
+
+`Speedy.Keypoint.Matcher.LSHKNN(name?: string): SpeedyPipelineNodeLSHKNNKeypointMatcher`
+
+Fast approximate k-nearest neighbors keypoint matcher based on my own GPU-based variant of Locality Sensitive Hashing (LSH).
+
+###### Parameters
+
+* `k: number`. The desired number of matches per keypoint. Defaults to `1`.
+* `quality: string`. The desired quality level for the search of the best matches. One of the following: `"default"`, `"fastest"` or `"demanding"`. Changing this parameter impacts performance, and possibly the quality of the results.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"keypoints"` | Keypoints | The input keypoints that you want to match. |
+| `"lsh"`   | LSHTables | LSH tables of the keypoints to be matched against (the "database"). |
+| `"out"`   | KeypointMatches | The `k` best matches (approximately) for all elements of `"keypoints"`. |
+
+**Tip:** the `"default"` `quality` is generally appropriate, but if you set it to `"fastest"`, consider increasing the number of LSH tables (see below).
+
+##### Speedy.Keypoint.Matcher.StaticLSHTables()
+
+`Speedy.Keypoint.Matcher.StaticLSHTables(name?: string): SpeedyPipelineNodeStaticLSHTables`
+
+Generate LSH tables based on a known, and potentially large, collection of keypoints. LSH tables can help you match up to hundreds of thousands of keypoints.
+
+###### Parameters
+
+* `keypoints: SpeedyKeypoint[]`. The known collection of keypoints to be used as a "database" for matching. Make sure that they have descriptors.
+* `numberOfTables: number`. The number of LSH tables that you want to generate. Defaults to `8`. This parameter can be as low as `4` and as high as `32`. Increasing it may increase the quality of the results - at the expense of performance.
+* `hashSize: number`. The size of a descriptor hash, in bits. Defaults to `15`. This parameter can be as low as `10` and as high as `20`. Increasing it will substantially increase VRAM usage.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"out"`   | LSHTables | LSH tables associated with the known collection of `keypoints`. |
+
+**Tip:** Speedy generates logs based on the numerical parameters that you define and on the number of keypoints in your database. You may use these logs to help you tune the numerical parameters. That being said, the default parameters are generally good.
+
+
 
 ### Portals
 
@@ -2748,6 +2871,10 @@ promise.then(() => {
 `Speedy.Settings.logging: "default" | "none"`
 
 Configures the logging mode. `default` shows debug and warnings messages while `none` hides them all.
+
+
+
+
 #### Utilities
 
 ##### Speedy.version

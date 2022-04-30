@@ -59,7 +59,7 @@ const LSH_KNN = (fd => LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((o,d) => ((o[d] = 
 /**
  * K approximate nearest neighbors matcher
  */
-export class SpeedyPipelineNodeLSHKNNMatcher extends SpeedyPipelineNode
+export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 {
     /**
      * Constructor
