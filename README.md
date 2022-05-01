@@ -1310,7 +1310,7 @@ Pyramid-based LK optical-flow.
 
 #### Keypoint matching
 
-Keypoint matching is the process of matching keypoints based on their descriptors. A distance metric is established in descriptor space. Two keypoints are said to be "matched" if the distance between their respective descriptors is minimized according to some criteria. Since Speedy uses binary descriptors, in practice we use the Hamming distance, i.e., the number of differing bits in two descriptors of the same size.
+Keypoint matching is the process of matching keypoints based on their descriptors. A distance metric is established in descriptor space. Two keypoints are said to be "matched" if the distance between their respective descriptors is minimized according to some criteria. Since Speedy uses binary descriptors, in practice we use the Hamming distance, i.e., the number of differing bits in two descriptors of same size.
 
 Keypoint matching is useful for object recognition, object tracking, rectification of images, and more.
 
@@ -1806,7 +1806,7 @@ Returns `this` matrix after setting it to the result of `expr`.
 ```js
 Speedy.Matrix.ready().then(() => {
     const mat = Speedy.Matrix.Eye(3); // I := identity matrix
-    const pot = 3; // power-of-two
+    const pot = 4; // power-of-two
 
     for(let i = 0; i < pot; i++)
         mat.setToSync(mat.plus(mat)); // mat := mat + mat
