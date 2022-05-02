@@ -186,6 +186,8 @@ function createPipeline(mediaA, mediaB, k = 1, max = 800)
     const sourceB = Speedy.Image.Source();
     const greyscaleA = Speedy.Filter.Greyscale();
     const greyscaleB = Speedy.Filter.Greyscale();
+    const pyramidA = Speedy.Image.Pyramid();
+    const pyramidB = Speedy.Image.Pyramid();
     const detectorA = Speedy.Keypoint.Detector.Harris();
     const detectorB = Speedy.Keypoint.Detector.Harris();
     const clipperA = Speedy.Keypoint.Clipper();
@@ -207,15 +209,17 @@ function createPipeline(mediaA, mediaB, k = 1, max = 800)
     matcherB.k = k;
 
     sourceA.output().connectTo(greyscaleA.input());
-    greyscaleA.output().connectTo(detectorA.input());
     greyscaleA.output().connectTo(blurA.input());
+    greyscaleA.output().connectTo(pyramidA.input());
+    pyramidA.output().connectTo(detectorA.input());
     detectorA.output().connectTo(clipperA.input());
     clipperA.output().connectTo(descriptorA.input('keypoints'));
     blurA.output().connectTo(descriptorA.input('image'));
 
     sourceB.output().connectTo(greyscaleB.input());
-    greyscaleB.output().connectTo(detectorB.input());
     greyscaleB.output().connectTo(blurB.input());
+    greyscaleB.output().connectTo(pyramidB.input());
+    pyramidB.output().connectTo(detectorB.input());
     detectorB.output().connectTo(clipperB.input());
     clipperB.output().connectTo(descriptorB.input('keypoints'));
     blurB.output().connectTo(descriptorB.input('image'));
@@ -231,8 +235,8 @@ function createPipeline(mediaA, mediaB, k = 1, max = 800)
     descriptorB.output().connectTo(sinkB.input('in'));
 
     pipeline.init(
-        sourceA, greyscaleA, blurA, detectorA, clipperA, descriptorA, matcherA, sinkA,
-        sourceB, greyscaleB, blurB, detectorB, clipperB, descriptorB, matcherB, sinkB,
+        sourceA, greyscaleA, pyramidA, blurA, detectorA, clipperA, descriptorA, matcherA, sinkA,
+        sourceB, greyscaleB, pyramidB, blurB, detectorB, clipperB, descriptorB, matcherB, sinkB,
     );
 
     return pipeline;
