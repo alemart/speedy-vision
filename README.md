@@ -131,6 +131,8 @@ Try the demos and take a look at their source code:
 
 ## Installation
 
+### Browser
+
 Download the latest release of Speedy Vision and include it in the `<head>` section of your HTML page:
 
 ```html
@@ -138,6 +140,20 @@ Download the latest release of Speedy Vision and include it in the `<head>` sect
 ```
 
 Once you import the library, the `Speedy` object will be exposed. Check out the [Hello World demo](https://alemart.github.io/speedy-vision/demos/hello-world.html) for a working example.
+
+### Via npm
+
+Simply run:
+
+```sh
+npm install speedy-vision
+```
+
+Next, import the `Speedy` object as follows:
+
+```js
+import Speedy from 'speedy-vision';
+```
 
 ## Motivation
 
