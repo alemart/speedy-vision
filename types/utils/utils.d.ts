@@ -1,9 +1,4 @@
 /**
- * @typedef {Object} LoggingOptions
- * @property {boolean} [logs.debug] Enables `Utils.log()` calls. Default is true.
- * @property {boolean} [logs.warn] Enables `Utils.warn()` calls. Default is true.
- */
-/**
  * Generic utilities
  */
 export class Utils {
@@ -117,14 +112,4 @@ export class Utils {
      */
     static requestCameraStream(constraints?: MediaStreamConstraints | undefined): SpeedyPromise<HTMLVideoElement>;
 }
-export type LoggingOptions = {
-    /**
-     * Enables `Utils.log()` calls. Default is true.
-     */
-    debug?: boolean | undefined;
-    /**
-     * Enables `Utils.warn()` calls. Default is true.
-     */
-    warn?: boolean | undefined;
-};
 import { SpeedyPromise } from "../core/speedy-promise";

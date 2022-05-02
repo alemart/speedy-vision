@@ -9,10 +9,9 @@
   "types": "types/main.d.ts",
   "scripts": {
     "start": "webpack-dev-server --mode development --env PORT=8080",
-    "build": "npm run clean && npm run build-dev && npm run build-pro && npm run build-dts",
-    "build-dev": "webpack --mode development",
-    "build-pro": "webpack --mode production",
-    "build-dts": "tsc",
+    "build": "npm run clean && webpack --mode production && webpack --mode production --env minimize=1 && npm run build-types",
+    "build-dev": "npm run clean && webpack --mode development && npm run build-types",
+    "build-types": "tsc",
     "make": "cd src/core/wasm; make; cd ..",
     "clean": "rm -rf dist/*"
   },

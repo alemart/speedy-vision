@@ -184,9 +184,9 @@ declare class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace {
     /**
      * LSH-based K-approximate nearest neighbors
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeLSHKNNMatcher}
+     * @returns {SpeedyPipelineNodeLSHKNNKeypointMatcher}
      */
-    static LSHKNN(name?: string | undefined): SpeedyPipelineNodeLSHKNNMatcher;
+    static LSHKNN(name?: string | undefined): SpeedyPipelineNodeLSHKNNKeypointMatcher;
     /**
      * Brute-force K-nearest neighbors keypoint matcher
      * @param {string} [name]
@@ -211,6 +211,6 @@ import { SpeedyPipelineNodeHarrisKeypointDetector } from "../nodes/keypoints/det
 import { SpeedyPipelineNodeORBKeypointDescriptor } from "../nodes/keypoints/descriptors/orb";
 import { SpeedyPipelineNodeLKKeypointTracker } from "../nodes/keypoints/trackers/lk";
 import { SpeedyPipelineNodeStaticLSHTables } from "../nodes/keypoints/matchers/lsh-static-tables";
-import { SpeedyPipelineNodeLSHKNNMatcher } from "../nodes/keypoints/matchers/lsh-knn";
+import { SpeedyPipelineNodeLSHKNNKeypointMatcher } from "../nodes/keypoints/matchers/lsh-knn";
 import { SpeedyPipelineNodeBruteForceKNNKeypointMatcher } from "../nodes/keypoints/matchers/bf-knn";
 export {};

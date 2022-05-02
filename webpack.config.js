@@ -5,8 +5,11 @@ const pack = require("./package.json");
 
 module.exports = (env, argv) => ({
     entry: './src/main.js',
+    mode: argv.mode == 'development' ? 'development' : 'production',
+    devtool: argv.mode == 'development' ? 'source-map' : undefined,
+
     output: {
-        filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
+        filename: !env.minimize ? 'speedy-vision.js' : 'speedy-vision.min.js',
         path: path.resolve(__dirname, 'dist'),
         publicPath: '/dist/',
         library: {
@@ -15,6 +18,7 @@ module.exports = (env, argv) => ({
             export: 'default',
         },
     },
+
     plugins: [
         new webpack.BannerPlugin({
             banner: (({ version, homepage, description, year, author, license, date }) => [
@@ -40,6 +44,7 @@ module.exports = (env, argv) => ({
             resourceRegExp: /\.ignore\./i,
         }),
     ],
+
     module: {
         rules: [{
             test: /\.glsl$/i,
@@ -53,9 +58,9 @@ module.exports = (env, argv) => ({
             }],
         }],
     },
-    mode: argv.mode == 'development' ? 'development' : 'production',
-    devtool: argv.mode == 'development' ? 'source-map' : undefined,
+
     devServer: {
+        //https: true,
         host: env.HOST || '0.0.0.0',
         port: env.PORT || 8080,
         static: ['assets', 'demos', 'tests'].map(dir => ({
@@ -63,13 +68,17 @@ module.exports = (env, argv) => ({
             publicPath: `/${dir}/`,
         })),
     },
-    optimization: argv.mode == 'development' ? { minimize: false } : {
+
+    optimization: !env.minimize ? { minimize: false } : {
         minimize: true,
         minimizer: [new TerserPlugin({
             terserOptions: {
                 /*output: {
                     comments: /^!/,
                 },*/
+                format: {
+                    comments: /@license/i,
+                },
                 compress: {
                     defaults: true,
                 },

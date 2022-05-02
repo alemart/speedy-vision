@@ -1,7 +1,7 @@
 /**
  * K approximate nearest neighbors matcher
  */
-export class SpeedyPipelineNodeLSHKNNMatcher extends SpeedyPipelineNode {
+export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode {
     /**
      * Constructor
      * @param {string} [name] name of the node
