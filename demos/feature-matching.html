@@ -1,0 +1,243 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  feature-matching.html
+  Feature matching demo
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Speedy feature matching</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Feature matching</h1>
+        <form autocomplete="off">
+            <div>
+                <span>Number of matches:</span>
+                <label id="number-of-matches">0</label>
+            </div>
+            <div class="separator"></div>
+            <div>
+                <label for="slider">"Distinctiveness" ratio</label>
+                <input type="range" min="0.5" max="0.9" value="0.7" step="0.05" id="slider">
+                <label id="label"></label>
+            </div>
+        </form>
+        <img id="imageA" src="../assets/ponte-estaiada.jpg" title="Free photo by Bruno Thethe, available at https://unsplash.com/photos/T56KAD-Iyag" hidden>
+        <img id="imageB" src="../assets/ponte-estaiada2.jpg" title="Free photo by Bruno Thethe, available at https://unsplash.com/photos/ga-BRbZOK64" hidden>
+        <script>
+window.onload = async function()
+{
+    // configure the form
+    const slider = document.getElementById('slider');
+    const label = document.getElementById('label');
+    const numberOfMatches = document.getElementById('number-of-matches');
+    slider.oninput = update;
+
+    // load the images
+    const imageA = document.getElementById('imageA');
+    const imageB = document.getElementById('imageB');
+    const mediaA = await Speedy.load(imageA);
+    const mediaB = await Speedy.load(imageB);
+
+    // create the pipeline
+    const pipeline = createPipeline(mediaA, mediaB, 2);
+
+    // find and match the keypoints
+    const { keypointsA, keypointsB } = await pipeline.run();
+
+    // setup the canvas
+    const width = mediaA.width + mediaB.width;
+    const height = Math.max(mediaA.height, mediaB.height);
+    const canvas = createCanvas(width, height, imageA.title + ", " + imageB.title);
+    const ctx = canvas.getContext('2d');
+
+    // display the matches
+    function update()
+    {
+        const ratio = Number(slider.value);
+        const matches = filterGoodMatches(keypointsA, keypointsB, ratio);
+
+        ctx.drawImage(mediaA.source, 0, 0);
+        ctx.drawImage(mediaB.source, mediaA.width, 0);
+        displayMatches(ctx, mediaA, mediaB, matches);
+
+        label.innerText = ratio;
+        numberOfMatches.innerText = matches.length;
+    }
+    update();
+
+    // done!
+    pipeline.release();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    return document.body.appendChild(canvas);
+}
+
+function randomInt(n)
+{
+    return Math.floor(n * Math.random());
+}
+
+function randomColor()
+{
+    const r = randomInt(256);
+    const g = randomInt(256);
+    const b = randomInt(256);
+
+    const r_ = r / (r+g+b);
+    const g_ = g / (r+g+b);
+    const b_ = 1 - r_ - g_;
+
+    const r__ = (r_ * 255) | 0;
+    const g__ = (g_ * 255) | 0;
+    const b__ = (b_ * 255) | 0;
+
+    return `rgb(${r__},${g__},${b__})`;
+}
+
+function filterGoodMatches(keypointsA, keypointsB, acceptableRatio = 0.75)
+{
+    const matches = [];
+
+    for(let j = 0; j < keypointsA.length; j++) {
+
+        const keypoint = keypointsA[j];
+
+        // validate
+        if(!keypoint.matches || keypoint.matches.length == 0)
+            throw new Error(`No matches computed for keypoint #${j}`);
+        else if(keypoint.matches.length < 2)
+            throw new Error(`I need at least 2 matches per keypoint`);
+
+        // filter out invalid matches
+        const i1 = keypoint.matches[0].index;
+        const i2 = keypoint.matches[1].index;
+        if(i1 < 0 || i2 < 0)
+            continue;
+
+        // filter out "bad" matches
+        const d1 = keypoint.matches[0].distance;
+        const d2 = keypoint.matches[1].distance;
+        if(d1 > d2 * acceptableRatio)
+            continue;
+
+        // accept the match
+        const matchedKeypoint = keypointsB[keypoint.matches[0].index];
+        matches.push([ keypoint, matchedKeypoint ]);
+
+    }
+
+    return matches;
+}
+
+function displayMatches(ctx, mediaA, mediaB, matches, color = 'yellow')
+{
+    //ctx.beginPath();
+    for(let i = 0; i < matches.length; i++) {
+        const keypoint = matches[i][0];
+        const matchedKeypoint = matches[i][1];
+
+        ctx.beginPath(); // changing colors all the time is slow; don't do this on a video
+
+        ctx.moveTo(keypoint.x, keypoint.y);
+        ctx.lineTo(mediaA.width + matchedKeypoint.x, matchedKeypoint.y);
+
+        ctx.strokeStyle = randomColor();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    //ctx.strokeStyle = color; // use a single color (faster)
+    //ctx.lineWidth = 2;
+    //ctx.stroke();
+}
+
+function createPipeline(mediaA, mediaB, k = 1, max = 800)
+{
+    const pipeline = Speedy.Pipeline();
+    const sourceA = Speedy.Image.Source();
+    const sourceB = Speedy.Image.Source();
+    const greyscaleA = Speedy.Filter.Greyscale();
+    const greyscaleB = Speedy.Filter.Greyscale();
+    const detectorA = Speedy.Keypoint.Detector.Harris();
+    const detectorB = Speedy.Keypoint.Detector.Harris();
+    const clipperA = Speedy.Keypoint.Clipper();
+    const clipperB = Speedy.Keypoint.Clipper();
+    const blurA = Speedy.Filter.GaussianBlur();
+    const blurB = Speedy.Filter.GaussianBlur();
+    const descriptorA = Speedy.Keypoint.Descriptor.ORB(); // note: ORB is NOT scale-invariant!
+    const descriptorB = Speedy.Keypoint.Descriptor.ORB();
+    const matcherA = Speedy.Keypoint.Matcher.BFKNN();
+    const matcherB = Speedy.Keypoint.Matcher.BFKNN();
+    const sinkA = Speedy.Keypoint.SinkOfMatchedKeypoints('keypointsA');
+    const sinkB = Speedy.Keypoint.SinkOfMatchedKeypoints('keypointsB');
+
+    sourceA.media = mediaA;
+    sourceB.media = mediaB;
+    clipperA.size = max;
+    clipperB.size = max;
+    matcherA.k = k;
+    matcherB.k = k;
+
+    sourceA.output().connectTo(greyscaleA.input());
+    greyscaleA.output().connectTo(detectorA.input());
+    greyscaleA.output().connectTo(blurA.input());
+    detectorA.output().connectTo(clipperA.input());
+    clipperA.output().connectTo(descriptorA.input('keypoints'));
+    blurA.output().connectTo(descriptorA.input('image'));
+
+    sourceB.output().connectTo(greyscaleB.input());
+    greyscaleB.output().connectTo(detectorB.input());
+    greyscaleB.output().connectTo(blurB.input());
+    detectorB.output().connectTo(clipperB.input());
+    clipperB.output().connectTo(descriptorB.input('keypoints'));
+    blurB.output().connectTo(descriptorB.input('image'));
+
+    descriptorA.output().connectTo(matcherA.input('keypoints'));
+    descriptorB.output().connectTo(matcherA.input('database'));
+    matcherA.output().connectTo(sinkA.input('matches'));
+    descriptorA.output().connectTo(sinkA.input('in'));
+
+    descriptorB.output().connectTo(matcherB.input('keypoints'));
+    descriptorA.output().connectTo(matcherB.input('database'));
+    matcherB.output().connectTo(sinkB.input('matches'));
+    descriptorB.output().connectTo(sinkB.input('in'));
+
+    pipeline.init(
+        sourceA, greyscaleA, blurA, detectorA, clipperA, descriptorA, matcherA, sinkA,
+        sourceB, greyscaleB, blurB, detectorB, clipperB, descriptorB, matcherB, sinkB,
+    );
+
+    return pipeline;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>
+    </body>
+</html>

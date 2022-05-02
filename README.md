@@ -111,6 +111,8 @@ Try the demos and take a look at their source code:
   * [ORB features](https://alemart.github.io/speedy-vision/demos/orb-features.html)
 * Feature tracking
   * [Optical flow](https://alemart.github.io/speedy-vision/demos/optical-flow.html)
+* Feature matching
+  * [Feature matching](https://alemart.github.io/speedy-vision/demos/feature-matching.html)
 * Image processing
   * [Image convolution](https://alemart.github.io/speedy-vision/demos/convolution.html)
   * [Image warping](https://alemart.github.io/speedy-vision/demos/warping.html)
@@ -370,13 +372,13 @@ A new `SpeedyPipeline` object.
 
 ##### SpeedyPipeline.init()
 
-`SpeedyPipeline.init(...nodes: ...SpeedyPipelineNode): SpeedyPipeline`
+`SpeedyPipeline.init(...nodes: SpeedyPipelineNode[]): SpeedyPipeline`
 
 Initializes a pipeline with the specified `nodes`.
 
 ###### Arguments
 
-* `...nodes: ...SpeedyPipelineNode`. The list of nodes that belong to the pipeline.
+* `...nodes: SpeedyPipelineNode[]`. The list of nodes that belong to the pipeline.
 
 ###### Returns
 
