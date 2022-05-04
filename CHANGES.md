@@ -1,5 +1,25 @@
 # Release notes
 
+## 0.9.0 - May 4th, 2022
+
+* Introduced feature matching
+    * Brute force
+    * Fast approximate k-nearest neighbors (kNN)
+* Introduced type definitions for TypeScript
+* New nodes: DistanceFilter, HammingDistanceFilter, BorderClipper
+* New sink nodes: SinkOfTrackedKeypoints, SinkOfMatchedKeypoints
+* Removed node: DiscardKeypointDescriptor
+* New feature matching demo
+* Improved the algorithm used to download data from the GPU
+* Introduced synchronous writing methods to SpeedyMatrix
+* Introduced affine transforms
+* Introduced Speedy.Settings
+    * Power preference
+    * GPU polling modes
+    * Logging modes (alxAgu)
+* Removed SpeedyMedia.draw()
+* Optimizations and fixes
+
 ## 0.8.2 - November 7th, 2021
 
 * Introduced a new and faster keypoint encoder using Parallel Ale Sort
