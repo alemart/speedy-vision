@@ -1,14 +1,14 @@
 # How to contribute
 
-In order to contribute to speedy-vision.js, you must certify that you have the right to submit your contribution to this project according to the [Developer Certificate of Origin (DCO)](https://developercertificate.org). Each commit must include a `Signed-off-by` line at the end of the commit message, as in the template below:
+Thank you for your interest in contributing to Speedy Vision! 👍
+
+In order to contribute to Speedy Vision, you must certify that you have the right to submit your contribution according to the [Developer Certificate of Origin (DCO)](https://developercertificate.org). Each commit must include a `Signed-off-by` line at the end of the commit message, as in the template below:
 
 ```
 Signed-off-by: Your Name <your.email@addr.es>
 ```
 
-This can easily be done with `git commit -s` or `git commit --signoff`.
-
-You must use your real name and include a valid e-mail address of yours.
+This can easily be done with `git commit -s` or `git commit --signoff`. You must use your real name and include a valid e-mail address of yours.
 
 By including a `Signed-off-by` line, you agree to and certify the following:
 
