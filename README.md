@@ -4,9 +4,12 @@ Build real-time stuff with **Speedy Vision**, a GPU-accelerated Computer Vision 
 
 [<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision/demos/best-features.html "Click to open a demo")
 
-Speedy Vision is [developed independently](#author).
+Speedy Vision is [developed independently](#author). If you came here looking for Augmented Reality, [check my other project](https://github.com/alemart/martins-js) instead!
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/alemart)
+| |
+|-|
+| :octocat: [**Support my work on GitHub Sponsors!**](https://github.com/sponsors/alemart) |
+| |
 
 ## Features
 
@@ -43,8 +46,6 @@ There are plenty of [demos](#demos) available!
 ## Author
 
 **Speedy Vision** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
-
-If you came here looking for Augmented Reality, [check my other project](https://github.com/alemart/martins-js) instead!
 
 -----
 
