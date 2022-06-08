@@ -45,7 +45,7 @@ struct KeypointMatch
  */
 vec4 encodeKeypointMatch(KeypointMatch candidate)
 {
-    uint index = uint(candidate.index & MATCH_INDEX_MASK);
+    uint index = uint(candidate.index) & uint(MATCH_INDEX_MASK);
     uint dist = uint(clamp(candidate.dist, 0, MATCH_MAX_DISTANCE));
     uint u32 = index | (dist << MATCH_INDEX_BITS);
     return encodeUint32(u32);
