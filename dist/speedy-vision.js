@@ -1,11 +1,11 @@
 /*!
- * Speedy Vision version 0.9.0
+ * Speedy Vision version 0.9.1
  * GPU-accelerated Computer Vision for JavaScript
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2022-05-02T00:57:30.277Z
+ * Date: 2022-06-08T04:17:16.104Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -4439,7 +4439,7 @@ module.exports = "#ifndef _KEYPOINT_DESCRIPTORS_GLSL\n#define _KEYPOINT_DESCRIPT
 /***/ 4004:
 /***/ ((module) => {
 
-module.exports = "#ifndef _KEYPOINT_MATCHES_GLSL\n#define _KEYPOINT_MATCHES_GLSL\n@include \"int32.glsl\"\nconst int MATCH_INDEX_BITS = int(@MATCH_INDEX_BITS@);\nconst int MATCH_INDEX_MASK = int(@MATCH_INDEX_MASK@);\nconst int MATCH_MAX_INDEX = int(@MATCH_MAX_INDEX@);\nconst int MATCH_MAX_DISTANCE = int(@MATCH_MAX_DISTANCE@);\nstruct KeypointMatch\n{\nint index;\nint dist;\n};\nvec4 encodeKeypointMatch(KeypointMatch candidate)\n{\nuint index = uint(candidate.index & MATCH_INDEX_MASK);\nuint dist = uint(clamp(candidate.dist, 0, MATCH_MAX_DISTANCE));\nuint u32 = index | (dist << MATCH_INDEX_BITS);\nreturn encodeUint32(u32);\n}\nKeypointMatch decodeKeypointMatch(vec4 rgba)\n{\nuint u32 = decodeUint32(rgba);\nint dist = int(u32 >> MATCH_INDEX_BITS);\nint index = int(u32 & uint(MATCH_INDEX_MASK));\nreturn KeypointMatch(index, dist);\n}\nconst KeypointMatch MATCH_NOT_FOUND = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif"
+module.exports = "#ifndef _KEYPOINT_MATCHES_GLSL\n#define _KEYPOINT_MATCHES_GLSL\n@include \"int32.glsl\"\nconst int MATCH_INDEX_BITS = int(@MATCH_INDEX_BITS@);\nconst int MATCH_INDEX_MASK = int(@MATCH_INDEX_MASK@);\nconst int MATCH_MAX_INDEX = int(@MATCH_MAX_INDEX@);\nconst int MATCH_MAX_DISTANCE = int(@MATCH_MAX_DISTANCE@);\nstruct KeypointMatch\n{\nint index;\nint dist;\n};\nvec4 encodeKeypointMatch(KeypointMatch candidate)\n{\nuint index = uint(candidate.index) & uint(MATCH_INDEX_MASK);\nuint dist = uint(clamp(candidate.dist, 0, MATCH_MAX_DISTANCE));\nuint u32 = index | (dist << MATCH_INDEX_BITS);\nreturn encodeUint32(u32);\n}\nKeypointMatch decodeKeypointMatch(vec4 rgba)\n{\nuint u32 = decodeUint32(rgba);\nint dist = int(u32 >> MATCH_INDEX_BITS);\nint index = int(u32 & uint(MATCH_INDEX_MASK));\nreturn KeypointMatch(index, dist);\n}\nconst KeypointMatch MATCH_NOT_FOUND = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif"
 
 /***/ }),
 
@@ -20720,7 +20720,7 @@ class Speedy
         if(false)
             {}
         else
-            return "0.9.0";
+            return "0.9.1";
     }
 
     /**
