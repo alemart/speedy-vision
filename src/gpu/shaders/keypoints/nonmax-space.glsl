@@ -51,11 +51,19 @@ void main()
 #endif
     // Read 3x3 patch
     #define P(x,y) textureLod(corners, texCoord + pot * vec2((x), (y)) / texSize, 0.0f)
+    /*
+    // the following initializer crashes on some Android devices (driver bug?)
+    // error: "no default precision defined for variable 'vec4[9]'"
     vec4 pix[9] = vec4[9](
         P(-1,-1), P(0,-1), P(1,-1),
         P(-1,0), pixel, P(1,0),
         P(-1,1), P(0,1), P(1,1)
     );
+    */
+    vec4 pix[9];
+    pix[0] = P(-1,-1); pix[1] = P(0,-1); pix[2] = P(1,-1);
+    pix[3] = P(-1, 0); pix[4] = pixel;   pix[5] = P(1, 0);
+    pix[6] = P(-1, 1); pix[7] = P(0, 1); pix[8] = P(1, 1);
 
     #define S(j) decodeFloat16(pix[j].rb)
     mat3 scores = mat3(
