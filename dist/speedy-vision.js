@@ -1,11 +1,11 @@
 /*!
- * Speedy Vision version 0.9.1
+ * Speedy Vision version 0.9.1-wip
  * GPU-accelerated Computer Vision for JavaScript
  * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2022-06-08T04:17:16.104Z
+ * Date: 2022-06-19T01:47:11.024Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -4663,7 +4663,7 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@includ
 /***/ 8430:
 /***/ ((module) => {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat encodedLod = pixel.a;\nfloat score = decodeFloat16(pixel.rb);\nfloat lod = decodeLod(encodedLod);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#if 1\nvec2 gridSize = vec2(pot);\nvec2 gridLocation = floor(mod(texCoord * texSize, gridSize));\nvec2 gridDelta = gridLocation / gridSize - vec2(0.5f);\nfloat gridStep = 1.0f / pot;\nconst float adjustment = 1.25f;\ncolor.rb = encodeFloat16(0.0f);\nif(max(abs(gridDelta.x), abs(gridDelta.y)) > adjustment * gridStep)\nreturn;\n#endif\n#define P(x,y) textureLod(corners, texCoord + pot * vec2((x), (y)) / texSize, 0.0f)\nvec4 pix[9] = vec4[9](\nP(-1,-1), P(0,-1), P(1,-1),\nP(-1,0), pixel, P(1,0),\nP(-1,1), P(0,1), P(1,1)\n);\n#define S(j) decodeFloat16(pix[j].rb)\nmat3 scores = mat3(\nS(0), S(1), S(2),\nS(3), S(4), S(5),\nS(6), S(7), S(8)\n);\n#define B(j) float(isSameLod(decodeLod(pix[j].a), lod))\nmat3 sameLod = mat3(\nB(0), B(1), B(2),\nB(3), B(4), B(5),\nB(6), B(7), B(8)\n);\nmat3 sameLodScores = matrixCompMult(scores, sameLod);\nvec3 maxScore3 = max(sameLodScores[0], max(sameLodScores[1], sameLodScores[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\ncolor.rb = encodeFloat16(score * step(maxScore, score));\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat encodedLod = pixel.a;\nfloat score = decodeFloat16(pixel.rb);\nfloat lod = decodeLod(encodedLod);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#if 1\nvec2 gridSize = vec2(pot);\nvec2 gridLocation = floor(mod(texCoord * texSize, gridSize));\nvec2 gridDelta = gridLocation / gridSize - vec2(0.5f);\nfloat gridStep = 1.0f / pot;\nconst float adjustment = 1.25f;\ncolor.rb = encodeFloat16(0.0f);\nif(max(abs(gridDelta.x), abs(gridDelta.y)) > adjustment * gridStep)\nreturn;\n#endif\n#define P(x,y) textureLod(corners, texCoord + pot * vec2((x), (y)) / texSize, 0.0f)\nvec4 pix[9];\npix[0] = P(-1,-1); pix[1] = P(0,-1); pix[2] = P(1,-1);\npix[3] = P(-1, 0); pix[4] = pixel;   pix[5] = P(1, 0);\npix[6] = P(-1, 1); pix[7] = P(0, 1); pix[8] = P(1, 1);\n#define S(j) decodeFloat16(pix[j].rb)\nmat3 scores = mat3(\nS(0), S(1), S(2),\nS(3), S(4), S(5),\nS(6), S(7), S(8)\n);\n#define B(j) float(isSameLod(decodeLod(pix[j].a), lod))\nmat3 sameLod = mat3(\nB(0), B(1), B(2),\nB(3), B(4), B(5),\nB(6), B(7), B(8)\n);\nmat3 sameLodScores = matrixCompMult(scores, sameLod);\nvec3 maxScore3 = max(sameLodScores[0], max(sameLodScores[1], sameLodScores[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\ncolor.rb = encodeFloat16(score * step(maxScore, score));\n}"
 
 /***/ }),
 
@@ -20720,7 +20720,7 @@ class Speedy
         if(false)
             {}
         else
-            return "0.9.1";
+            return "0.9.1-wip";
     }
 
     /**
