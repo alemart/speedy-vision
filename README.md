@@ -1,15 +1,16 @@
 # Speedy Vision
 
+[![GitHub](https://img.shields.io/github/license/alemart/speedy-vision)](LICENSE) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/alemart/speedy-vision)](https://github.com/alemart/speedy-vision/releases) [![GitHub Repo stars](https://img.shields.io/github/stars/alemart/speedy-vision?logo=github)](https://github.com/alemart/speedy-vision/stargazers) [![GitHub Sponsors](https://img.shields.io/github/sponsors/alemart?logo=github)](https://github.com/sponsors/alemart)
+
 Build real-time stuff with **Speedy Vision**, a GPU-accelerated Computer Vision library for JavaScript.
 
 [<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision/demos/best-features.html "Click to open a demo")
 
-Speedy Vision is [developed independently](#author). If you came here looking for Augmented Reality, [check my other project](https://github.com/alemart/martins-js) instead!
+**Speedy Vision** is developed independently by [Alexandre Martins](https://github.com/alemart) and released under the [Apache-2.0 license](LICENSE).
 
-| |
-|-|
-| :octocat: [**Support my work on GitHub Sponsors!**](https://github.com/sponsors/alemart) |
-| |
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J41O00K)
+
+For web-based Augmented Reality, [check out my other project](https://github.com/alemart/martins-js).
 
 ## Features
 
@@ -43,16 +44,12 @@ Speedy Vision is [developed independently](#author). If you came here looking fo
 
 There are plenty of [demos](#demos) available!
 
-## Author
-
-**Speedy Vision** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
-
 -----
 
 ## Table of contents
 
 * [Demos](#demos)
-* [Installation](#installation)
+* [Usage](#usage)
 * [Motivation](#motivation)
 * [The Pipeline](#the-pipeline)
 * [API Reference](#api-reference)
@@ -130,17 +127,27 @@ Try the demos and take a look at their source code:
   * [System of equations](https://alemart.github.io/speedy-vision/demos/system-of-equations.html)
   * [QR decomposition](https://alemart.github.io/speedy-vision/demos/qr-decomposition.html)
 
-## Installation
+## Usage
 
 ### Browser
 
-Download the latest release of Speedy Vision and include it in the `<head>` section of your HTML page:
+[Download the latest release of Speedy Vision](https://github.com/alemart/speedy-vision/releases) and include it in the `<head>` section of your HTML page:
 
 ```html
 <script src="dist/speedy-vision.min.js"></script>
 ```
 
 Once you import the library, the `Speedy` object will be exposed. Check out the [Hello World demo](https://alemart.github.io/speedy-vision/demos/hello-world.html) for a working example.
+
+### Via CDN
+
+Add the following to the `<head>` of your HTML page:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/alemart/speedy-vision@VERSION/dist/speedy-vision.min.js"></script>
+```
+
+Replace `VERSION` by ![GitHub release (latest by date)](https://img.shields.io/github/v/release/alemart/speedy-vision?color=%23ffffff&display_name=tag&label=%20)
 
 ### Via npm
 
