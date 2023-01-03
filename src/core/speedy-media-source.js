@@ -361,10 +361,11 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
+            video.load();
             return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
                 return this;
-            })
+            });
         }
     }
 
