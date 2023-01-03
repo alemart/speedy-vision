@@ -1,11 +1,11 @@
 /*!
  * Speedy Vision version 0.9.1-wip
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2022-06-19T01:47:11.024Z
+ * Date: 2023-01-03T15:04:44.999Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9310,10 +9310,11 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
+            video.load();
             return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
                 return this;
-            })
+            });
         }
     }
 
