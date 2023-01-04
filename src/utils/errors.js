@@ -228,6 +228,22 @@ export class FileNotFoundError extends SpeedyError
 }
 
 /**
+ * Resource not loaded error
+ */
+export class ResourceNotLoadedError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyErrorCause} [cause] cause of the error
+     */
+    constructor(message = '', cause = null)
+    {
+        super(`Resource not loaded. ${message}`, cause);
+    }
+}
+
+/**
  * Timeout error
  */
 export class TimeoutError extends SpeedyError
