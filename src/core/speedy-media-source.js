@@ -21,7 +21,7 @@
 
 import { Utils } from '../utils/utils';
 import { SpeedyPromise } from './speedy-promise';
-import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
+import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, TimeoutError, ResourceNotLoadedError } from '../utils/errors';
 import { MediaType } from '../utils/types'
 
 /** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} SpeedyMediaSourceNativeElement */
@@ -164,10 +164,30 @@ export class SpeedyMediaSource
                 reject(new TimeoutError(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
             }, timeout);
 
-            element.addEventListener(eventName, () => {
+            function handleError()
+            {
                 clearTimeout(timer);
+                element.removeEventListener('error', handleError, false);
+                element.removeEventListener(eventName, handleSuccess, false);
+
+                const hasError = (element.error !== null && typeof element.error === 'object');
+                const error = hasError ? element.error : ({ code: -1, message: '' });
+                const info = `${error.message} (error code ${error.code})`;
+
+                reject(new ResourceNotLoadedError(`Can't load ${element}. ${info}`));
+            }
+
+            function handleSuccess()
+            {
+                clearTimeout(timer);
+                element.removeEventListener('error', handleError, false);
+                element.removeEventListener(eventName, handleSuccess, false);
+
                 resolve(element);
-            }, false);
+            }
+
+            element.addEventListener('error', handleError, false);
+            element.addEventListener(eventName, handleSuccess, false);
         });
     }
 }
@@ -361,7 +381,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
-            video.load();
+            setTimeout(() => video.load());
             return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
                 return this;
