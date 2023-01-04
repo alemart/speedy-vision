@@ -161,6 +161,7 @@ export class SpeedyMediaSource
             Utils.log(`Waiting for ${eventName} to be triggered in ${element}...`);
 
             const timer = setTimeout(() => {
+                clear();
                 reject(new TimeoutError(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
             }, timeout);
 
