@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-01-03T15:04:44.999Z
+ * Date: 2023-01-04T15:40:02.564Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -3321,6 +3321,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
 /* harmony export */   "js": () => (/* binding */ IllegalOperationError),
 /* harmony export */   "Cx": () => (/* binding */ OutOfMemoryError),
 /* harmony export */   "Xg": () => (/* binding */ FileNotFoundError),
+/* harmony export */   "tg": () => (/* binding */ ResourceNotLoadedError),
 /* harmony export */   "W5": () => (/* binding */ TimeoutError),
 /* harmony export */   "D3": () => (/* binding */ ParseError),
 /* harmony export */   "ps": () => (/* binding */ AssertionError),
@@ -3554,6 +3555,22 @@ class FileNotFoundError extends SpeedyError
     constructor(message = '', cause = null)
     {
         super(`File not found. ${message}`, cause);
+    }
+}
+
+/**
+ * Resource not loaded error
+ */
+class ResourceNotLoadedError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyErrorCause} [cause] cause of the error
+     */
+    constructor(message = '', cause = null)
+    {
+        super(`Resource not loaded. ${message}`, cause);
     }
 }
 
@@ -9113,10 +9130,30 @@ class SpeedyMediaSource
                 reject(new utils_errors/* TimeoutError */.W5(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
             }, timeout);
 
-            element.addEventListener(eventName, () => {
+            function handleError()
+            {
                 clearTimeout(timer);
+                element.removeEventListener('error', handleError, false);
+                element.removeEventListener(eventName, handleSuccess, false);
+
+                const hasError = (element.error !== null && typeof element.error === 'object');
+                const error = hasError ? element.error : ({ code: -1, message: '' });
+                const info = `${error.message} (error code ${error.code})`;
+
+                reject(new utils_errors/* ResourceNotLoadedError */.tg(`Can't load ${element}. ${info}`));
+            }
+
+            function handleSuccess()
+            {
+                clearTimeout(timer);
+                element.removeEventListener('error', handleError, false);
+                element.removeEventListener(eventName, handleSuccess, false);
+
                 resolve(element);
-            }, false);
+            }
+
+            element.addEventListener('error', handleError, false);
+            element.addEventListener(eventName, handleSuccess, false);
         });
     }
 }
@@ -9310,7 +9347,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
-            video.load();
+            setTimeout(() => video.load());
             return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
                 return this;

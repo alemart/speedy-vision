@@ -119,6 +119,17 @@ export class FileNotFoundError extends SpeedyError {
     constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
 }
 /**
+ * Resource not loaded error
+ */
+export class ResourceNotLoadedError extends SpeedyError {
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyErrorCause} [cause] cause of the error
+     */
+    constructor(message?: string | undefined, cause?: SpeedyErrorCause | undefined);
+}
+/**
  * Timeout error
  */
 export class TimeoutError extends SpeedyError {
