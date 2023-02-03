@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Blurring a video with a median filter</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Median filter</h1>
@@ -49,7 +50,7 @@
             <span id="status"></span>
             <canvas id="canvas-demo"></canvas>
         </div>
-        <video
+        <video id="video"
             src="../assets/bird-walking.webm"
             poster="../assets/loading.jpg"
             preload="auto"
@@ -73,7 +74,7 @@ window.onload = async function()
     */
 
     // Load a video
-    const video = document.querySelector('video');
+    const video = document.getElementById('video');
     const media = await Speedy.load(video);
     video.play();
 
@@ -103,7 +104,7 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        const canvas = createCanvas(media.width * 2, media.height, video.title);
+        const canvas = setupCanvas('canvas-demo', media.width * 2, media.height, video.title);
         let median = null, greyscale = null, frameReady = false;
 
         async function update()
@@ -120,8 +121,8 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                draw(median, canvas, 0, 0);
-                draw(greyscale, canvas, median.width, 0);
+                renderMedia(median, canvas, 0, 0);
+                renderMedia(greyscale, canvas, median.width, 0);
             }
 
             frameReady = false;
@@ -131,32 +132,6 @@ window.onload = async function()
 
         setInterval(renderStatus, 200);
     })();
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    return canvas;
-}
-
-function renderStatus()
-{
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps}`;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

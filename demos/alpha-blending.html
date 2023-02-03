@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Alpha blending</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Alpha blending</h1>
@@ -36,18 +37,19 @@
                 <input type="range" min="0.0" max="1.0" value="0.5" step="0.01" id="alpha">
             </div>
         </form>
-        <video
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+            <canvas id="animated-canvas"></canvas>
+        </div>
+        <video id="video"
             src="../assets/flying-eagle.webm"
             poster="../assets/loading.jpg"
             preload="auto"
             loop muted controls autoplay hidden
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
         </video>
-        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
-        <div>
-            <span id="status"></span>
-            <canvas id="canvas-demo"></canvas>
-        </div>
+        <img id="image" src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
         <script>
 window.onload = async function()
 {
@@ -55,8 +57,8 @@ window.onload = async function()
     const alpha = document.getElementById('alpha');
 
     // Load media
-    const image = document.querySelector('img');
-    const video = document.querySelector('video');
+    const image = document.getElementById('image');
+    const video = document.getElementById('video');
     const media = [
         await Speedy.load(video),
         await Speedy.load(image),
@@ -68,7 +70,7 @@ window.onload = async function()
     const height = Math.max(media[0].height, media[1].height);
 
     // Setup an animated canvas
-    const animatedCanvas = createCanvas(width, height);
+    const animatedCanvas = setupCanvas('animated-canvas', width, height);
     (() => {
         const [ background, sprite ] = media;
         const position = Speedy.Point2(0, 0);
@@ -97,8 +99,8 @@ window.onload = async function()
                 speed.y = Math.abs(speed.y);
 
             // draw animation
-            draw(background, animatedCanvas);
-            draw(sprite, animatedCanvas, position.x, position.y);
+            renderMedia(background, animatedCanvas);
+            renderMedia(sprite, animatedCanvas, position.x, position.y);
             requestAnimationFrame(animate);
         }
 
@@ -124,11 +126,8 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        const canvas = document.getElementById('canvas-demo');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.title = video.title + ' | ' + image.title;
-
+        const title = video.title + ' | ' + image.title;
+        const canvas = setupCanvas('canvas-demo', width, height, title);
         let blended = null, frameReady = false
 
         async function update()
@@ -148,7 +147,7 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                draw(blended, canvas);
+                renderMedia(blended, canvas);
             }
 
             frameReady = false;
@@ -158,32 +157,6 @@ window.onload = async function()
 
         setInterval(renderStatus, 200);
     })();
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    return canvas;
-}
-
-function renderStatus()
-{
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps}`;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

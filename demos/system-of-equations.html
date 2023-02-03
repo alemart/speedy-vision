@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Linear System of Equations</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>System of Equations</h1>
@@ -73,10 +74,10 @@
                 </table>
             </div>
         </form>
-        <pre>Edit any field to begin!</pre>
+        <pre id="output">Edit any field to begin!</pre>
         <script>
             window.onload = function() {
-                const output = document.querySelector('pre');
+                const output = document.querySelector('#output');
                 const input = {
                     method: document.querySelector('#method'),
                     a: [ ...(new Array(9).keys()) ].map(j => document.querySelector('#a' + j)),

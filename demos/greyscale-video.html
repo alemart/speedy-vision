@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,22 +25,23 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Convert video to greyscale</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Convert video to greyscale</h1>
-        <video
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+        </div>
+        <video id="video"
             src="../assets/flying-eagle.webm"
             poster="../assets/loading.jpg"
             preload="auto"
             loop muted controls autoplay
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
         </video>
-        <div>
-            <span id="status"></span>
-            <canvas id="canvas-demo"></canvas>
-        </div>
         <script>
 window.onload = async function()
 {
@@ -54,7 +55,7 @@ window.onload = async function()
     */
 
     // Load a video
-    const video = document.querySelector('video');
+    const video = document.getElementById('video');
     const media = await Speedy.load(video);
 
     // Setup the pipeline
@@ -72,7 +73,7 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        const canvas = createCanvas(media.width, media.height, video.title);
+        const canvas = setupCanvas('canvas-demo', media.width, media.height, video.title);
         let image = null, frameReady = false;
 
         async function update()
@@ -88,7 +89,7 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                draw(image, canvas);
+                renderMedia(image, canvas);
             }
 
             frameReady = false;
@@ -98,32 +99,6 @@ window.onload = async function()
 
         setInterval(renderStatus, 200);
     })();
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    return canvas;
-}
-
-function renderStatus()
-{
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps}`;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

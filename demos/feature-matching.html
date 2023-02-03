@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Speedy feature matching</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Feature matching</h1>
@@ -42,6 +43,9 @@
                 <label id="label"></label>
             </div>
         </form>
+        <div>
+            <canvas id="canvas-demo"></canvas>
+        </div>
         <img id="imageA" src="../assets/ponte-estaiada.jpg" title="Free photo by Bruno Thethe, available at https://unsplash.com/photos/T56KAD-Iyag" hidden>
         <img id="imageB" src="../assets/ponte-estaiada2.jpg" title="Free photo by Bruno Thethe, available at https://unsplash.com/photos/ga-BRbZOK64" hidden>
         <script>
@@ -68,7 +72,7 @@ window.onload = async function()
     // setup the canvas
     const width = mediaA.width + mediaB.width;
     const height = Math.max(mediaA.height, mediaB.height);
-    const canvas = createCanvas(width, height, imageA.title + ", " + imageB.title);
+    const canvas = setupCanvas('canvas-demo', width, height, imageA.title + ", " + imageB.title);
     const ctx = canvas.getContext('2d');
 
     // display the matches
@@ -88,17 +92,6 @@ window.onload = async function()
 
     // done!
     pipeline.release();
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    return document.body.appendChild(canvas);
 }
 
 function randomInt(n)

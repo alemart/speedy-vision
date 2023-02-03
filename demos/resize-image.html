@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Resize an image</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Resize an image</h1>
@@ -54,7 +55,10 @@
                 </select>
             </div>
         </form>
-        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
+        <div>
+            <canvas id="canvas-demo"></canvas>
+        </div>
+        <img id="image" src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
         <script>
 window.onload = async function()
 {
@@ -105,7 +109,7 @@ window.onload = async function()
     */
 
     // load an image
-    const img = document.querySelector('img');
+    const img = document.getElementById('image');
     const media = await Speedy.load(img);
 
     // create the pipeline
@@ -123,7 +127,7 @@ window.onload = async function()
     pipeline.init(source, sink, resize);
 
     // display the result
-    const canvas = createCanvas(media.width, media.height, img.title);
+    const canvas = setupCanvas('canvas-demo', media.width, media.height, img.title);
     async function render()
     {
         resize.scale = Speedy.Vector2(scaleX.value, scaleY.value);
@@ -134,29 +138,9 @@ window.onload = async function()
         canvas.width = image.width;
         canvas.height = image.height;
 
-        draw(image, canvas);
+        renderMedia(image, canvas);
     }
     render();
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    return canvas;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

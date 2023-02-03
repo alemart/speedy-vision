@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,13 +25,15 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Speedy feature detection</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Hello, Speedy!</h1>
         <p>Feature detection made easy:</p>
-        <img src="../assets/masp.jpg" title="Free photo by ckturistando (pexels.com)" hidden>
+        <canvas id="canvas-demo"></canvas>
+        <img id="image" src="../assets/masp.jpg" title="Free photo by ckturistando (pexels.com)" hidden>
         <script>
 window.onload = async function()
 {
@@ -45,7 +47,7 @@ window.onload = async function()
     */
 
     // load the image
-    const image = document.querySelector('img');
+    const image = document.getElementById('image');
     const media = await Speedy.load(image);
 
     // create the pipeline
@@ -68,38 +70,9 @@ window.onload = async function()
     const { keypoints } = await pipeline.run();
 
     // render the feature points
-    const canvas = createCanvas(media.width, media.height, image.title);
-    draw(media, canvas);
-    renderFeatures(canvas, keypoints);
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    return document.body.appendChild(canvas);
-}
-
-function renderFeatures(canvas, features, size = 1, color = 'yellow')
-{
-    const context = canvas.getContext('2d');
-    context.beginPath();
-
-    for(let feature of features)
-        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
-
-    context.strokeStyle = color;
-    context.stroke();
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
+    const canvas = setupCanvas('canvas-demo', media.width, media.height, image.title);
+    renderMedia(media, canvas);
+    renderKeypoints(canvas, keypoints);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

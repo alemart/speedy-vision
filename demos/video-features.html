@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Speedy feature detection in a video</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Gotta go FAST!!!</h1>
@@ -55,7 +56,7 @@
         <div>
             <button id="play">Play / pause</button>
         </div>
-        <video
+        <video id="video"
             src="../assets/roadrunner.webm"
             poster="../assets/loading.jpg"
             width="480" height="270"
@@ -72,7 +73,7 @@ window.onload = async function()
     const speedSlider = document.getElementById('speed-slider');
 
     // load the video
-    const video = document.querySelector('video');
+    const video = document.getElementById('video');
     const media = await Speedy.load(video);
     video.play();
 
@@ -105,7 +106,7 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        const canvas = createCanvas(media.width, media.height, video.title);
+        const canvas = setupCanvas('canvas-demo', media.width, media.height, video.title);
         let keypoints = [], frameReady = false;
 
         async function update()
@@ -131,8 +132,8 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                draw(media, canvas);
-                renderFeatures(canvas, keypoints, 2, '#ff0', 2);
+                renderMedia(media, canvas);
+                renderKeypoints(canvas, keypoints);
             }
 
             frameReady = false;
@@ -146,54 +147,6 @@ window.onload = async function()
     // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
-}
-
-function createCanvas(width, height, title)
-{
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    return canvas;
-}
-
-function renderFeatures(canvas, features, size = 2, color = 'yellow')
-{
-    const context = canvas.getContext('2d');
-
-    context.beginPath();
-    for(let feature of features) {
-        let radius = size * feature.scale;
-
-        // draw scaled circle
-        context.moveTo(feature.x + radius, feature.y);
-        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
-
-        // draw rotation line
-        const sin = Math.sin(feature.rotation);
-        const cos = Math.cos(feature.rotation);
-        context.moveTo(feature.x, feature.y);
-        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
-    }
-    context.strokeStyle = color;
-    context.stroke();
-}
-
-function renderStatus(features)
-{
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps} | Keypoints: ${features.length}`;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>

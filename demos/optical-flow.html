@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Optical flow - feature tracking</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>LK optical flow</h1>
@@ -100,7 +101,7 @@
             &nbsp;
             <button id="clear">Clear features</button>
         </div>
-        <video
+        <video id="video"
             src="../assets/people.webm"
             poster="../assets/loading.jpg"
             width="640" height="360"
@@ -121,7 +122,7 @@ window.onload = async function()
     const epsilon = document.getElementById('epsilon');
 
     // load the video
-    const video = document.querySelector('video');
+    const video = document.getElementById('video');
     const media = await Speedy.load(video);
     video.play();
 
@@ -168,7 +169,7 @@ window.onload = async function()
     // Main loop
     let detect = false, clear = false;
     (function() {
-        const canvas = createCanvas(media.width, media.height, video.title);
+        const canvas = addMouseListener(setupCanvas('canvas-demo', media.width, media.height, video.title));
         let keypoints = [], frameReady = false;
 
         async function update()
@@ -215,9 +216,9 @@ window.onload = async function()
         function render()
         {
             if(frameReady) {
-                draw(media, canvas);
-                renderFlowVectors(canvas, keypoints, 3, '#f22');
-                renderFeatures(canvas, keypoints, 1, '#f22');
+                renderMedia(media, canvas);
+                renderFlowVectors(canvas, keypoints, '#f22', 3);
+                renderKeypoints(canvas, keypoints, '#f22');
             }
 
             frameReady = false;
@@ -252,49 +253,7 @@ window.onload = async function()
     };
 }
 
-function createCanvas(width, height, title)
-{
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
-    canvas.addEventListener('mousedown', ev => {
-        const position = cursorPosition(canvas, ev);
-        userPoints.push({ position });
-    });
-
-    return canvas;
-}
-
-function renderFeatures(canvas, features, size = 2, color = 'yellow')
-{
-    const context = canvas.getContext('2d');
-
-    context.beginPath();
-    for(let feature of features) {
-        let radius = size * feature.scale;
-
-        // draw scaled circle
-        context.moveTo(feature.x + radius, feature.y);
-        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
-
-        // draw rotation line
-        const sin = Math.sin(feature.rotation);
-        const cos = Math.cos(feature.rotation);
-        context.moveTo(feature.x, feature.y);
-        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
-    }
-    context.strokeStyle = color;
-    context.lineWidth = 2;
-    context.stroke();
-}
-
-function renderFlowVectors(canvas, features, length = 1, color = 'red')
+function renderFlowVectors(canvas, features, color = 'red', length = 1)
 {
     const context = canvas.getContext('2d');
 
@@ -312,16 +271,14 @@ function renderFlowVectors(canvas, features, length = 1, color = 'red')
     context.stroke();
 }
 
-function renderStatus(features)
+function addMouseListener(canvas)
 {
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps} | Keypoints: ${features.length}`;
-}
+    canvas.addEventListener('mousedown', ev => {
+        const position = cursorPosition(canvas, ev);
+        userPoints.push({ position });
+    });
 
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
+    return canvas;
 }
 
 function cursorPosition(canvas, event)

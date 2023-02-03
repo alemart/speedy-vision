@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
         <title>Image warping</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
         <script src="../dist/speedy-vision.js"></script>
-        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Image warping</h1>
@@ -64,7 +65,7 @@
         <div>
             <button id="play">Play / pause</button>
         </div>
-        <video
+        <video id="video"
             src="../assets/flying-eagle.webm"
             poster="../assets/loading.jpg"
             preload="auto"
@@ -136,12 +137,13 @@ const template = {
 window.onload = async function()
 {
     // load a video
-    const video = document.querySelector('video');
+    const video = document.getElementById('video');
     const media = await Speedy.load(video);
     video.play();
 
-    // create a canvas
-    const canvas = createCanvas(media.width, media.height, video.title);
+    // setup the canvas
+    const canvas = setupCanvas('canvas-demo', media.width, media.height, video.title);
+    addMouseListeners(canvas);
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();
@@ -200,7 +202,8 @@ window.onload = async function()
     async function updateVertices()
     {
         // drag the vertices
-        const r2 = VERTEX_RADIUS * VERTEX_RADIUS;
+        const r = VERTEX_RADIUS;
+        const r2 = r * r;
         let anydrag = vertices.reduce((d, v) => d || v.drag, false);
         let anyhover = false;
         for(const vertex of vertices) {
@@ -274,7 +277,7 @@ window.onload = async function()
         {
             if(frameReady) {
                 // render the warped image
-                draw(image, canvas);
+                renderMedia(image, canvas);
 
                 // render the vertices
                 const TWO_PI = Math.PI * 2;
@@ -300,16 +303,10 @@ window.onload = async function()
     playButton.onclick = () => video.paused ? video.play() : video.pause();
 }
 
-function createCanvas(width, height, title)
+function addMouseListeners(canvas)
 {
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = title;
-
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
+    const width = canvas.width;
+    const height = canvas.height;
 
     canvas.addEventListener('mousedown', ev => {
         const position = cursorPosition(canvas, ev);
@@ -327,18 +324,6 @@ function createCanvas(width, height, title)
     });
 
     return canvas;
-}
-
-function renderStatus()
-{
-    const status = document.getElementById('status');
-    status.innerText = `FPS: ${Speedy.fps}`;
-}
-
-function draw(media, canvas, x = 0, y = 0, width = media.width, height = media.height)
-{
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(media.source, x, y, width, height);
 }
 
 function cursorPosition(canvas, event)
