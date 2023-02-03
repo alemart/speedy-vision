@@ -69,12 +69,13 @@
             <button id="play">Play / pause</button>
         </div>
         <video id="video"
-            src="../assets/corridor.webm"
             poster="../assets/loading.jpg"
             width="640" height="360"
             preload="auto"
-            loop muted hidden
+            loop muted hidden playsinline
             title="Free video by Ricardo Esquivel (pexels.com)">
+                <source src="../assets/corridor.webm" type="video/webm" />
+                <source src="../assets/corridor.mp4" type="video/mp4" />
         </video>
         <script>
 window.onload = async function()

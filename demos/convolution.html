@@ -66,12 +66,13 @@
             <button id="play">Play / pause</button>
         </div>
         <video id="video"
-            src="../assets/jelly.webm"
             poster="../assets/loading.jpg"
             width="426" height="240"
             preload="auto"
-            loop muted hidden
+            loop muted hidden playsinline
             title="Free video by Chris Munnik from https://www.pexels.com/pt-br/video/3297379/">
+                <source src="../assets/jelly.webm" type="video/webm" />
+                <source src="../assets/jelly.mp4" type="video/mp4" />
         </video>
         <script>
 // Convolution kernels written in column-major format (3x3)

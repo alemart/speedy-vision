@@ -66,11 +66,12 @@
             <button id="play">Play / pause</button>
         </div>
         <video id="video"
-            src="../assets/flying-eagle.webm"
             poster="../assets/loading.jpg"
             preload="auto"
-            loop muted hidden
+            loop muted hidden autoplay playsinline
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
+                <source src="../assets/flying-eagle.webm" type="video/webm" />
+                <source src="../assets/flying-eagle.mp4" type="video/mp4" />
         </video>
         <script>
 const VERTEX_RADIUS = 5;

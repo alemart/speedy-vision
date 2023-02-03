@@ -45,11 +45,12 @@
             <canvas id="canvas-demo"></canvas>
         </div>
         <video id="video"
-            src="../assets/bird-walking.webm"
             poster="../assets/loading.jpg"
             preload="auto"
-            loop muted hidden
+            loop muted hidden playsinline
             title="Free video by Wendy Laplume, https://www.pexels.com/pt-br/video/passaro-ave-passarinho-concreto-4168986/">
+                <source src="../assets/bird-walking.webm" type="video/webm" />
+                <source src="../assets/bird-walking.mp4" type="video/mp4" />
         </video>
         <script>
 window.onload = async function()
