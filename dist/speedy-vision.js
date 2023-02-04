@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-01-04T15:40:02.564Z
+ * Date: 2023-02-04T15:18:19.738Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -33,7 +33,7 @@ return /******/ (() => { // webpackBootstrap
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -789,7 +789,7 @@ class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1166,7 +1166,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1598,7 +1598,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1649,7 +1649,7 @@ class SpeedyNamespace
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2127,7 +2127,7 @@ var errors = __webpack_require__(3841);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2335,7 +2335,7 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2730,7 +2730,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3042,7 +3042,7 @@ webpackContext.id = 2863;
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3314,6 +3314,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "nU": () => (/* binding */ SpeedyError),
 /* harmony export */   "B8": () => (/* binding */ NotSupportedError),
 /* harmony export */   "Ql": () => (/* binding */ GLError),
 /* harmony export */   "Mi": () => (/* binding */ AbstractMethodError),
@@ -3328,11 +3329,11 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
 /* harmony export */   "$y": () => (/* binding */ AccessDeniedError),
 /* harmony export */   "IT": () => (/* binding */ WebAssemblyError)
 /* harmony export */ });
-/* unused harmony exports SpeedyError, NotImplementedError */
+/* unused harmony export NotImplementedError */
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3683,7 +3684,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3794,7 +3795,7 @@ const LITTLE_ENDIAN = (function() {
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3889,7 +3890,7 @@ class Observable
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3964,7 +3965,7 @@ const ColorComponentId = Object.freeze({
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4342,18 +4343,39 @@ class Utils
         return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyPromise */ .s((resolve, reject) => {
             navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
+
                 video.onloadedmetadata = () => {
                     video.play();
                     Utils.log(`The camera is on! Resolution: ${video.videoWidth} x ${video.videoHeight}`);
                     resolve(video);
                 };
+
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+                if(constraints.audio === false)
+                    video.setAttribute('muted', 'true');
+
                 video.srcObject = stream;
             })
             .catch(err => {
-                reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AccessDeniedError */ .$y(
-                    `Please give access to the camera and reload the page`,
-                    err
-                ));
+                if(err.name === 'NotAllowedError') {
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AccessDeniedError */ .$y(
+                        `Please give access to the camera and reload the page.`,
+                        err
+                    ));
+                }
+                else if(err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .NotSupportedError */ .B8(
+                        `Can't access the webcam with the requested constraints: ${JSON.stringify(constraints)}.`,
+                        err
+                    ));
+                }
+                else {
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyError */ .nU(
+                        `Can't access the webcam.`,
+                        err
+                    ));
+                }
             });
         });
     }
@@ -5426,7 +5448,7 @@ var globals = __webpack_require__(3020);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6124,7 +6146,7 @@ var speedy_promise = __webpack_require__(4500);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6886,7 +6908,7 @@ UBOHelper.prototype.release = function()
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7028,7 +7050,7 @@ class SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7141,7 +7163,7 @@ var convolution = __webpack_require__(6776);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7328,7 +7350,7 @@ var speedy_namespace = __webpack_require__(2411);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7427,7 +7449,7 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8001,7 +8023,7 @@ function findTableCapacity(hashSize, bucketCapacity, probability = 0.99)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8496,7 +8518,7 @@ class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8584,7 +8606,7 @@ class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8659,7 +8681,7 @@ class SpeedyProgramGroupTransforms extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8785,7 +8807,7 @@ class SpeedyProgramCenter
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8967,7 +8989,7 @@ var types = __webpack_require__(6731);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9127,28 +9149,30 @@ class SpeedyMediaSource
             utils/* Utils.log */.c.log(`Waiting for ${eventName} to be triggered in ${element}...`);
 
             const timer = setTimeout(() => {
+                clear();
                 reject(new utils_errors/* TimeoutError */.W5(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
             }, timeout);
 
-            function handleError()
+            function clear()
             {
                 clearTimeout(timer);
                 element.removeEventListener('error', handleError, false);
                 element.removeEventListener(eventName, handleSuccess, false);
+            }
 
+            function handleError()
+            {
                 const hasError = (element.error !== null && typeof element.error === 'object');
                 const error = hasError ? element.error : ({ code: -1, message: '' });
                 const info = `${error.message} (error code ${error.code})`;
 
+                clear();
                 reject(new utils_errors/* ResourceNotLoadedError */.tg(`Can't load ${element}. ${info}`));
             }
 
             function handleSuccess()
             {
-                clearTimeout(timer);
-                element.removeEventListener('error', handleError, false);
-                element.removeEventListener(eventName, handleSuccess, false);
-
+                clear();
                 resolve(element);
             }
 
@@ -9579,7 +9603,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9657,7 +9681,7 @@ var observable = __webpack_require__(9845);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9846,7 +9870,7 @@ class SpeedyGPU extends observable/* Observable */.y
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9957,7 +9981,7 @@ class SpeedySize
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10193,7 +10217,7 @@ var settings = __webpack_require__(3135);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10300,7 +10324,7 @@ class FPSCounter
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10478,7 +10502,7 @@ class SpeedyVector2
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10608,7 +10632,7 @@ var speedy_matrix = __webpack_require__(8007);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11174,7 +11198,7 @@ class SpeedyMatrixFactory extends Function
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11630,7 +11654,7 @@ function createMessage(type)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11731,7 +11755,7 @@ class SpeedyPipelinePortSpec
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12053,7 +12077,7 @@ class SpeedyPipelineInputPort extends SpeedyPipelinePort
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12172,7 +12196,7 @@ function OutputPort(portName = SpeedyPipelineOutputPort.DEFAULT_NAME)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12228,7 +12252,7 @@ function asap(fn, ...params)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12603,7 +12627,7 @@ class SpeedyTextureReader
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13001,7 +13025,7 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13079,7 +13103,7 @@ class SpeedyKeypointMatch
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13304,7 +13328,7 @@ class SpeedyMatchedKeypoint extends SpeedyKeypoint
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13625,7 +13649,7 @@ class SpeedyPipeline
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13725,7 +13749,7 @@ class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13809,7 +13833,7 @@ class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13897,7 +13921,7 @@ class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14028,7 +14052,7 @@ class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14150,7 +14174,7 @@ class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14288,7 +14312,7 @@ class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14470,7 +14494,7 @@ class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14601,7 +14625,7 @@ class SpeedyPipelineImageFactory extends speedy_namespace/* SpeedyNamespace */.R
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14667,7 +14691,7 @@ class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14868,7 +14892,7 @@ class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15019,7 +15043,7 @@ class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15128,7 +15152,7 @@ class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15233,7 +15257,7 @@ class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15429,7 +15453,7 @@ class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15571,7 +15595,7 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15677,7 +15701,7 @@ class SpeedyPipelineFilterFactory extends speedy_namespace/* SpeedyNamespace */.
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15821,7 +15845,7 @@ class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15968,7 +15992,7 @@ class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16019,7 +16043,7 @@ class SpeedyPipelineTransformFactory extends speedy_namespace/* SpeedyNamespace 
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16385,7 +16409,7 @@ class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipelineNodeKey
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16565,7 +16589,7 @@ class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16629,7 +16653,7 @@ class SpeedyKeypointDescriptor
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17163,7 +17187,7 @@ class SpeedyPipelineNodeMatchedKeypointSink extends SpeedyPipelineNodeAbstractKe
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17301,7 +17325,7 @@ class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17455,7 +17479,7 @@ class SpeedyPipelineNodeKeypointBorderClipper extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17591,7 +17615,7 @@ class SpeedyPipelineNodeKeypointBuffer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17705,7 +17729,7 @@ class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17849,7 +17873,7 @@ class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17937,7 +17961,7 @@ class SpeedyPipelineNodeKeypointMultiplexer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18031,7 +18055,7 @@ class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18196,7 +18220,7 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18340,7 +18364,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMultiscal
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18536,7 +18560,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18609,7 +18633,7 @@ class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18702,7 +18726,7 @@ class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeKeypoint
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18948,7 +18972,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19126,7 +19150,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19337,7 +19361,7 @@ class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19491,7 +19515,7 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19600,7 +19624,7 @@ class SpeedyPipelineNodeKeypointDistanceFilter extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19726,7 +19750,7 @@ class SpeedyPipelineNodeKeypointHammingDistanceFilter extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19938,7 +19962,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20293,7 +20317,7 @@ class SpeedyPipelineKeypointFactory extends speedy_namespace/* SpeedyNamespace *
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20488,7 +20512,7 @@ class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20552,7 +20576,7 @@ class SpeedyPipelineVector2Factory extends Function
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2022 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
