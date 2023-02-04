@@ -388,7 +388,7 @@ export class Utils
 
                 video.setAttribute('playsinline', 'true');
                 video.setAttribute('autoplay', 'true');
-                if(constraints.audio === false)
+                if(constraints.audio === false || constraints.audio === undefined)
                     video.setAttribute('muted', 'true');
 
                 video.srcObject = stream;
