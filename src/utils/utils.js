@@ -386,10 +386,10 @@ export class Utils
                     resolve(video);
                 };
 
-                video.setAttribute('playsinline', 'true');
-                video.setAttribute('autoplay', 'true');
+                video.setAttribute('playsinline', '');
+                video.setAttribute('autoplay', '');
                 if(constraints.audio === false || constraints.audio === undefined)
-                    video.setAttribute('muted', 'true');
+                    video.setAttribute('muted', '');
 
                 video.srcObject = stream;
             })

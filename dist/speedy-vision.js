@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-02-04T15:22:49.887Z
+ * Date: 2023-02-04T15:35:57.474Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -4350,10 +4350,10 @@ class Utils
                     resolve(video);
                 };
 
-                video.setAttribute('playsinline', 'true');
-                video.setAttribute('autoplay', 'true');
+                video.setAttribute('playsinline', '');
+                video.setAttribute('autoplay', '');
                 if(constraints.audio === false || constraints.audio === undefined)
-                    video.setAttribute('muted', 'true');
+                    video.setAttribute('muted', '');
 
                 video.srcObject = stream;
             })
