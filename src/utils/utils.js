@@ -19,7 +19,7 @@
  * Generic utilities
  */
 
-import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError } from './errors'
+import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError, SpeedyError } from './errors'
 import { SpeedyPromise } from '../core/speedy-promise';
 import { Settings } from '../core/settings';
 
@@ -379,18 +379,39 @@ export class Utils
         return new SpeedyPromise((resolve, reject) => {
             navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
+
                 video.onloadedmetadata = () => {
                     video.play();
                     Utils.log(`The camera is on! Resolution: ${video.videoWidth} x ${video.videoHeight}`);
                     resolve(video);
                 };
+
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+                if(constraints.audio === false)
+                    video.setAttribute('muted', 'true');
+
                 video.srcObject = stream;
             })
             .catch(err => {
-                reject(new AccessDeniedError(
-                    `Please give access to the camera and reload the page`,
-                    err
-                ));
+                if(err.name === 'NotAllowedError') {
+                    reject(new AccessDeniedError(
+                        `Please give access to the camera and reload the page.`,
+                        err
+                    ));
+                }
+                else if(err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
+                    reject(new NotSupportedError(
+                        `Can't access the webcam with the requested constraints: ${JSON.stringify(constraints)}.`,
+                        err
+                    ));
+                }
+                else {
+                    reject(new SpeedyError(
+                        `Can't access the webcam.`,
+                        err
+                    ));
+                }
             });
         });
     }
