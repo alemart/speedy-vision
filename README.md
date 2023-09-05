@@ -111,6 +111,7 @@ Try the demos and take a look at their source code:
   * [Optical flow](https://alemart.github.io/speedy-vision/demos/optical-flow.html)
 * Feature matching
   * [Feature matching](https://alemart.github.io/speedy-vision/demos/feature-matching.html)
+  * [LSH feature matching](https://alemart.github.io/speedy-vision/demos/feature-matching-lsh.html)
 * Image processing
   * [Image convolution](https://alemart.github.io/speedy-vision/demos/convolution.html)
   * [Image warping](https://alemart.github.io/speedy-vision/demos/warping.html)

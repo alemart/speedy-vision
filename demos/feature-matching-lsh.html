@@ -1,0 +1,309 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  feature-matching-lsh.html
+  Feature matching demo based on Locality Sensitive Hashing (LSH)
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Speedy LSH feature matching</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
+        <script src="../dist/speedy-vision.js"></script>
+    </head>
+    <body>
+        <h1>LSH feature matching</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="slider">Distinctiveness</label>
+                <input type="range" min="0.5" max="0.9" value="0.7" step="0.05" id="slider">
+                <label id="label"></label>
+            </div>
+            <div>
+                <label for="speed-slider">Video speed</label>
+                <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
+            </div>
+            <div>
+                <label for="descriptor">Descriptor</label>
+                <select id="descriptor">
+                    <option selected value="orb">ORB (rotation-invariant, not scale-invariant)</option>
+                </select>
+            </div>
+        </form>
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+        </div>
+        <video id="matching-video"
+            poster="../assets/loading.jpg"
+            width="640" height="960"
+            hidden muted loop autoplay playsinline oncanplay="this.muted=true;this.play()"
+            title="Ponte Estaiada: free photo by Bruno Thethe, available at https://unsplash.com/photos/T56KAD-Iyag | MASP: free photo by ckturistando (pexels.com)">
+                <source src="../assets/ponte-estaiada-masp.webm" type="video/webm" />
+                <source src="../assets/ponte-estaiada-masp.mp4" type="video/mp4" />
+        </video>
+        <img id="training-image-0" src="../assets/ponte-estaiada.jpg" title="Free photo by Bruno Thethe, available at https://unsplash.com/photos/T56KAD-Iyag" hidden>
+        <img id="training-image-1" src="../assets/masp.jpg" title="Free photo by ckturistando (pexels.com)" hidden>
+        <script>
+window.onload = async function()
+{
+    //
+    // training pipelines
+    //
+
+    // load the training media
+    const trainingImage = [
+        document.getElementById('training-image-0'),
+        document.getElementById('training-image-1'),
+    ];
+    const promisesOfTrainingMedia = trainingImage.map(image => Speedy.load(image));
+    const trainingMedia = await Speedy.Promise.all(promisesOfTrainingMedia);
+
+    // create and run the training pipelines (one for each training media)
+    const trainingPipeline = trainingMedia.map(media => createTrainingPipeline(media));
+    const promisesOfTrainingResults = trainingPipeline.map(pipeline => pipeline.run());
+    const trainingResults = await Speedy.Promise.all(promisesOfTrainingResults);
+    const trainingKeypoints = trainingResults.map(result => result.trainingKeypoints);
+
+    // combine the training keypoints into a larger batch. Associate each keypoint with its originating media.
+    const combinedTrainingKeypoints = trainingKeypoints.flat();
+    const classIdOfTrainingKeypoint = trainingKeypoints.map((arr, i) => new Array(arr.length).fill(i)).flat();
+
+
+
+    //
+    // matching pipeline
+    //
+
+    // load the media
+    const matchingVideo = document.getElementById('matching-video');
+    const matchingMedia = await Speedy.load(matchingVideo);
+
+    // create the matching pipeline
+    const matchingPipeline = createMatchingPipeline(combinedTrainingKeypoints, matchingMedia);
+
+
+
+    //
+    // setup & loop
+    //
+
+    // configure the form
+    const slider = document.getElementById('slider');
+    const label = document.getElementById('label');
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => matchingVideo.playbackRate = speedSlider.value;
+
+    // setup the canvas
+    const width = [matchingMedia].concat(trainingMedia).map(media => media.width).reduce((sum, width) => sum + width, 0);
+    const height = Math.max(...([matchingMedia].concat(trainingMedia).map(media => media.height)));
+    const title = [matchingVideo].concat(trainingImage).map(e => e.title).join('; ');
+    const canvas = setupCanvas('canvas-demo', width, height, title);
+    const ctx = canvas.getContext('2d');
+
+    // Main loop
+    (function() {
+        let frameReady = false;
+        let keypoints = [];
+        let matches = [];
+        let ratio = 1;
+        let xoffset = [];
+
+        async function update()
+        {
+            // run the pipeline
+            const result = await matchingPipeline.run();
+            keypoints = result.keypoints;
+
+            // get the best matches
+            ratio = Number(slider.value);
+            matches = filterGoodMatches(keypoints, combinedTrainingKeypoints, classIdOfTrainingKeypoint, ratio);
+
+            // repeat
+            frameReady = true;
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        function render()
+        {
+            if(frameReady) {
+                const videoOffset = trainingMedia[0].width;
+                xoffset[0] = 0;
+                xoffset[1] = trainingMedia[0].width + matchingMedia.width;
+
+                renderMedia(trainingMedia[0], canvas, xoffset[0], 0);
+                renderMedia(trainingMedia[1], canvas, xoffset[1], 0);
+                renderMedia(matchingMedia, canvas, videoOffset, 0);
+
+                displayMatches(ctx, matches, videoOffset, xoffset);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
+
+        // misc
+        setInterval(() => { renderStatus(matches, 'Matches'); label.innerText = ratio; }, 200);
+    })();
+}
+
+function filterGoodMatches(keypoints, trainingKeypoints, classId, acceptableRatio = 0.75)
+{
+    const matches = [];
+
+    for(let j = 0; j < keypoints.length; j++) {
+
+        const keypoint = keypoints[j];
+
+        // validate
+        if(!keypoint.matches || keypoint.matches.length == 0)
+            throw new Error(`No matches computed for keypoint #${j}`);
+        else if(keypoint.matches.length < 2)
+            throw new Error(`I need at least 2 matches per keypoint`);
+
+        // filter out invalid matches
+        const i1 = keypoint.matches[0].index;
+        const i2 = keypoint.matches[1].index;
+        if(i1 < 0 || i2 < 0)
+            continue;
+
+        // filter out "bad" matches
+        const d1 = keypoint.matches[0].distance;
+        const d2 = keypoint.matches[1].distance;
+        if(d1 > d2 * acceptableRatio)
+            continue;
+
+        // filter out spurious matches whose keypoints belong to different training images
+        const c1 = classId[i1];
+        const c2 = classId[i2];
+        if(c1 != c2)
+            continue;
+
+        // accept the match
+        const trainingKeypoint = trainingKeypoints[i1];
+        matches.push([ keypoint, trainingKeypoint, c1 ]);
+
+    }
+
+    return matches;
+}
+
+function displayMatches(ctx, matches, videoOffset, xoffset, color = 'yellow')
+{
+    ctx.beginPath();
+    for(let i = 0; i < matches.length; i++) {
+        const keypoint = matches[i][0];
+        const trainingKeypoint = matches[i][1];
+        const classIdOfKeypoint = matches[i][2];
+
+        const dx = classIdOfKeypoint < xoffset.length ? xoffset[classIdOfKeypoint] : 0;
+        ctx.moveTo(videoOffset + keypoint.x, keypoint.y);
+        ctx.lineTo(dx + trainingKeypoint.x, trainingKeypoint.y);
+    }
+    ctx.strokeStyle = color; // use a single color (faster)
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function createTrainingPipeline(media, max = 800)
+{
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Image.Source();
+    const greyscale = Speedy.Filter.Greyscale();
+    const blur = Speedy.Filter.GaussianBlur();
+    const pyramid = Speedy.Image.Pyramid();
+    const harris = Speedy.Keypoint.Detector.Harris();
+    const clipper = Speedy.Keypoint.Clipper();
+    const descriptor = Speedy.Keypoint.Descriptor.ORB();
+    const sink = Speedy.Keypoint.Sink('trainingKeypoints');
+
+    source.media = media;
+    blur.kernelSize = Speedy.Size(9, 9);
+    blur.sigma = Speedy.Vector2(2, 2);
+    harris.levels = 1; // no pyramid?
+    //harris.levels = 8;
+    harris.scaleFactor = 1.19; // approximately 2^0.25
+    clipper.size = max;
+
+    source.output().connectTo(greyscale.input());
+
+    greyscale.output().connectTo(pyramid.input());
+    pyramid.output().connectTo(harris.input());
+    harris.output().connectTo(clipper.input());
+    clipper.output().connectTo(descriptor.input('keypoints'));
+
+    greyscale.output().connectTo(blur.input());
+    blur.output().connectTo(descriptor.input('image'));
+
+    descriptor.output().connectTo(sink.input());
+
+    return pipeline.init(source, greyscale, blur, pyramid, harris, clipper, descriptor, sink);
+}
+
+function createMatchingPipeline(trainingKeypoints, media, max = 800)
+{
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Image.Source();
+    const greyscale = Speedy.Filter.Greyscale();
+    const blur = Speedy.Filter.GaussianBlur();
+    const pyramid = Speedy.Image.Pyramid();
+    const harris = Speedy.Keypoint.Detector.Harris();
+    const clipper = Speedy.Keypoint.Clipper();
+    const descriptor = Speedy.Keypoint.Descriptor.ORB();
+    const lshTables = Speedy.Keypoint.Matcher.StaticLSHTables();
+    const lshMatcher = Speedy.Keypoint.Matcher.LSHKNN();
+    const sink = Speedy.Keypoint.SinkOfMatchedKeypoints();
+
+    source.media = media;
+    blur.kernelSize = Speedy.Size(9, 9);
+    blur.sigma = Speedy.Vector2(2, 2);
+    harris.levels = 1; // no pyramid?
+    //harris.levels = 8;
+    harris.scaleFactor = 1.19; // approximately 2^0.25
+    clipper.size = max;
+    lshTables.keypoints = trainingKeypoints;
+    lshMatcher.k = 2; // get the best 2 matches
+
+    source.output().connectTo(greyscale.input());
+
+    greyscale.output().connectTo(pyramid.input());
+    pyramid.output().connectTo(harris.input());
+    harris.output().connectTo(clipper.input());
+    clipper.output().connectTo(descriptor.input('keypoints'));
+
+    greyscale.output().connectTo(blur.input());
+    blur.output().connectTo(descriptor.input('image'));
+
+    descriptor.output().connectTo(lshMatcher.input('keypoints'));
+    lshTables.output().connectTo(lshMatcher.input('lsh'));
+
+    descriptor.output().connectTo(sink.input());
+    lshMatcher.output().connectTo(sink.input('matches'));
+
+    return pipeline.init(source, greyscale, blur, pyramid, harris, clipper, descriptor, lshTables, lshMatcher, sink);
+}
+
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision">speedy-vision.js</a></mark>
+    </body>
+</html>

@@ -63,12 +63,12 @@ function renderKeypoints(canvas, keypoints, color = 'yellow', size = 1, thicknes
     context.stroke();
 }
 
-function renderStatus(keypoints = null)
+function renderStatus(arr = null, label = 'Keypoints')
 {
     const status = document.getElementById('status');
 
-    if(Array.isArray(keypoints))
-        status.innerText = `FPS: ${Speedy.fps} | Keypoints: ${keypoints.length}`;
+    if(Array.isArray(arr))
+        status.innerText = `FPS: ${Speedy.fps} | ${label}: ${arr.length}`;
     else
         status.innerText = `FPS: ${Speedy.fps}`;
 }
