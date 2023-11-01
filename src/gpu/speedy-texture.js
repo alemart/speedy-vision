@@ -20,9 +20,10 @@
  */
 
 import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyTextureReader } from './speedy-texture-reader';
 import { Utils } from '../utils/utils';
 import { IllegalOperationError, IllegalArgumentError, NotSupportedError, GLError } from '../utils/errors';
-import { MAX_TEXTURE_LENGTH } from '../utils/globals';
+import { MAX_TEXTURE_LENGTH, LITTLE_ENDIAN } from '../utils/globals';
 
 /**
  * Get a buffer filled with zeros
@@ -605,6 +606,40 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect the pixels of the texture for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint8Array}
+     */
+    inspect(gpu, textureReader)
+    {
+        if(textureReader === undefined) {
+            textureReader = new SpeedyTextureReader();
+            textureReader.init(gpu);
+            const pixels = textureReader.readPixelsSync(this);
+            textureReader.release(gpu);
+
+            return new Uint8Array(pixels); // copy the array
+        }
+        else {
+            const pixels = textureReader.readPixelsSync(this);
+            return new Uint8Array(pixels);
+        }
+    }
+
+    /**
+     * Inspect the pixels of the texture as unsigned 32-bit integers
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint32Array}
+     */
+    inspect32(gpu, textureReader)
+    {
+        Utils.assert(LITTLE_ENDIAN); // make sure we use little-endian
+        return new Uint32Array(this.inspect(gpu, textureReader).buffer);
     }
 
     /**

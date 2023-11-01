@@ -120,7 +120,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
 
         /*
         // debug (read the contents of the permutation)
-        const pixels = this._inspect(gpu, permutation), debug = [];
+        const pixels = permutation.inspect(gpu), debug = [];
         for(let i = 0; i < pixels.length; i += 4) {
             let id = pixels[i] | (pixels[i+1] << 8);
             let score = pixels[i+2] / 255.0;

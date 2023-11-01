@@ -288,34 +288,6 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Inspect the pixels of a texture for debugging purposes
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint8Array}
-     */
-    _inspect(gpu, texture)
-    {
-        const textureReader = new SpeedyTextureReader();
-        textureReader.init(gpu);
-        const pixels = textureReader.readPixelsSync(texture);
-        textureReader.release(gpu);
-
-        return new Uint8Array(pixels); // copy the array
-    }
-
-    /**
-     * Inspect the pixels of a texture as unsigned 32-bit integers
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint32Array}
-     */
-    _inspect32(gpu, texture)
-    {
-        Utils.assert(LITTLE_ENDIAN); // make sure we use little-endian
-        return new Uint32Array(this._inspect(gpu, texture).buffer);
-    }
-
-    /**
      * Visually inspect a texture for debugging purposes
      * @param {SpeedyGPU} gpu
      * @param {SpeedyDrawableTexture} texture

@@ -194,7 +194,7 @@ export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 
         /*
         // debug
-        let data = this._inspect32(filters), debug = [];
+        let data = filters.inspect32(gpu), debug = [];
         for(let i = 0; i < data.length; i++) {
             const bits = MATCH_INDEX_BITS;
             const mask = (1 << bits) - 1;
