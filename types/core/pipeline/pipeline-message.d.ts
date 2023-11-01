@@ -15,6 +15,10 @@ export const SpeedyPipelineMessageType: Readonly<{
     KeypointMatches: symbol;
 }>;
 /**
+ * Diagnostic data
+ * @typedef {Object.<string, string|number>} SpeedyPipelineMessageDiagnosticData
+ */
+/**
  * A message that is shared between nodes of a pipeline
  * @abstract
  */
@@ -53,6 +57,12 @@ export class SpeedyPipelineMessage {
      * @returns {string}
      */
     toString(): string;
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu: SpeedyGPU): SpeedyPipelineMessageDiagnosticData;
     /**
      * Set parameters
      * @abstract
@@ -179,6 +189,13 @@ export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMess
      */
     get matchesPerKeypoint(): number;
 }
+/**
+ * Diagnostic data
+ */
+export type SpeedyPipelineMessageDiagnosticData = {
+    [x: string]: string | number;
+};
+import { SpeedyGPU } from "../../gpu/speedy-gpu";
 import { SpeedyDrawableTexture } from "../../gpu/speedy-texture";
 import { ImageFormat } from "../../utils/types";
 import { SpeedyLSH } from "../../gpu/speedy-lsh";

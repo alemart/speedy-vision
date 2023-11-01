@@ -35,5 +35,5 @@ export class Settings extends SpeedyNamespace {
 }
 export type PowerPreference = import('../gpu/speedy-gl').PowerPreference;
 export type GPUPollingMode = "raf" | "asap";
-export type LoggingMode = 'default' | 'none';
+export type LoggingMode = "default" | "none" | "diagnostic";
 import { SpeedyNamespace } from "./speedy-namespace";

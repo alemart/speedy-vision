@@ -25,7 +25,7 @@ import { IllegalArgumentError } from '../utils/errors';
 
 /** @typedef {import('../gpu/speedy-gl').PowerPreference} PowerPreference */
 /** @typedef {"raf" | "asap"} GPUPollingMode */
-/** @typedef {'default' | 'none'} LoggingMode */
+/** @typedef {"default" | "none" | "diagnostic"} LoggingMode */
 
 /** @type {GPUPollingMode} Default GPU polling mode */
 const DEFAULT_GPU_POLLING_MODE = 'raf';
@@ -33,7 +33,7 @@ const DEFAULT_GPU_POLLING_MODE = 'raf';
 /** @type {GPUPollingMode} GPU polling mode */
 let gpuPollingMode = DEFAULT_GPU_POLLING_MODE;
 
-/** @type {LoggingMode} */
+/** @type {LoggingMode} logging mode */
 let loggingMode = 'default';
 
 
@@ -96,9 +96,8 @@ export class Settings extends SpeedyNamespace
      */
     static set logging(mode)
     {
-        if(mode !== 'default' && mode !== 'none'){
+        if(mode !== 'default' && mode !== 'none' && mode !== 'diagnostic')
             throw new IllegalArgumentError(`Invalid logging mode: "${mode}"`);
-        }
 
         loggingMode = mode;
     }

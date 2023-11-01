@@ -24,12 +24,18 @@ import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSu
 import { SpeedyPipelinePortSpec } from './pipeline-portspec';
 import { SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing } from './pipeline-message';
 import { SpeedyPipelineNode } from './pipeline-node';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // Constants
 const DEFAULT_INPUT_PORT_NAME = 'in';
 const DEFAULT_OUTPUT_PORT_NAME = 'out';
 const ACCEPTABLE_PORT_NAME = /^[a-z][a-zA-Z0-9]*$/;
 const EMPTY_MESSAGE = new SpeedyPipelineMessageWithNothing();
+
+/**
+ * Diagnostic data
+ * @typedef {import('./pipeline-message.js').SpeedyPipelineMessageDiagnosticData} SpeedyPipelinePortDiagnosticData
+ */
 
 /**
  * Port of a node of a pipeline
@@ -145,6 +151,16 @@ export class SpeedyPipelinePort
     write(message)
     {
         throw new NotSupportedError(`Can't write ${message} to port ${this.name}: unsupported operation`);
+    }
+
+    /**
+     * Inspect this port for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelinePortDiagnosticData} diagnostic data
+     */
+    inspect(gpu)
+    {
+        return this._message.inspect(gpu);
     }
 
     /**

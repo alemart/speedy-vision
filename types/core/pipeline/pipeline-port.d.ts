@@ -1,4 +1,8 @@
 /**
+ * Diagnostic data
+ * @typedef {import('./pipeline-message.js').SpeedyPipelineMessageDiagnosticData} SpeedyPipelinePortDiagnosticData
+ */
+/**
  * Port of a node of a pipeline
  * @abstract
  */
@@ -70,6 +74,12 @@ export class SpeedyPipelinePort {
      * @param {SpeedyPipelineMessage} message
      */
     write(message: SpeedyPipelineMessage): void;
+    /**
+     * Inspect this port for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelinePortDiagnosticData} diagnostic data
+     */
+    inspect(gpu: SpeedyGPU): SpeedyPipelinePortDiagnosticData;
 }
 /**
  * Output port
@@ -105,6 +115,11 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort {
      */
     pullMessage(nodeName?: string | undefined): SpeedyPipelineMessage;
 }
+/**
+ * Diagnostic data
+ */
+export type SpeedyPipelinePortDiagnosticData = import('./pipeline-message.js').SpeedyPipelineMessageDiagnosticData;
 import { SpeedyPipelinePortSpec } from "./pipeline-portspec";
 import { SpeedyPipelineNode } from "./pipeline-node";
 import { SpeedyPipelineMessage } from "./pipeline-message";
+import { SpeedyGPU } from "../../gpu/speedy-gpu";

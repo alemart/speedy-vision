@@ -21,6 +21,7 @@
 
 import { Utils } from '../../utils/utils';
 import { LITTLE_ENDIAN } from '../../utils/globals';
+import { Settings } from '../settings';
 import { SpeedyPromise } from '../speedy-promise';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
@@ -172,16 +173,38 @@ export class SpeedyPipelineNode
 
         // run the task
         const runTask = this._run(gpu);
-        if(typeof runTask === 'undefined') {
-            for(portName in this._outputPorts) // ensure that no output ports are empty
-                Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
+        if(typeof runTask === 'undefined')
+            return void(this._finishExecution(gpu));
+        else
+            return runTask.then(() => this._finishExecution(gpu));
+    }
 
-            return undefined;
+    /**
+     * Finish the execution of this node;
+     * to be called after execute()
+     * @param {SpeedyGPU} gpu
+     */
+    _finishExecution(gpu)
+    {
+        // ensure that no output ports are empty
+        for(const portName in this._outputPorts) {
+            Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
         }
-        else return runTask.then(() => {
-            for(portName in this._outputPorts) // ensure that no output ports are empty
-                Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
-        });
+
+        // diagnosticize the node / pipeline
+        if(Settings.logging === 'diagnostic') {
+            Utils.log('\n\n\n\n\n\n\n\n');
+            Utils.log(`== ${this.fullName} ==`);
+
+            // Inspecting the data has performance implications.
+            // It is for diagnostic purposes only, not meant to be done in production!
+
+            for(const portName in this._inputPorts)
+                Utils.log(`-> ${portName}:`, this._inputPorts[portName].inspect(gpu));
+
+            for(const portName in this._outputPorts)
+                Utils.log(`<- ${portName}:`, this._outputPorts[portName].inspect(gpu));
+        }
     }
 
     /**

@@ -2895,9 +2895,15 @@ promise.then(() => {
 
 ##### Speedy.Settings.logging
 
-`Speedy.Settings.logging: "default" | "none"`
+`Speedy.Settings.logging: "default" | "none" | "diagnostic"`
 
-Configures the logging mode. `default` shows debug and warnings messages while `none` hides them all.
+Speedy prints messages to the browser console according to the logging mode. The table below summarizes the available modes:
+
+| Mode | Description |
+|------|-------------|
+| `"default"` | Shows warnings and some informative messages. |
+| `"none"`| Hides all messages. |
+| `"diagnostic"` | Enables the diagnostic mode, which lets you inspect the raw data traveling throughout the nodes of a pipeline. This has performance implications and should not be used in production code. |
 
 
 

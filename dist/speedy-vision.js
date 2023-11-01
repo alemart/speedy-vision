@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-02-04T15:35:57.474Z
+ * Date: 2023-11-01T19:11:18.687Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -57,7 +57,7 @@ return /******/ (() => { // webpackBootstrap
 
 /** @typedef {import('../gpu/speedy-gl').PowerPreference} PowerPreference */
 /** @typedef {"raf" | "asap"} GPUPollingMode */
-/** @typedef {'default' | 'none'} LoggingMode */
+/** @typedef {"default" | "none" | "diagnostic"} LoggingMode */
 
 /** @type {GPUPollingMode} Default GPU polling mode */
 const DEFAULT_GPU_POLLING_MODE = 'raf';
@@ -65,7 +65,7 @@ const DEFAULT_GPU_POLLING_MODE = 'raf';
 /** @type {GPUPollingMode} GPU polling mode */
 let gpuPollingMode = DEFAULT_GPU_POLLING_MODE;
 
-/** @type {LoggingMode} */
+/** @type {LoggingMode} logging mode */
 let loggingMode = 'default';
 
 
@@ -128,9 +128,8 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
      */
     static set logging(mode)
     {
-        if(mode !== 'default' && mode !== 'none'){
+        if(mode !== 'default' && mode !== 'none' && mode !== 'diagnostic')
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Invalid logging mode: "${mode}"`);
-        }
 
         loggingMode = mode;
     }
@@ -3999,9 +3998,9 @@ class Utils
      */
     static warning(text, ...args)
     {
-        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging === 'default'){
+        //if(Settings.logging === 'default' || Settings.logging === 'diagnostic') // TODO: warnings & errors only?
+        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
             console.warn('[speedy-vision]', text, ...args);
-        }
     }
 
     /**
@@ -4011,9 +4010,8 @@ class Utils
      */
     static log(text, ...args)
     {
-        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none'){
+        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
             console.log('[speedy-vision]', text, ...args);
-        }
     }
 
     /**
@@ -5440,8 +5438,443 @@ __webpack_require__.d(__webpack_exports__, {
 var speedy_gl = __webpack_require__(7905);
 // EXTERNAL MODULE: ./src/utils/utils.js
 var utils = __webpack_require__(5484);
+// EXTERNAL MODULE: ./src/core/settings.js
+var settings = __webpack_require__(3135);
+// EXTERNAL MODULE: ./src/core/speedy-promise.js
+var speedy_promise = __webpack_require__(4500);
+;// CONCATENATED MODULE: ./src/utils/asap.js
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * asap.js
+ * Schedule a function to run "as soon as possible"
+ */
+
+/** callbacks */
+const callbacks = /** @type {Function[]} */ ( [] );
+
+/** arguments to be passed to the callbacks */
+const args = /** @type {any[][]} */ ( [] );
+
+/** asap key */
+const ASAP_KEY = 'asap' + Math.random().toString(36).substr(1);
+
+// Register an event listener
+window.addEventListener('message', event => {
+    if(event.source !== window || event.data !== ASAP_KEY)
+        return;
+
+    event.stopPropagation();
+    if(callbacks.length == 0)
+        return;
+
+    const fn = callbacks.pop();
+    const argArray = args.pop();
+    fn.apply(undefined, argArray);
+}, true);
+
+/**
+ * Schedule a function to run "as soon as possible"
+ * @param {Function} fn callback
+ * @param {any[]} params optional parameters
+ */
+function asap(fn, ...params)
+{
+    callbacks.unshift(fn);
+    args.unshift(params);
+    window.postMessage(ASAP_KEY, '*');
+}
 // EXTERNAL MODULE: ./src/utils/errors.js
 var utils_errors = __webpack_require__(3841);
+;// CONCATENATED MODULE: ./src/gpu/speedy-texture-reader.js
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-texture-reader.js
+ * Reads data from textures
+ */
+
+
+
+
+
+
+
+
+
+/** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
+
+/** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
+const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
+    ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
+    ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
+
+/**
+ * Reads data from textures
+ */
+class SpeedyTextureReader
+{
+    /**
+     * Constructor
+     * @param {number} [numberOfBuffers]
+     */
+    constructor(numberOfBuffers = DEFAULT_NUMBER_OF_BUFFERS)
+    {
+        utils/* Utils.assert */.c.assert(numberOfBuffers > 0);
+
+        /** @type {boolean} is this object initialized? */
+        this._initialized = false;
+
+        /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
+        this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
+
+        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+        this._pbo = (new Array(numberOfBuffers)).fill(null);
+
+        /** @type {number} the index of the buffer that will be consumed in this frame */
+        this._consumerIndex = 0;
+
+        /** @type {number} the index of the buffer that will be produced next */
+        this._producerIndex = numberOfBuffers - 1;
+
+        /** @type {SpeedyPromise<void>[]} producer-consumer promises */
+        this._promise = Array.from({ length: numberOfBuffers }, () => speedy_promise/* SpeedyPromise.resolve */.s.resolve());
+
+        /** @type {boolean[]} are the contents of the ith buffer being produced? */
+        this._busy = (new Array(numberOfBuffers)).fill(false);
+
+        /** @type {boolean[]} can the ith buffer be consumed? */
+        this._ready = (new Array(numberOfBuffers)).fill(true);
+    }
+
+    /**
+     * Initialize this object
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        this._allocatePBOs(gpu);
+        gpu.subscribe(this._allocatePBOs, this, gpu);
+
+        this._initialized = true;
+    }
+
+    /**
+     * Release resources
+     * @param {SpeedyGPU} gpu
+     * @returns {null}
+     */
+    release(gpu)
+    {
+        gpu.unsubscribe(this._allocatePBOs, this);
+        this._deallocatePBOs(gpu);
+
+        this._initialized = false;
+        return null;
+    }
+
+    /**
+     * Read pixels from a texture, synchronously.
+     * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * @param {SpeedyDrawableTexture} texture a texture with a FBO
+     * @param {number} [x]
+     * @param {number} [y] 
+     * @param {number} [width]
+     * @param {number} [height]
+     * @returns {Uint8Array} pixels in the RGBA format
+     */
+    readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
+    {
+        utils/* Utils.assert */.c.assert(this._initialized);
+
+        const gl = texture.gl;
+        const fbo = texture.glFbo;
+
+        // clamp values
+        width = Math.max(0, Math.min(width, texture.width));
+        height = Math.max(0, Math.min(height, texture.height));
+        x = Math.max(0, Math.min(x, texture.width - width));
+        y = Math.max(0, Math.min(y, texture.height - height));
+
+        // buffer allocation
+        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
+        this._reallocate(sizeofBuffer);
+
+        // lost context?
+        if(gl.isContextLost())
+            return this._pixelBuffer[0].subarray(0, sizeofBuffer);
+
+        // read pixels
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // done!
+        return this._pixelBuffer[0].subarray(0, sizeofBuffer);
+    }
+
+    /**
+     * Read pixels from a texture, asynchronously, with PBOs.
+     * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * @param {SpeedyDrawableTexture} texture a texture with a FBO
+     * @param {number} [x]
+     * @param {number} [y] 
+     * @param {number} [width]
+     * @param {number} [height]
+     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
+     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     */
+    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
+    {
+        utils/* Utils.assert */.c.assert(this._initialized);
+
+        const gl = texture.gl;
+        const fbo = texture.glFbo;
+
+        // clamp values
+        width = Math.max(0, Math.min(width, texture.width));
+        height = Math.max(0, Math.min(height, texture.height));
+        x = Math.max(0, Math.min(x, texture.width - width));
+        y = Math.max(0, Math.min(y, texture.height - height));
+
+        // buffer allocation
+        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
+        this._reallocate(sizeofBuffer);
+
+        // lost context?
+        if(gl.isContextLost())
+            return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+
+        // do not optimize?
+        if(!useBufferedDownloads) {
+            const pixelBuffer = this._pixelBuffer[0].subarray(0, sizeofBuffer);
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], pixelBuffer, fbo, x, y, width, height).then(() =>
+                pixelBuffer
+            );
+        }
+
+        // Hide latency with a Producer-Consumer mechanism
+        const numberOfBuffers = this._pixelBuffer.length;
+
+        // GPU needs to produce data
+        const producerIndex = this._producerIndex;
+
+        if(!this._busy[producerIndex]) {
+            const pbo = this._pbo[producerIndex];
+            const pixelBuffer = this._pixelBuffer[producerIndex].subarray(0, sizeofBuffer);
+
+            this._producerIndex = (producerIndex + 1) % numberOfBuffers;
+
+            this._ready[producerIndex] = false;
+            this._busy[producerIndex] = true;
+            //console.time("produce "+producerIndex);
+            this._promise[producerIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
+                //console.timeEnd("produce "+producerIndex);
+                this._busy[producerIndex] = false;
+                this._ready[producerIndex] = true;
+            });
+        }
+        //else console.log("skip",producerIndex);
+        else /* skip frame */ ;
+
+        // CPU needs to consume data
+        const consumerIndex = this._consumerIndex;
+        this._consumerIndex = (consumerIndex + 1) % numberOfBuffers;
+
+        if(!this._ready[consumerIndex]) {
+            //console.time("consume "+consumerIndex);
+            return this._promise[consumerIndex].then(() => {
+                //console.timeEnd("consume "+consumerIndex);
+                this._ready[consumerIndex] = false;
+                return this._pixelBuffer[consumerIndex];
+            });
+        }
+
+        //console.log("NO WAIT "+consumerIndex);
+        this._ready[consumerIndex] = false;
+        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[consumerIndex]);
+    }
+
+    /**
+     * Reallocate the pixel buffers, so that they can hold the required number of bytes
+     * If the pixel buffers already have the required capacity, then nothing is done
+     * @param {number} size in bytes
+     */
+    _reallocate(size)
+    {
+        // no need to reallocate
+        if(size <= this._pixelBuffer[0].byteLength)
+            return;
+
+        // reallocate
+        for(let i = 0; i < this._pixelBuffer.length; i++) {
+            const newBuffer = new Uint8Array(size);
+            //newBuffer.set(this._pixelBuffer[i]); // make this optional?
+            this._pixelBuffer[i] = newBuffer;
+        }
+    }
+
+    /**
+     * Allocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _allocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = 0; i < this._pbo.length; i++)
+            this._pbo[i] = gl.createBuffer();
+    }
+
+    /**
+     * Deallocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = this._pbo.length - 1; i >= 0; i--) {
+            gl.deleteBuffer(this._pbo[i]);
+            this._pbo[i] = null;
+        }
+    }
+
+    /**
+     * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
+     * It's assumed that the target texture is in the RGBA8 format
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
+     * @param {Uint8Array} outputBuffer with size >= width * height * 4
+     * @param {WebGLFramebuffer} fbo
+     * @param {GLint} x
+     * @param {GLint} y
+     * @param {GLsizei} width
+     * @param {GLsizei} height
+     * @returns {SpeedyPromise<void>}
+     */
+    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
+    {
+        /*
+
+        When testing Speedy on Chrome (mobile) using about:tracing with the
+        --enable-gpu-service-tracing flag, I found that A LOT of time is spent
+        in TraceGLAPI::glMapBufferRange, which takes place just after
+        GLES2DecoderImpl::HandleReadPixels and GLES2DecoderImpl::glReadPixels.
+
+        Using multiple PBOs doesn't seem to impact Chrome too much. Performance
+        is much better on Firefox. This suggests there is room for improvement.
+        I do not yet understand clearly the cause for this lag on Chrome. It
+        may be a CPU-GPU synchronization issue.
+
+        EDIT: I have found that using gl.flush() aggressively greatly improves
+              things. WebGL commands will be pushed frequently!
+
+        See also:
+        https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7.3 (Buffer objects)
+        https://github.com/chromium/chromium/blob/master/docs/gpu/debugging_gpu_related_code.md
+
+        */
+        const size = width * height * 4;
+
+        // validate outputBuffer
+        utils/* Utils.assert */.c.assert(outputBuffer.byteLength >= size, `Invalid buffer size`);
+
+        // read pixels into the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, size, gl.DYNAMIC_READ);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // create a fence
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush(); // make sure the sync command is read
+
+        // wait for the commands to be processed by the GPU
+        return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
+
+            // according to the WebGL2 spec sec 3.7.14 Sync objects,
+            // "sync objects may only transition to the signaled state
+            // when the user agent's event loop is not executing a task"
+            // in other words, it won't be signaled in the same frame
+            if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
+                runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+            else
+                asap(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
+
+        }).then(() => {
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        }).catch(err => {
+            throw new utils_errors/* IllegalOperationError */.js(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+        }).finally(() => {
+            gl.deleteSync(sync);
+        });
+    }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync
+     * @param {GLbitfield} flags may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @param {Function} resolve
+     * @param {Function} reject
+     * @param {number} [pollInterval] in milliseconds
+     * @param {number} [remainingAttempts] for timeout
+     */
+    static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
+    {
+        (function poll() {
+            const status = gl.clientWaitSync(sync, flags, 0);
+
+            if(remainingAttempts-- <= 0) {
+                reject(new utils_errors/* TimeoutError */.W5(`GPU polling timeout`, utils_errors/* GLError.from */.Ql.from(gl)));
+            }
+            else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
+                resolve();
+            }
+            else {
+                //setTimeout(poll, pollInterval);
+                if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
+                    requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
+                else
+                    asap(poll);
+            }
+        })();
+    }
+}
 // EXTERNAL MODULE: ./src/utils/globals.js
 var globals = __webpack_require__(3020);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-texture.js
@@ -5465,6 +5898,7 @@ var globals = __webpack_require__(3020);
  * speedy-texture.js
  * A wrapper around WebGLTexture
  */
+
 
 
 
@@ -6055,6 +6489,40 @@ class SpeedyDrawableTexture extends SpeedyTexture
     }
 
     /**
+     * Inspect the pixels of the texture for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint8Array}
+     */
+    inspect(gpu, textureReader)
+    {
+        if(textureReader === undefined) {
+            textureReader = new SpeedyTextureReader();
+            textureReader.init(gpu);
+            const pixels = textureReader.readPixelsSync(this);
+            textureReader.release(gpu);
+
+            return new Uint8Array(pixels); // copy the array
+        }
+        else {
+            const pixels = textureReader.readPixelsSync(this);
+            return new Uint8Array(pixels);
+        }
+    }
+
+    /**
+     * Inspect the pixels of the texture as unsigned 32-bit integers
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint32Array}
+     */
+    inspect32(gpu, textureReader)
+    {
+        utils/* Utils.assert */.c.assert(globals.LITTLE_ENDIAN); // make sure we use little-endian
+        return new Uint32Array(this.inspect(gpu, textureReader).buffer);
+    }
+
+    /**
      * Create a FBO associated with an existing texture
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLTexture} texture
@@ -6140,8 +6608,6 @@ class SpeedyDrawableTexture extends SpeedyTexture
 }
 // EXTERNAL MODULE: ./src/gpu/shader-declaration.js + 1 modules
 var shader_declaration = __webpack_require__(9759);
-// EXTERNAL MODULE: ./src/core/speedy-promise.js
-var speedy_promise = __webpack_require__(4500);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-program.js
 /*
  * speedy-vision.js
@@ -10211,8 +10677,6 @@ class SpeedyMedia
     }
 }
 
-// EXTERNAL MODULE: ./src/core/settings.js
-var settings = __webpack_require__(3135);
 ;// CONCATENATED MODULE: ./src/utils/fps-counter.js
 /*
  * speedy-vision.js
@@ -11222,6 +11686,7 @@ class SpeedyMatrixFactory extends Function
 
 
 
+
 /**
  * Types of messages
  * @enum {Symbol}
@@ -11234,6 +11699,11 @@ const SpeedyPipelineMessageType = Object.freeze({
     LSHTables: Symbol('LSHTables'),
     KeypointMatches: Symbol('KeypointMatches'),
 });
+
+/**
+ * Diagnostic data
+ * @typedef {Object.<string, string|number>} SpeedyPipelineMessageDiagnosticData
+ */
 
 /**
  * A message that is shared between nodes of a pipeline
@@ -11293,6 +11763,16 @@ class SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        throw new utils_errors/* AbstractMethodError */.Mi();
+    }
+
+    /**
      * Set parameters
      * @abstract
      * @param  {...any} args
@@ -11335,6 +11815,18 @@ class SpeedyPipelineMessageWithNothing extends SpeedyPipelineMessage
     {
         return this;
     }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name
+        };
+    }
 }
 
 /**
@@ -11370,6 +11862,26 @@ class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        const formatName = Object.keys(types/* ImageFormat */.D3).find(
+            format => types/* ImageFormat */.D3[format] === this.format
+        );
+
+        return {
+            type: this.constructor.name,
+            format: String(formatName),
+            imageSize: this.image ? `${this.image.width}x${this.image.height}` : '0x0',
+            image: this.image ? '<image data>' /* possibly MBs of data */ : '',
+            hasMipmaps: this.image && this.image.hasMipmaps() ? 'yes' : 'no'
+        };
     }
 
     /**
@@ -11442,6 +11954,23 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            descriptorSize: this.descriptorSize,
+            extraSize: this.extraSize,
+            encoderLength: this.encoderLength,
+            encodedKeypointsSize: this.encodedKeypoints ? `${this.encodedKeypoints.width}x${this.encodedKeypoints.height}` : '0x0',
+            encodedKeypoints: this.encodedKeypoints ? this.encodedKeypoints.inspect(gpu).toString() : '',
+        };
+    }
+
+    /**
      * Encoded keypoints
      * @returns {SpeedyDrawableTexture}
      */
@@ -11509,6 +12038,20 @@ class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            vectorsSize: this.vectors ? `${this.vectors.width}x${this.vectors.height}` : '0x0',
+            vectors: this.vectors ? this.vectors.inspect(gpu).toString() : ''
+        };
+    }
+
+    /**
      * The set of vectors
      * @returns {SpeedyDrawableTexture}
      */
@@ -11546,6 +12089,19 @@ class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            lsh: '<LSH tables>'
+        };
     }
 
     /**
@@ -11594,6 +12150,21 @@ class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            matchesPerKeypoint: this.matchesPerKeypoint,
+            encodedMatchesSize: this.encodedMatches ? `${this.encodedMatches.width}x${this.encodedMatches.height}` : '0x0',
+            encodedMatches: this.encodedMatches ? this.encodedMatches.inspect(gpu).toString() : ''
+        };
     }
 
     /**
@@ -11779,11 +12350,17 @@ class SpeedyPipelinePortSpec
 
 
 
+
 // Constants
 const DEFAULT_INPUT_PORT_NAME = 'in';
 const DEFAULT_OUTPUT_PORT_NAME = 'out';
 const ACCEPTABLE_PORT_NAME = /^[a-z][a-zA-Z0-9]*$/;
 const EMPTY_MESSAGE = new SpeedyPipelineMessageWithNothing();
+
+/**
+ * Diagnostic data
+ * @typedef {import('./pipeline-message.js').SpeedyPipelineMessageDiagnosticData} SpeedyPipelinePortDiagnosticData
+ */
 
 /**
  * Port of a node of a pipeline
@@ -11899,6 +12476,16 @@ class SpeedyPipelinePort
     write(message)
     {
         throw new utils_errors/* NotSupportedError */.B8(`Can't write ${message} to port ${this.name}: unsupported operation`);
+    }
+
+    /**
+     * Inspect this port for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelinePortDiagnosticData} diagnostic data
+     */
+    inspect(gpu)
+    {
+        return this._message.inspect(gpu);
     }
 
     /**
@@ -12192,437 +12779,6 @@ function OutputPort(portName = SpeedyPipelineOutputPort.DEFAULT_NAME)
 {
     return new SpeedyPipelinePortBuilder(SpeedyPipelineOutputPort, portName);
 }
-;// CONCATENATED MODULE: ./src/utils/asap.js
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * asap.js
- * Schedule a function to run "as soon as possible"
- */
-
-/** callbacks */
-const callbacks = /** @type {Function[]} */ ( [] );
-
-/** arguments to be passed to the callbacks */
-const args = /** @type {any[][]} */ ( [] );
-
-/** asap key */
-const ASAP_KEY = 'asap' + Math.random().toString(36).substr(1);
-
-// Register an event listener
-window.addEventListener('message', event => {
-    if(event.source !== window || event.data !== ASAP_KEY)
-        return;
-
-    event.stopPropagation();
-    if(callbacks.length == 0)
-        return;
-
-    const fn = callbacks.pop();
-    const argArray = args.pop();
-    fn.apply(undefined, argArray);
-}, true);
-
-/**
- * Schedule a function to run "as soon as possible"
- * @param {Function} fn callback
- * @param {any[]} params optional parameters
- */
-function asap(fn, ...params)
-{
-    callbacks.unshift(fn);
-    args.unshift(params);
-    window.postMessage(ASAP_KEY, '*');
-}
-;// CONCATENATED MODULE: ./src/gpu/speedy-texture-reader.js
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-texture-reader.js
- * Reads data from textures
- */
-
-
-
-
-
-
-
-
-
-/** @type {number} number of PBOs; used to get a performance boost in gl.readPixels() */
-const DEFAULT_NUMBER_OF_BUFFERS = 2;
-
-/** @type {(fn: Function, ...args: any[]) => number} Run function fn on the "next frame" */
-const runOnNextFrame = navigator.userAgent.includes('Firefox') ?
-    ((fn, ...args) => setTimeout(fn, 10, ...args)) : // RAF produces a warning on Firefox
-    ((fn, ...args) => requestAnimationFrame(() => fn.apply(undefined, args))); // reduce battery usage
-
-/**
- * Reads data from textures
- */
-class SpeedyTextureReader
-{
-    /**
-     * Constructor
-     * @param {number} [numberOfBuffers]
-     */
-    constructor(numberOfBuffers = DEFAULT_NUMBER_OF_BUFFERS)
-    {
-        utils/* Utils.assert */.c.assert(numberOfBuffers > 0);
-
-        /** @type {boolean} is this object initialized? */
-        this._initialized = false;
-
-        /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
-        this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
-
-        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
-        this._pbo = (new Array(numberOfBuffers)).fill(null);
-
-        /** @type {number} the index of the buffer that will be consumed in this frame */
-        this._consumerIndex = 0;
-
-        /** @type {number} the index of the buffer that will be produced next */
-        this._producerIndex = numberOfBuffers - 1;
-
-        /** @type {SpeedyPromise<void>[]} producer-consumer promises */
-        this._promise = Array.from({ length: numberOfBuffers }, () => speedy_promise/* SpeedyPromise.resolve */.s.resolve());
-
-        /** @type {boolean[]} are the contents of the ith buffer being produced? */
-        this._busy = (new Array(numberOfBuffers)).fill(false);
-
-        /** @type {boolean[]} can the ith buffer be consumed? */
-        this._ready = (new Array(numberOfBuffers)).fill(true);
-    }
-
-    /**
-     * Initialize this object
-     * @param {SpeedyGPU} gpu
-     */
-    init(gpu)
-    {
-        this._allocatePBOs(gpu);
-        gpu.subscribe(this._allocatePBOs, this, gpu);
-
-        this._initialized = true;
-    }
-
-    /**
-     * Release resources
-     * @param {SpeedyGPU} gpu
-     * @returns {null}
-     */
-    release(gpu)
-    {
-        gpu.unsubscribe(this._allocatePBOs, this);
-        this._deallocatePBOs(gpu);
-
-        this._initialized = false;
-        return null;
-    }
-
-    /**
-     * Read pixels from a texture, synchronously.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {SpeedyDrawableTexture} texture a texture with a FBO
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {Uint8Array} pixels in the RGBA format
-     */
-    readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
-    {
-        utils/* Utils.assert */.c.assert(this._initialized);
-
-        const gl = texture.gl;
-        const fbo = texture.glFbo;
-
-        // clamp values
-        width = Math.max(0, Math.min(width, texture.width));
-        height = Math.max(0, Math.min(height, texture.height));
-        x = Math.max(0, Math.min(x, texture.width - width));
-        y = Math.max(0, Math.min(y, texture.height - height));
-
-        // buffer allocation
-        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
-        this._reallocate(sizeofBuffer);
-
-        // lost context?
-        if(gl.isContextLost())
-            return this._pixelBuffer[0].subarray(0, sizeofBuffer);
-
-        // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // done!
-        return this._pixelBuffer[0].subarray(0, sizeofBuffer);
-    }
-
-    /**
-     * Read pixels from a texture, asynchronously, with PBOs.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {SpeedyDrawableTexture} texture a texture with a FBO
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
-     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
-     */
-    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
-    {
-        utils/* Utils.assert */.c.assert(this._initialized);
-
-        const gl = texture.gl;
-        const fbo = texture.glFbo;
-
-        // clamp values
-        width = Math.max(0, Math.min(width, texture.width));
-        height = Math.max(0, Math.min(height, texture.height));
-        x = Math.max(0, Math.min(x, texture.width - width));
-        y = Math.max(0, Math.min(y, texture.height - height));
-
-        // buffer allocation
-        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
-        this._reallocate(sizeofBuffer);
-
-        // lost context?
-        if(gl.isContextLost())
-            return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
-
-        // do not optimize?
-        if(!useBufferedDownloads) {
-            const pixelBuffer = this._pixelBuffer[0].subarray(0, sizeofBuffer);
-            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], pixelBuffer, fbo, x, y, width, height).then(() =>
-                pixelBuffer
-            );
-        }
-
-        // Hide latency with a Producer-Consumer mechanism
-        const numberOfBuffers = this._pixelBuffer.length;
-
-        // GPU needs to produce data
-        const producerIndex = this._producerIndex;
-
-        if(!this._busy[producerIndex]) {
-            const pbo = this._pbo[producerIndex];
-            const pixelBuffer = this._pixelBuffer[producerIndex].subarray(0, sizeofBuffer);
-
-            this._producerIndex = (producerIndex + 1) % numberOfBuffers;
-
-            this._ready[producerIndex] = false;
-            this._busy[producerIndex] = true;
-            //console.time("produce "+producerIndex);
-            this._promise[producerIndex] = SpeedyTextureReader._readPixelsViaPBO(gl, pbo, pixelBuffer, fbo, x, y, width, height).then(() => {
-                //console.timeEnd("produce "+producerIndex);
-                this._busy[producerIndex] = false;
-                this._ready[producerIndex] = true;
-            });
-        }
-        //else console.log("skip",producerIndex);
-        else /* skip frame */ ;
-
-        // CPU needs to consume data
-        const consumerIndex = this._consumerIndex;
-        this._consumerIndex = (consumerIndex + 1) % numberOfBuffers;
-
-        if(!this._ready[consumerIndex]) {
-            //console.time("consume "+consumerIndex);
-            return this._promise[consumerIndex].then(() => {
-                //console.timeEnd("consume "+consumerIndex);
-                this._ready[consumerIndex] = false;
-                return this._pixelBuffer[consumerIndex];
-            });
-        }
-
-        //console.log("NO WAIT "+consumerIndex);
-        this._ready[consumerIndex] = false;
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[consumerIndex]);
-    }
-
-    /**
-     * Reallocate the pixel buffers, so that they can hold the required number of bytes
-     * If the pixel buffers already have the required capacity, then nothing is done
-     * @param {number} size in bytes
-     */
-    _reallocate(size)
-    {
-        // no need to reallocate
-        if(size <= this._pixelBuffer[0].byteLength)
-            return;
-
-        // reallocate
-        for(let i = 0; i < this._pixelBuffer.length; i++) {
-            const newBuffer = new Uint8Array(size);
-            //newBuffer.set(this._pixelBuffer[i]); // make this optional?
-            this._pixelBuffer[i] = newBuffer;
-        }
-    }
-
-    /**
-     * Allocate PBOs
-     * @param {SpeedyGPU} gpu
-     */
-    _allocatePBOs(gpu)
-    {
-        const gl = gpu.gl;
-
-        for(let i = 0; i < this._pbo.length; i++)
-            this._pbo[i] = gl.createBuffer();
-    }
-
-    /**
-     * Deallocate PBOs
-     * @param {SpeedyGPU} gpu
-     */
-    _deallocatePBOs(gpu)
-    {
-        const gl = gpu.gl;
-
-        for(let i = this._pbo.length - 1; i >= 0; i--) {
-            gl.deleteBuffer(this._pbo[i]);
-            this._pbo[i] = null;
-        }
-    }
-
-    /**
-     * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
-     * It's assumed that the target texture is in the RGBA8 format
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLBuffer} pbo
-     * @param {Uint8Array} outputBuffer with size >= width * height * 4
-     * @param {WebGLFramebuffer} fbo
-     * @param {GLint} x
-     * @param {GLint} y
-     * @param {GLsizei} width
-     * @param {GLsizei} height
-     * @returns {SpeedyPromise<void>}
-     */
-    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
-    {
-        /*
-
-        When testing Speedy on Chrome (mobile) using about:tracing with the
-        --enable-gpu-service-tracing flag, I found that A LOT of time is spent
-        in TraceGLAPI::glMapBufferRange, which takes place just after
-        GLES2DecoderImpl::HandleReadPixels and GLES2DecoderImpl::glReadPixels.
-
-        Using multiple PBOs doesn't seem to impact Chrome too much. Performance
-        is much better on Firefox. This suggests there is room for improvement.
-        I do not yet understand clearly the cause for this lag on Chrome. It
-        may be a CPU-GPU synchronization issue.
-
-        EDIT: I have found that using gl.flush() aggressively greatly improves
-              things. WebGL commands will be pushed frequently!
-
-        See also:
-        https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7.3 (Buffer objects)
-        https://github.com/chromium/chromium/blob/master/docs/gpu/debugging_gpu_related_code.md
-
-        */
-        const size = width * height * 4;
-
-        // validate outputBuffer
-        utils/* Utils.assert */.c.assert(outputBuffer.byteLength >= size, `Invalid buffer size`);
-
-        // read pixels into the PBO
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, size, gl.DYNAMIC_READ);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-        // create a fence
-        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        gl.flush(); // make sure the sync command is read
-
-        // wait for the commands to be processed by the GPU
-        return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
-
-            // according to the WebGL2 spec sec 3.7.14 Sync objects,
-            // "sync objects may only transition to the signaled state
-            // when the user agent's event loop is not executing a task"
-            // in other words, it won't be signaled in the same frame
-            if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
-                runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
-            else
-                asap(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
-
-        }).then(() => {
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        }).catch(err => {
-            throw new utils_errors/* IllegalOperationError */.js(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
-        }).finally(() => {
-            gl.deleteSync(sync);
-        });
-    }
-
-    /**
-     * Waits for a sync object to become signaled
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLSync} sync
-     * @param {GLbitfield} flags may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @param {Function} resolve
-     * @param {Function} reject
-     * @param {number} [pollInterval] in milliseconds
-     * @param {number} [remainingAttempts] for timeout
-     */
-    static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
-    {
-        (function poll() {
-            const status = gl.clientWaitSync(sync, flags, 0);
-
-            if(remainingAttempts-- <= 0) {
-                reject(new utils_errors/* TimeoutError */.W5(`GPU polling timeout`, utils_errors/* GLError.from */.Ql.from(gl)));
-            }
-            else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
-                resolve();
-            }
-            else {
-                //setTimeout(poll, pollInterval);
-                if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
-                    requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
-                else
-                    asap(poll);
-            }
-        })();
-    }
-}
 ;// CONCATENATED MODULE: ./src/core/pipeline/pipeline-node.js
 /*
  * speedy-vision.js
@@ -12644,6 +12800,7 @@ class SpeedyTextureReader
  * pipeline-node.js
  * Node of a pipeline
  */
+
 
 
 
@@ -12798,16 +12955,38 @@ class SpeedyPipelineNode
 
         // run the task
         const runTask = this._run(gpu);
-        if(typeof runTask === 'undefined') {
-            for(portName in this._outputPorts) // ensure that no output ports are empty
-                utils/* Utils.assert */.c.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
+        if(typeof runTask === 'undefined')
+            return void(this._finishExecution(gpu));
+        else
+            return runTask.then(() => this._finishExecution(gpu));
+    }
 
-            return undefined;
+    /**
+     * Finish the execution of this node;
+     * to be called after execute()
+     * @param {SpeedyGPU} gpu
+     */
+    _finishExecution(gpu)
+    {
+        // ensure that no output ports are empty
+        for(const portName in this._outputPorts) {
+            utils/* Utils.assert */.c.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
         }
-        else return runTask.then(() => {
-            for(portName in this._outputPorts) // ensure that no output ports are empty
-                utils/* Utils.assert */.c.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
-        });
+
+        // diagnosticize the node / pipeline
+        if(settings/* Settings.logging */.Z.logging === 'diagnostic') {
+            utils/* Utils.log */.c.log('\n\n\n\n\n\n\n\n');
+            utils/* Utils.log */.c.log(`== ${this.fullName} ==`);
+
+            // Inspecting the data has performance implications.
+            // It is for diagnostic purposes only, not meant to be done in production!
+
+            for(const portName in this._inputPorts)
+                utils/* Utils.log */.c.log(`-> ${portName}:`, this._inputPorts[portName].inspect(gpu));
+
+            for(const portName in this._outputPorts)
+                utils/* Utils.log */.c.log(`<- ${portName}:`, this._outputPorts[portName].inspect(gpu));
+        }
     }
 
     /**
@@ -12911,34 +13090,6 @@ class SpeedyPipelineNode
     {
         for(let j = this._tex.length - 1; j >= 0; j--)
             this._tex[j] = gpu.texturePool.free(this._tex[j]);
-    }
-
-    /**
-     * Inspect the pixels of a texture for debugging purposes
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint8Array}
-     */
-    _inspect(gpu, texture)
-    {
-        const textureReader = new SpeedyTextureReader();
-        textureReader.init(gpu);
-        const pixels = textureReader.readPixelsSync(texture);
-        textureReader.release(gpu);
-
-        return new Uint8Array(pixels); // copy the array
-    }
-
-    /**
-     * Inspect the pixels of a texture as unsigned 32-bit integers
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint32Array}
-     */
-    _inspect32(gpu, texture)
-    {
-        utils/* Utils.assert */.c.assert(globals.LITTLE_ENDIAN); // make sure we use little-endian
-        return new Uint32Array(this._inspect(gpu, texture).buffer);
     }
 
     /**
@@ -13355,6 +13506,7 @@ class SpeedyMatchedKeypoint extends SpeedyKeypoint
 
 
 
+
 /**
  * A dictionary indexed by the names of the sink nodes
  * @typedef {Object<string,any>} SpeedyPipelineOutput
@@ -13491,6 +13643,10 @@ class SpeedyPipeline
 
         // create output template
         const template = SpeedyPipeline._createOutputTemplate(sinks);
+
+        // diagnostic log
+        if(settings/* Settings.logging */.Z.logging === 'diagnostic')
+            utils/* Utils.log */.c.log('//////////////// PIPELINE RUN ////////////////');
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>
@@ -17306,7 +17462,7 @@ class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
 
         /*
         // debug (read the contents of the permutation)
-        const pixels = this._inspect(gpu, permutation), debug = [];
+        const pixels = permutation.inspect(gpu), debug = [];
         for(let i = 0; i < pixels.length; i += 4) {
             let id = pixels[i] | (pixels[i+1] << 8);
             let score = pixels[i+2] / 255.0;
@@ -19343,7 +19499,7 @@ class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 
         /*
         // debug
-        let data = this._inspect32(filters), debug = [];
+        let data = filters.inspect32(gpu), debug = [];
         for(let i = 0; i < data.length; i++) {
             const bits = MATCH_INDEX_BITS;
             const mask = (1 << bits) - 1;

@@ -23,6 +23,7 @@ import { Utils } from '../../utils/utils';
 import { ImageFormat } from '../../utils/types';
 import { AbstractMethodError } from '../../utils/errors';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../gpu/speedy-texture';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyLSH } from '../../gpu/speedy-lsh';
 
 /**
@@ -37,6 +38,11 @@ export const SpeedyPipelineMessageType = Object.freeze({
     LSHTables: Symbol('LSHTables'),
     KeypointMatches: Symbol('KeypointMatches'),
 });
+
+/**
+ * Diagnostic data
+ * @typedef {Object.<string, string|number>} SpeedyPipelineMessageDiagnosticData
+ */
 
 /**
  * A message that is shared between nodes of a pipeline
@@ -96,6 +102,16 @@ export class SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
      * Set parameters
      * @abstract
      * @param  {...any} args
@@ -138,6 +154,18 @@ export class SpeedyPipelineMessageWithNothing extends SpeedyPipelineMessage
     {
         return this;
     }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name
+        };
+    }
 }
 
 /**
@@ -173,6 +201,26 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        const formatName = Object.keys(ImageFormat).find(
+            format => ImageFormat[format] === this.format
+        );
+
+        return {
+            type: this.constructor.name,
+            format: String(formatName),
+            imageSize: this.image ? `${this.image.width}x${this.image.height}` : '0x0',
+            image: this.image ? '<image data>' /* possibly MBs of data */ : '',
+            hasMipmaps: this.image && this.image.hasMipmaps() ? 'yes' : 'no'
+        };
     }
 
     /**
@@ -245,6 +293,23 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            descriptorSize: this.descriptorSize,
+            extraSize: this.extraSize,
+            encoderLength: this.encoderLength,
+            encodedKeypointsSize: this.encodedKeypoints ? `${this.encodedKeypoints.width}x${this.encodedKeypoints.height}` : '0x0',
+            encodedKeypoints: this.encodedKeypoints ? this.encodedKeypoints.inspect(gpu).toString() : '',
+        };
+    }
+
+    /**
      * Encoded keypoints
      * @returns {SpeedyDrawableTexture}
      */
@@ -312,6 +377,20 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
     }
 
     /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            vectorsSize: this.vectors ? `${this.vectors.width}x${this.vectors.height}` : '0x0',
+            vectors: this.vectors ? this.vectors.inspect(gpu).toString() : ''
+        };
+    }
+
+    /**
      * The set of vectors
      * @returns {SpeedyDrawableTexture}
      */
@@ -349,6 +428,19 @@ export class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            lsh: '<LSH tables>'
+        };
     }
 
     /**
@@ -397,6 +489,21 @@ export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMess
 
         // done!
         return this;
+    }
+
+    /**
+     * Inspect this message for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @returns {SpeedyPipelineMessageDiagnosticData}
+     */
+    inspect(gpu)
+    {
+        return {
+            type: this.constructor.name,
+            matchesPerKeypoint: this.matchesPerKeypoint,
+            encodedMatchesSize: this.encodedMatches ? `${this.encodedMatches.width}x${this.encodedMatches.height}` : '0x0',
+            encodedMatches: this.encodedMatches ? this.encodedMatches.inspect(gpu).toString() : ''
+        };
     }
 
     /**

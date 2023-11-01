@@ -21,6 +21,7 @@
 
 import { Utils } from '../../utils/utils';
 import { SpeedyPromise } from '../speedy-promise';
+import { Settings } from '../settings';
 import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode, SpeedyPipelineSinkNode } from './pipeline-node';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
@@ -164,6 +165,10 @@ export class SpeedyPipeline
 
         // create output template
         const template = SpeedyPipeline._createOutputTemplate(sinks);
+
+        // diagnostic log
+        if(Settings.logging === 'diagnostic')
+            Utils.log('//////////////// PIPELINE RUN ////////////////');
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>

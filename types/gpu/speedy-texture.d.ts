@@ -179,4 +179,20 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      * @returns {this}
      */
     clearToColor(r: number, g: number, b: number, a: number): this;
+    /**
+     * Inspect the pixels of the texture for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint8Array}
+     */
+    inspect(gpu: SpeedyGPU, textureReader?: SpeedyTextureReader | undefined): Uint8Array;
+    /**
+     * Inspect the pixels of the texture as unsigned 32-bit integers
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTextureReader} [textureReader] optional texture reader
+     * @returns {Uint32Array}
+     */
+    inspect32(gpu: SpeedyGPU, textureReader?: SpeedyTextureReader | undefined): Uint32Array;
 }
+import { SpeedyGPU } from "./speedy-gpu";
+import { SpeedyTextureReader } from "./speedy-texture-reader";

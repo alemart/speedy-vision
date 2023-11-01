@@ -35,9 +35,9 @@ export class Utils
      */
     static warning(text, ...args)
     {
-        if(Settings.logging === 'default'){
+        //if(Settings.logging === 'default' || Settings.logging === 'diagnostic') // TODO: warnings & errors only?
+        if(Settings.logging !== 'none')
             console.warn('[speedy-vision]', text, ...args);
-        }
     }
 
     /**
@@ -47,9 +47,8 @@ export class Utils
      */
     static log(text, ...args)
     {
-        if(Settings.logging !== 'none'){
+        if(Settings.logging !== 'none')
             console.log('[speedy-vision]', text, ...args);
-        }
     }
 
     /**

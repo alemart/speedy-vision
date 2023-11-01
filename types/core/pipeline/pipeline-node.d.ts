@@ -48,6 +48,12 @@ export class SpeedyPipelineNode {
      */
     execute(gpu: SpeedyGPU): void | SpeedyPromise<void>;
     /**
+     * Finish the execution of this node;
+     * to be called after execute()
+     * @param {SpeedyGPU} gpu
+     */
+    _finishExecution(gpu: SpeedyGPU): void;
+    /**
      * Run the specific task of this node
      * @abstract
      * @param {SpeedyGPU} gpu
@@ -93,20 +99,6 @@ export class SpeedyPipelineNode {
      * @param {SpeedyGPU} gpu
      */
     _deallocateWorkTextures(gpu: SpeedyGPU): void;
-    /**
-     * Inspect the pixels of a texture for debugging purposes
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint8Array}
-     */
-    _inspect(gpu: SpeedyGPU, texture: SpeedyDrawableTexture): Uint8Array;
-    /**
-     * Inspect the pixels of a texture as unsigned 32-bit integers
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} texture
-     * @returns {Uint32Array}
-     */
-    _inspect32(gpu: SpeedyGPU, texture: SpeedyDrawableTexture): Uint32Array;
     /**
      * Visually inspect a texture for debugging purposes
      * @param {SpeedyGPU} gpu
