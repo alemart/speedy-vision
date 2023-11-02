@@ -423,8 +423,8 @@ export class Utils
     static formatBinaryData(bytes)
     {
         const uint8 = new Uint8Array(bytes);
-        const array = Array.from(uint8);
+        const array = Array.from(uint8, b => b.toString(16).padStart(2, '0'));
 
-        return array.map(b => b.toString(16).padStart(2, '0')).join(' ');
+        return array.join(' ');
     }
 }
