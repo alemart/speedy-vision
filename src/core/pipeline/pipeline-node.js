@@ -193,17 +193,16 @@ export class SpeedyPipelineNode
 
         // diagnosticize the node / pipeline
         if(Settings.logging === 'diagnostic') {
-            Utils.log('\n\n\n\n\n\n\n\n');
-            Utils.log(`== ${this.fullName} ==`);
+            Utils.log(`%c ${this.fullName} `, 'font-size:12pt;font-weight:bold;color:white;background:blue');
 
             // Inspecting the data has performance implications.
             // It is for diagnostic purposes only, not meant to be done in production!
 
             for(const portName in this._inputPorts)
-                Utils.log(`-> ${portName}:`, this._inputPorts[portName].inspect(gpu));
+                Utils.log(`%c-> ${portName}:`, 'font-size:10pt;font-weight:bold', this._inputPorts[portName].inspect(gpu));
 
             for(const portName in this._outputPorts)
-                Utils.log(`<- ${portName}:`, this._outputPorts[portName].inspect(gpu));
+                Utils.log(`%c<- ${portName}:`, 'font-size:10pt;font-weight:bold', this._outputPorts[portName].inspect(gpu));
         }
     }
 

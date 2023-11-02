@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-11-01T19:11:18.687Z
+ * Date: 2023-11-02T00:55:55.053Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -29,7 +29,8 @@ return /******/ (() => { // webpackBootstrap
 /* harmony export */ });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(2411);
 /* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(7905);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3841);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5484);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3841);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -50,6 +51,7 @@ return /******/ (() => { // webpackBootstrap
  * settings.js
  * Global settings
  */
+
 
 
 
@@ -108,7 +110,7 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
     static set gpuPollingMode(value)
     {
         if(value !== 'raf' && value !== 'asap')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Invalid GPU polling mode: "${value}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .mG(`Invalid GPU polling mode: "${value}"`);
 
         gpuPollingMode = value;
     }
@@ -129,7 +131,9 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
     static set logging(mode)
     {
         if(mode !== 'default' && mode !== 'none' && mode !== 'diagnostic')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Invalid logging mode: "${mode}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .mG(`Invalid logging mode: "${mode}"`);
+        else if(mode === 'diagnostic')
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.log */ .c.log('%c DIAGNOSTIC MODE ', 'background:red;color:white;font-size:36pt;font-weight:bold');
 
         loggingMode = mode;
     }
@@ -4000,7 +4004,7 @@ class Utils
     {
         //if(Settings.logging === 'default' || Settings.logging === 'diagnostic') // TODO: warnings & errors only?
         if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
-            console.warn('[speedy-vision]', text, ...args);
+            console.warn('[speedy-vision] ' + text, ...args);
     }
 
     /**
@@ -4011,7 +4015,7 @@ class Utils
     static log(text, ...args)
     {
         if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
-            console.log('[speedy-vision]', text, ...args);
+            console.log('[speedy-vision] ' + text, ...args);
     }
 
     /**
@@ -12975,17 +12979,16 @@ class SpeedyPipelineNode
 
         // diagnosticize the node / pipeline
         if(settings/* Settings.logging */.Z.logging === 'diagnostic') {
-            utils/* Utils.log */.c.log('\n\n\n\n\n\n\n\n');
-            utils/* Utils.log */.c.log(`== ${this.fullName} ==`);
+            utils/* Utils.log */.c.log(`%c ${this.fullName} `, 'font-size:12pt;font-weight:bold;color:white;background:blue');
 
             // Inspecting the data has performance implications.
             // It is for diagnostic purposes only, not meant to be done in production!
 
             for(const portName in this._inputPorts)
-                utils/* Utils.log */.c.log(`-> ${portName}:`, this._inputPorts[portName].inspect(gpu));
+                utils/* Utils.log */.c.log(`%c-> ${portName}:`, 'font-size:10pt;font-weight:bold', this._inputPorts[portName].inspect(gpu));
 
             for(const portName in this._outputPorts)
-                utils/* Utils.log */.c.log(`<- ${portName}:`, this._outputPorts[portName].inspect(gpu));
+                utils/* Utils.log */.c.log(`%c<- ${portName}:`, 'font-size:10pt;font-weight:bold', this._outputPorts[portName].inspect(gpu));
         }
     }
 
@@ -13646,7 +13649,7 @@ class SpeedyPipeline
 
         // diagnostic log
         if(settings/* Settings.logging */.Z.logging === 'diagnostic')
-            utils/* Utils.log */.c.log('//////////////// PIPELINE RUN ////////////////');
+            utils/* Utils.log */.c.log('%c RUNNING PIPELINE ', 'background:red;color:white;font-size:28pt;font-weight:bold');
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>
@@ -13667,6 +13670,10 @@ class SpeedyPipeline
 
             // the pipeline is no longer busy
             this._busy = false;
+
+            // diagnostic log
+            if(settings/* Settings.logging */.Z.logging === 'diagnostic')
+                utils/* Utils.log */.c.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold', template);
 
         }).turbocharge();
     }

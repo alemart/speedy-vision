@@ -21,6 +21,7 @@
 
 import { SpeedyNamespace } from './speedy-namespace';
 import { SpeedyGL } from '../gpu/speedy-gl';
+import { Utils } from '../utils/utils';
 import { IllegalArgumentError } from '../utils/errors';
 
 /** @typedef {import('../gpu/speedy-gl').PowerPreference} PowerPreference */
@@ -98,6 +99,8 @@ export class Settings extends SpeedyNamespace
     {
         if(mode !== 'default' && mode !== 'none' && mode !== 'diagnostic')
             throw new IllegalArgumentError(`Invalid logging mode: "${mode}"`);
+        else if(mode === 'diagnostic')
+            Utils.log('%c DIAGNOSTIC MODE ', 'background:red;color:white;font-size:36pt;font-weight:bold');
 
         loggingMode = mode;
     }

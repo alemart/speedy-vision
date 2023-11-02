@@ -168,7 +168,7 @@ export class SpeedyPipeline
 
         // diagnostic log
         if(Settings.logging === 'diagnostic')
-            Utils.log('//////////////// PIPELINE RUN ////////////////');
+            Utils.log('%c RUNNING PIPELINE ', 'background:red;color:white;font-size:28pt;font-weight:bold');
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>
@@ -189,6 +189,10 @@ export class SpeedyPipeline
 
             // the pipeline is no longer busy
             this._busy = false;
+
+            // diagnostic log
+            if(Settings.logging === 'diagnostic')
+                Utils.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold', template);
 
         }).turbocharge();
     }
