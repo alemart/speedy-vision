@@ -2903,7 +2903,7 @@ Speedy prints messages to the browser console according to the logging mode. The
 |------|-------------|
 | `"default"` | Shows warnings and some informative messages. |
 | `"none"`| Hides all messages. |
-| `"diagnostic"` | Enables the diagnostic mode, which lets you inspect the raw data traveling throughout the nodes of a pipeline. This has performance implications and should not be used in production code. |
+| `"diagnostic"` | Enables the diagnostic mode, which lets you inspect the raw data traveling throughout the nodes of a pipeline. This has performance implications and is not meant to be used in production code. |
 
 
 

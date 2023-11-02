@@ -414,4 +414,17 @@ export class Utils
             });
         });
     }
+
+    /**
+     * Format binary data as a string with hex values
+     * @param {ArrayBuffer} bytes
+     * @returns {string}
+     */
+    static formatBinaryData(bytes)
+    {
+        const uint8 = new Uint8Array(bytes);
+        const array = Array.from(uint8);
+
+        return array.map(b => b.toString(16).padStart(2, '0')).join(' ');
+    }
 }

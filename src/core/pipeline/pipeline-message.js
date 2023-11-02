@@ -305,7 +305,7 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
             extraSize: this.extraSize,
             encoderLength: this.encoderLength,
             encodedKeypointsSize: this.encodedKeypoints ? `${this.encodedKeypoints.width}x${this.encodedKeypoints.height}` : '0x0',
-            encodedKeypoints: this.encodedKeypoints ? this.encodedKeypoints.inspect(gpu).toString() : '',
+            encodedKeypoints: this.encodedKeypoints ? Utils.formatBinaryData(this.encodedKeypoints.inspect(gpu).buffer) : '',
         };
     }
 
@@ -386,7 +386,7 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
         return {
             type: this.constructor.name,
             vectorsSize: this.vectors ? `${this.vectors.width}x${this.vectors.height}` : '0x0',
-            vectors: this.vectors ? this.vectors.inspect(gpu).toString() : ''
+            vectors: this.vectors ? Utils.formatBinaryData(this.vectors.inspect(gpu).buffer) : ''
         };
     }
 
@@ -502,7 +502,7 @@ export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMess
             type: this.constructor.name,
             matchesPerKeypoint: this.matchesPerKeypoint,
             encodedMatchesSize: this.encodedMatches ? `${this.encodedMatches.width}x${this.encodedMatches.height}` : '0x0',
-            encodedMatches: this.encodedMatches ? this.encodedMatches.inspect(gpu).toString() : ''
+            encodedMatches: this.encodedMatches ? Utils.formatBinaryData(this.encodedMatches.inspect(gpu).buffer) : ''
         };
     }
 

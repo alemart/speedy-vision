@@ -191,8 +191,12 @@ export class SpeedyPipeline
             this._busy = false;
 
             // diagnostic log
-            if(Settings.logging === 'diagnostic')
-                Utils.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold', template);
+            if(Settings.logging === 'diagnostic') {
+                Utils.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold');
+                Object.keys(template).forEach(entry => {
+                    Utils.log('%c' + entry + ':', 'font-size:10pt;font-weight:bold', template[entry]);
+                });
+            }
 
         }).turbocharge();
     }

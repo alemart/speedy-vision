@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-11-02T00:55:55.053Z
+ * Date: 2023-11-02T03:03:49.360Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -4381,8 +4381,20 @@ class Utils
             });
         });
     }
-}
 
+    /**
+     * Format binary data as a string with hex values
+     * @param {ArrayBuffer} bytes
+     * @returns {string}
+     */
+    static formatBinaryData(bytes)
+    {
+        const uint8 = new Uint8Array(bytes);
+        const array = Array.from(uint8);
+
+        return array.map(b => b.toString(16).padStart(2, '0')).join(' ');
+    }
+}
 
 /***/ }),
 
@@ -11970,7 +11982,7 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
             extraSize: this.extraSize,
             encoderLength: this.encoderLength,
             encodedKeypointsSize: this.encodedKeypoints ? `${this.encodedKeypoints.width}x${this.encodedKeypoints.height}` : '0x0',
-            encodedKeypoints: this.encodedKeypoints ? this.encodedKeypoints.inspect(gpu).toString() : '',
+            encodedKeypoints: this.encodedKeypoints ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.encodedKeypoints.inspect(gpu).buffer) : '',
         };
     }
 
@@ -12051,7 +12063,7 @@ class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
         return {
             type: this.constructor.name,
             vectorsSize: this.vectors ? `${this.vectors.width}x${this.vectors.height}` : '0x0',
-            vectors: this.vectors ? this.vectors.inspect(gpu).toString() : ''
+            vectors: this.vectors ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.vectors.inspect(gpu).buffer) : ''
         };
     }
 
@@ -12167,7 +12179,7 @@ class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
             type: this.constructor.name,
             matchesPerKeypoint: this.matchesPerKeypoint,
             encodedMatchesSize: this.encodedMatches ? `${this.encodedMatches.width}x${this.encodedMatches.height}` : '0x0',
-            encodedMatches: this.encodedMatches ? this.encodedMatches.inspect(gpu).toString() : ''
+            encodedMatches: this.encodedMatches ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.encodedMatches.inspect(gpu).buffer) : ''
         };
     }
 
@@ -13672,8 +13684,12 @@ class SpeedyPipeline
             this._busy = false;
 
             // diagnostic log
-            if(settings/* Settings.logging */.Z.logging === 'diagnostic')
-                utils/* Utils.log */.c.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold', template);
+            if(settings/* Settings.logging */.Z.logging === 'diagnostic') {
+                utils/* Utils.log */.c.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold');
+                Object.keys(template).forEach(entry => {
+                    utils/* Utils.log */.c.log('%c' + entry + ':', 'font-size:10pt;font-weight:bold', template[entry]);
+                });
+            }
 
         }).turbocharge();
     }

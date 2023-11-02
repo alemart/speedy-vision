@@ -111,5 +111,11 @@ export class Utils {
      * @returns {SpeedyPromise<HTMLVideoElement>}
      */
     static requestCameraStream(constraints?: MediaStreamConstraints | undefined): SpeedyPromise<HTMLVideoElement>;
+    /**
+     * Format binary data as a string with hex values
+     * @param {ArrayBuffer} bytes
+     * @returns {string}
+     */
+    static formatBinaryData(bytes: ArrayBuffer): string;
 }
 import { SpeedyPromise } from "../core/speedy-promise";

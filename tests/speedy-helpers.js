@@ -650,5 +650,17 @@ window.addEventListener('load', () => {
     print(msg);
 });
 
+// link the query string to Speedy.Settings
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(location.search);
+
+    for(const [key, value] of params) {
+        const setting = Object.getOwnPropertyDescriptor(Speedy.Settings, key);
+
+        if(setting !== undefined && setting.set !== undefined)
+            setting.set(value);
+    }
+});
+
 // run test sequentially
 jasmine.getEnv().configure({ random: false });
