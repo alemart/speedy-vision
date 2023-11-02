@@ -74,22 +74,13 @@ function renderStatus(arr = null, label = 'Keypoints')
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const script = document.createElement('script');
+    const params = new URLSearchParams(location.search);
 
-    script.addEventListener('load', () => {
-        kofiWidgetOverlay.draw('alemart', {
-            'type': 'floating-chat',
-            'floating-chat.donateButton.text': 'Support me',
-            'floating-chat.donateButton.background-color': 'royalblue',
-            'floating-chat.donateButton.text-color': 'white'
-        });
-    });
+    // link the query string to Speedy.Settings
+    for(const [key, value] of params) {
+        const setting = Object.getOwnPropertyDescriptor(Speedy.Settings, key);
 
-    script.addEventListener('error', e => console.log(`Can't load the Ko-fi widget`, e));
-
-    script.type = 'text/javascript';
-    script.async = true;
-    script.src = 'https://storage.ko-fi.com/cdn/scripts/overlay-widget.js';
-
-    document.body.appendChild(script);
+        if(setting !== undefined && setting.set !== undefined)
+            setting.set(value);
+    }
 });

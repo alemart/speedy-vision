@@ -129,7 +129,7 @@ input[type=number] {
 
 #status {
     position: absolute;
-    background: rgb(119, 136, 153);
+    background: lightslategrey;
     color: #fff;
     padding: 4px;
     user-select: none;
@@ -217,8 +217,8 @@ input[type=range]::-ms-track {
   box-shadow: 1px 1px 2px lightslategrey;
 }
 
-/* Watermark */
-mark {
+/* support */
+#speedy-vision {
     position: fixed;
     bottom: 0px;
     right: 0px;
@@ -228,7 +228,16 @@ mark {
     font-weight: bold;
 }
 
-mark a:any-link {
+#speedy-vision a:any-link {
     color: lightslategrey;
 }
 
+#speedy-vision .button {
+    float: right;
+    padding-top: 8px;
+    transition: transform  0.125s ease-in-out;
+}
+
+#speedy-vision .button:hover {
+    transform: scale(1.125);
+}
