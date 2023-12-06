@@ -62,7 +62,7 @@ export class SpeedyMediaSource
             return SpeedyImageMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof HTMLVideoElement)
             return SpeedyVideoMediaSource.load(wrappedObject);
-        else if(wrappedObject instanceof HTMLCanvasElement)
+        else if(wrappedObject instanceof HTMLCanvasElement || wrappedObject instanceof OffscreenCanvas)
             return SpeedyCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
