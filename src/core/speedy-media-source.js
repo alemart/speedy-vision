@@ -62,8 +62,10 @@ export class SpeedyMediaSource
             return SpeedyImageMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof HTMLVideoElement)
             return SpeedyVideoMediaSource.load(wrappedObject);
-        else if(wrappedObject instanceof HTMLCanvasElement || wrappedObject instanceof OffscreenCanvas)
+        else if(wrappedObject instanceof HTMLCanvasElement)
             return SpeedyCanvasMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof OffscreenCanvas)
+            return SpeedyOffscreenCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
         else
@@ -496,6 +498,103 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
     static load(canvas)
     {
         return new SpeedyCanvasMediaSource(PRIVATE_TOKEN)._load(canvas);
+    }
+}
+
+/**
+ * OffscreenCanvas media source:
+ * a wrapper around OffscreenCanvas
+ */
+class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
+{
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {OffscreenCanvas} offscreen canvas element */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {OffscreenCanvas}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
+    /**
+     * The type of the underlying media source
+     * @returns {MediaType}
+     */
+    get type()
+    {
+        return MediaType.Canvas; // or a new MediaType for OffscreenCanvas if necessary
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
+     * Clone this media source
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    clone()
+    {
+        if(this._data == null)
+            throw new IllegalOperationError(`Media not loaded`);
+
+        const newCanvas = new OffscreenCanvas(this.width, this.height);
+        const newContext = newCanvas.getContext('2d');
+        newContext.drawImage(this._data, 0, 0);
+
+        return SpeedyOffscreenCanvasMediaSource.load(newCanvas);
+    }
+
+    /**
+     * Load the underlying media
+     * @param {OffscreenCanvas} offscreenCanvas
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    _load(offscreenCanvas)
+    {
+        if(this.isLoaded())
+            this.release();
+
+        return new SpeedyPromise(resolve => {
+            this._data = offscreenCanvas;
+            resolve(this);
+        });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {OffscreenCanvas} offscreenCanvas
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(offscreenCanvas)
+    {
+        return new SpeedyOffscreenCanvasMediaSource(PRIVATE_TOKEN)._load(offscreenCanvas);
     }
 }
 
