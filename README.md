@@ -235,13 +235,13 @@ A `SpeedyMedia` object encapsulates a media object: an image, a video, a canvas 
 
 ##### Speedy.load()
 
-`Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, options?: object): SpeedyPromise<SpeedyMedia>`
+`Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, options?: object): SpeedyPromise<SpeedyMedia>`
 
 Tells Speedy to load `source`. The `source` parameter may be an image, a video, a canvas or a bitmap.
 
 ###### Arguments
 
-* `source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap`. The media source.
+* `source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap`. The media source.
 * `options: object, optional`. Additional options for advanced configuration. See [SpeedyMedia.options](#speedymediaoptions) for details.
 
 ###### Returns
@@ -319,7 +319,7 @@ Returns `null`.
 
 ##### SpeedyMedia.source
 
-`SpeedyMedia.source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, read-only`
+`SpeedyMedia.source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, read-only`
 
 The media source associated with the `SpeedyMedia` object.
 

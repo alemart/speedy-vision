@@ -24,7 +24,7 @@ import { SpeedyPromise } from './speedy-promise';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, TimeoutError, ResourceNotLoadedError } from '../utils/errors';
 import { MediaType } from '../utils/types'
 
-/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} SpeedyMediaSourceNativeElement */
+/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} SpeedyMediaSourceNativeElement */
 
 /** Internal token for protected constructors */
 const PRIVATE_TOKEN = Symbol();
@@ -64,7 +64,7 @@ export class SpeedyMediaSource
             return SpeedyVideoMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof HTMLCanvasElement)
             return SpeedyCanvasMediaSource.load(wrappedObject);
-        else if(wrappedObject instanceof OffscreenCanvas)
+        else if(typeof OffscreenCanvas !== 'undefined' && wrappedObject instanceof OffscreenCanvas)
             return SpeedyOffscreenCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
