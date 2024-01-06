@@ -484,12 +484,19 @@ void main()
         bottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y
     );
 
+    /*
     uvec4 mask[4] = uvec4[4](
         uvec4(1u, valid.x, valid.y, valid.x * valid.y),
         uvec4(1u, 1u, valid.y, valid.y),
         uvec4(1u, valid.x, 1u, valid.x),
         uvec4(1u)
     );
+    */
+    uvec4 mask[4];
+    mask[0] = uvec4(1u, valid.x, valid.y, valid.x * valid.y);
+    mask[1] = uvec4(1u, 1u, valid.y, valid.y);
+    mask[2] = uvec4(1u, valid.x, 1u, valid.x);
+    mask[3] = uvec4(1u);
 
     #if SKIP_TEXTURE_READS
 
@@ -525,12 +532,19 @@ void main()
 
     #endif
 
+    /*
     uvec4 sums[4] = uvec4[4](
         uvec4(center, right, bottom, bottomRight),
         uvec4(left, center, bottomLeft, bottom),
         uvec4(top, topRight, center, right),
         uvec4(topLeft, top, left, center)
     );
+    */
+    uvec4 sums[4];
+    sums[0] = uvec4(center, right, bottom, bottomRight);
+    sums[1] = uvec4(left, center, bottomLeft, bottom);
+    sums[2] = uvec4(top, topRight, center, right);
+    sums[3] = uvec4(topLeft, top, left, center);
 
     ivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));
     int option = 2 * cmp.y + cmp.x; // 0 <= option <= 3

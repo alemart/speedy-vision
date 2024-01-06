@@ -55,6 +55,9 @@ void main()
 
     // Read two 3x3 patches: up and down in the pyramid
     #define P(p,u,v) textureLod(corners, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)
+    /*
+    // the following initializers may crash on some mobile drivers
+    // ("no default precision defined for variable")
     vec4 pix[18] = vec4[18](
         #define D(u,v) P(potMinus,(u),(v))
         D(-1,-1), D(0,-1), D(1,-1),
@@ -88,6 +91,40 @@ void main()
         E(12), E(13), E(14),
         E(15), E(16), E(17)
     );
+    */
+    vec4 pix[18];
+
+        #define D(u,v) P(potMinus,(u),(v))
+        pix[0] = D(-1,-1); pix[1] = D(0,-1); pix[2] = D(1,-1);
+        pix[3] = D(-1,0); pix[4] = D(0,0); pix[5] = D(1,0);
+        pix[6] = D(-1,1); pix[7] = D(0,1); pix[8] = D(1,1);
+
+        #define U(u,v) P(potPlus,(u),(v))
+        pix[9] = U(-1,-1); pix[10] = U(0,-1); pix[11] = U(1,-1);
+        pix[12] = U(-1,0); pix[13] = U(0,0); pix[14] = U(1,0);
+        pix[15] = U(-1,1); pix[16] = U(0,1); pix[17] = U(1,1);
+
+    float scores[18];
+
+        #define C(j) decodeFloat16(pix[j].rb)
+        scores[0] = C(0); scores[1] = C(1); scores[2] = C(2);
+        scores[3] = C(3); scores[4] = C(4); scores[5] = C(5);
+        scores[6] = C(6); scores[7] = C(7); scores[8] = C(8);
+
+        scores[9] = C(9); scores[10] = C(10); scores[11] = C(11);
+        scores[12] = C(12); scores[13] = C(13); scores[14] = C(14);
+        scores[15] = C(15); scores[16] = C(16); scores[17] = C(17);
+
+    float lods[18];
+
+        #define E(j) decodeLod(pix[j].a)
+        lods[0] = E(0); lods[1] = E(1); lods[2] = E(2);
+        lods[3] = E(3); lods[4] = E(4); lods[5] = E(5);
+        lods[6] = E(6); lods[7] = E(7); lods[8] = E(8);
+
+        lods[9] = E(9); lods[10] = E(10); lods[11] = E(11);
+        lods[12] = E(12); lods[13] = E(13); lods[14] = E(14);
+        lods[15] = E(15); lods[16] = E(16); lods[17] = E(17);
 
     #if USE_LAPLACIAN
 

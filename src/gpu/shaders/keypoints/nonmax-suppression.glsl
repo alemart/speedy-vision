@@ -68,33 +68,68 @@ void main()
         return;
 
     // read inner ring: 8-neighborhood
+    /*
+    // the following initializer may crash on some mobile drivers
+    // ("no default precision defined for variable")
     vec4 p[8] = vec4[8](
         PIX(0,1), PIX(1,1), PIX(1,0), PIX(1,-1),
         PIX(0,-1), PIX(-1,-1), PIX(-1,0), PIX(-1,1)
     );
+    */
+    vec4 p[8];
+    p[0] = PIX(0,1); p[1] = PIX(1,1); p[2] = PIX(1,0); p[3] = PIX(1,-1);
+    p[4] = PIX(0,-1); p[5] = PIX(-1,-1); p[6] = PIX(-1,0); p[7] = PIX(-1,1);
 
     // read middle ring
 #ifdef USE_MIDDLE_RING
+    /*
     vec4 q[16] = vec4[16](
         PIX(0,2), PIX(1,2), PIX(2,2), PIX(2,1),
         PIX(2,0), PIX(2,-1), PIX(2,-2), PIX(1,-2),
         PIX(0,-2), PIX(-1,-2), PIX(-2,-2), PIX(-2,-1),
         PIX(-2,0), PIX(-2,1), PIX(-2,2), PIX(-1,2)
     );
+    */
+    vec4 q[16];
+    q[0] = PIX(0,2); q[1] = PIX(1,2); q[2] = PIX(2,2); q[3] = PIX(2,1);
+    q[4] = PIX(2,0); q[5] = PIX(2,-1); q[6] = PIX(2,-2); q[7] = PIX(1,-2);
+    q[8] = PIX(0,-2); q[9] = PIX(-1,-2); q[10] = PIX(-2,-2); q[11] = PIX(-2,-1);
+    q[12] = PIX(-2,0); q[13] = PIX(-2,1); q[14] = PIX(-2,2); q[15] = PIX(-1,2);
 #else
+    /*
     vec4 q[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);
+    */
+    vec4 q[16];
+    q[0] = O; q[1] = O; q[2] = O; q[3] = O;
+    q[4] = O; q[5] = O; q[6] = O; q[7] = O;
+    q[8] = O; q[9] = O; q[10] = O; q[11] = O;
+    q[12] = O; q[13] = O; q[14] = O; q[15] = O;
 #endif
 
     // read outer ring
 #ifdef USE_OUTER_RING
+    /*
     vec4 r[16] = vec4[16](
         PIX(0,3), PIX(1,3), PIX(3,1), PIX(3,0),
         PIX(3,-1), PIX(1,-3), PIX(0,-3), PIX(-1,-3),
         PIX(-3,-1), PIX(-3,0), PIX(-3,1), PIX(-1,3),
         PIX(0,4), PIX(4,0), PIX(0,-4), PIX(-4,0)
     );
+    */
+    vec4 r[16];
+    r[0] = PIX(0,3); r[1] = PIX(1,3); r[2] = PIX(3,1); r[3] = PIX(3,0);
+    r[4] = PIX(3,-1); r[5] = PIX(1,-3); r[6] = PIX(0,-3); r[7] = PIX(-1,-3);
+    r[8] = PIX(-3,-1); r[9] = PIX(-3,0); r[10] = PIX(-3,1); r[11] = PIX(-1,3);
+    r[12] = PIX(0,4); r[13] = PIX(4,0); r[14] = PIX(0,-4); r[15] = PIX(-4,0);
 #else
+    /*
     vec4 r[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);
+    */
+    vec4 r[16];
+    r[0] = O; r[1] = O; r[2] = O; r[3] = O;
+    r[4] = O; r[5] = O; r[6] = O; r[7] = O;
+    r[8] = O; r[9] = O; r[10] = O; r[11] = O;
+    r[12] = O; r[13] = O; r[14] = O; r[15] = O;
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
