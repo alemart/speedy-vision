@@ -38,10 +38,18 @@ uint decodeUint32(vec4 rgba)
  * @param {uint} value
  * @returns {vec4} RGBA tuple
  */
+#if 1 // FIXME: temporary fix (driver bug)
+vec4 encodeUint32(uint value)
+{
+    uvec4 v = uvec4(value, value / 256u, value / 65536u, value / 16777216u) % 256u;
+    return vec4(v) / 255.0f;
+}
+#else
 vec4 encodeUint32(uint value)
 {
     uvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;
     return vec4(v) / 255.0f;
 }
+#endif
 
 #endif
