@@ -1,11 +1,11 @@
 /*!
  * Speedy Vision version 0.9.1-wip
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2023-11-02T03:03:49.360Z
+ * Date: 2024-01-06T03:16:16.840Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -4390,9 +4390,9 @@ class Utils
     static formatBinaryData(bytes)
     {
         const uint8 = new Uint8Array(bytes);
-        const array = Array.from(uint8);
+        const array = Array.from(uint8, b => b.toString(16).padStart(2, '0'));
 
-        return array.map(b => b.toString(16).padStart(2, '0')).join(' ');
+        return array.join(' ');
     }
 }
 
@@ -4478,7 +4478,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /***/ 1830:
 /***/ ((module) => {
 
-module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(vec4 rgba)\n{\nuvec4 v = uvec4(rgba * 255.0f) & 255u;\nreturn v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);\n}\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;\nreturn vec4(v) / 255.0f;\n}\n#endif"
+module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(vec4 rgba)\n{\nuvec4 v = uvec4(rgba * 255.0f) & 255u;\nreturn v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);\n}\n#if 1\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value / 256u, value / 65536u, value / 16777216u) % 256u;\nreturn vec4(v) / 255.0f;\n}\n#else\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;\nreturn vec4(v) / 255.0f;\n}\n#endif\n#endif"
 
 /***/ }),
 
@@ -4681,7 +4681,7 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /***/ 4251:
 /***/ ((module) => {
 
-module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#elif STAGE < 1\nuniform mediump usampler2D lookupTable;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\nin vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4] = uvec4[4](\nuvec4(1u, valid.x, valid.y, valid.x * valid.y),\nuvec4(1u, 1u, valid.y, valid.y),\nuvec4(1u, valid.x, 1u, valid.x),\nuvec4(1u)\n);\n#if SKIP_TEXTURE_READS\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\n#else\n#define calcSb(pos) texture(lookupTable, (pos)).z\nuint center = calcSb(v_center);\nuint top = calcSb(v_top);\nuint topRight = calcSb(v_topRight);\nuint right = calcSb(v_right);\nuint bottomRight = calcSb(v_bottomRight);\nuint bottom = calcSb(v_bottom);\nuint bottomLeft = calcSb(v_bottomLeft);\nuint left = calcSb(v_left);\nuint topLeft = calcSb(v_topLeft);\n#endif\nuvec4 sums[4] = uvec4[4](\nuvec4(center, right, bottom, bottomRight),\nuvec4(left, center, bottomLeft, bottom),\nuvec4(top, topRight, center, right),\nuvec4(topLeft, top, left, center)\n);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
+module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#elif STAGE < 1\nuniform mediump usampler2D lookupTable;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\nin vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4];\nmask[0] = uvec4(1u, valid.x, valid.y, valid.x * valid.y);\nmask[1] = uvec4(1u, 1u, valid.y, valid.y);\nmask[2] = uvec4(1u, valid.x, 1u, valid.x);\nmask[3] = uvec4(1u);\n#if SKIP_TEXTURE_READS\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\n#else\n#define calcSb(pos) texture(lookupTable, (pos)).z\nuint center = calcSb(v_center);\nuint top = calcSb(v_top);\nuint topRight = calcSb(v_topRight);\nuint right = calcSb(v_right);\nuint bottomRight = calcSb(v_bottomRight);\nuint bottom = calcSb(v_bottom);\nuint bottomLeft = calcSb(v_bottomLeft);\nuint left = calcSb(v_left);\nuint topLeft = calcSb(v_topLeft);\n#endif\nuvec4 sums[4];\nsums[0] = uvec4(center, right, bottom, bottomRight);\nsums[1] = uvec4(left, center, bottomLeft, bottom);\nsums[2] = uvec4(top, topRight, center, right);\nsums[3] = uvec4(topLeft, top, left, center);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
 
 /***/ }),
 
@@ -4709,7 +4709,7 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"int32.glsl\"\n#if !def
 /***/ 2277:
 /***/ ((module) => {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@include \"filters.glsl\"\n#if !defined(USE_LAPLACIAN)\n#error Undefined USE_LAPLACIAN\n#endif\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lodStep;\n#if USE_LAPLACIAN\nuniform sampler2D pyrLaplacian;\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\nfloat myEncodedLod = pixel.a;\nfloat lod = decodeLod(myEncodedLod);\nfloat lodPlus = lod + lodStep;\nfloat lodMinus = lod - lodStep;\nfloat pot = exp2(lod);\nfloat potPlus = exp2(lodPlus);\nfloat potMinus = exp2(lodMinus);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#define P(p,u,v) textureLod(corners, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nvec4 pix[18] = vec4[18](\n#define D(u,v) P(potMinus,(u),(v))\nD(-1,-1), D(0,-1), D(1,-1),\nD(-1,0), D(0,0), D(1,0),\nD(-1,1), D(0,1), D(1,1)\n,\n#define U(u,v) P(potPlus,(u),(v))\nU(-1,-1), U(0,-1), U(1,-1),\nU(-1,0), U(0,0), U(1,0),\nU(-1,1), U(0,1), U(1,1)\n);\nfloat scores[18] = float[18](\n#define C(j) decodeFloat16(pix[j].rb)\nC(0), C(1), C(2),\nC(3), C(4), C(5),\nC(6), C(7), C(8)\n,\nC(9), C(10), C(11),\nC(12), C(13), C(14),\nC(15), C(16), C(17)\n);\nfloat lods[18] = float[18](\n#define E(j) decodeLod(pix[j].a)\nE(0), E(1), E(2),\nE(3), E(4), E(5),\nE(6), E(7), E(8)\n,\nE(9), E(10), E(11),\nE(12), E(13), E(14),\nE(15), E(16), E(17)\n);\n#if USE_LAPLACIAN\n#define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nmat3 strengths[2] = mat3[2](mat3(\n#define Lm(u,v) abs(decodeFloat16(L(potMinus,(u),(v)).xy))\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n), mat3(\n#define Lp(u,v) abs(decodeFloat16(L(potPlus,(u),(v)).zw))\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n));\nfloat myStrength = abs(laplacian(pyramid, vec2(thread), lod));\n#else\n#define L(u,v) (((v)+1)*3 + ((u)+1))\nmat3 strengths[2] = mat3[2](mat3(\n#define Lm(u,v) scores[L((u),(v))]\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n), mat3(\n#define Lp(u,v) scores[9 + L((u),(v))]\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n));\nfloat myStrength = score;\n#endif\n#define B(j,lod) float(isSameLod(lods[j], (lod))) * float(scores[j] > 0.0f)\nmat3 nearLod[2] = mat3[2](mat3(\n#define Bm(j) B((j), lodMinus)\nBm(0), Bm(1), Bm(2),\nBm(3), Bm(4), Bm(5),\nBm(6), Bm(7), Bm(8)\n), mat3(\n#define Bp(j) B((j), lodPlus)\nBp(9), Bp(10), Bp(11),\nBp(12), Bp(13), Bp(14),\nBp(15), Bp(16), Bp(17)\n));\nmat3 upStrengths = matrixCompMult(strengths[1], nearLod[1]);\nmat3 downStrengths = matrixCompMult(strengths[0], nearLod[0]);\nvec3 maxUpStrength3 = max(upStrengths[0], max(upStrengths[1], upStrengths[2]));\nvec3 maxDownStrength3 = max(downStrengths[0], max(downStrengths[1], downStrengths[2]));\nvec3 maxStrength3 = max(maxUpStrength3, maxDownStrength3);\nfloat maxStrength = max(maxStrength3.x, max(maxStrength3.y, maxStrength3.z));\ncolor.rb = encodeFloat16(score * step(maxStrength, myStrength));\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@include \"filters.glsl\"\n#if !defined(USE_LAPLACIAN)\n#error Undefined USE_LAPLACIAN\n#endif\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lodStep;\n#if USE_LAPLACIAN\nuniform sampler2D pyrLaplacian;\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\nfloat myEncodedLod = pixel.a;\nfloat lod = decodeLod(myEncodedLod);\nfloat lodPlus = lod + lodStep;\nfloat lodMinus = lod - lodStep;\nfloat pot = exp2(lod);\nfloat potPlus = exp2(lodPlus);\nfloat potMinus = exp2(lodMinus);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#define P(p,u,v) textureLod(corners, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nvec4 pix[18];\n#define D(u,v) P(potMinus,(u),(v))\npix[0] = D(-1,-1); pix[1] = D(0,-1); pix[2] = D(1,-1);\npix[3] = D(-1,0); pix[4] = D(0,0); pix[5] = D(1,0);\npix[6] = D(-1,1); pix[7] = D(0,1); pix[8] = D(1,1);\n#define U(u,v) P(potPlus,(u),(v))\npix[9] = U(-1,-1); pix[10] = U(0,-1); pix[11] = U(1,-1);\npix[12] = U(-1,0); pix[13] = U(0,0); pix[14] = U(1,0);\npix[15] = U(-1,1); pix[16] = U(0,1); pix[17] = U(1,1);\nfloat scores[18];\n#define C(j) decodeFloat16(pix[j].rb)\nscores[0] = C(0); scores[1] = C(1); scores[2] = C(2);\nscores[3] = C(3); scores[4] = C(4); scores[5] = C(5);\nscores[6] = C(6); scores[7] = C(7); scores[8] = C(8);\nscores[9] = C(9); scores[10] = C(10); scores[11] = C(11);\nscores[12] = C(12); scores[13] = C(13); scores[14] = C(14);\nscores[15] = C(15); scores[16] = C(16); scores[17] = C(17);\nfloat lods[18];\n#define E(j) decodeLod(pix[j].a)\nlods[0] = E(0); lods[1] = E(1); lods[2] = E(2);\nlods[3] = E(3); lods[4] = E(4); lods[5] = E(5);\nlods[6] = E(6); lods[7] = E(7); lods[8] = E(8);\nlods[9] = E(9); lods[10] = E(10); lods[11] = E(11);\nlods[12] = E(12); lods[13] = E(13); lods[14] = E(14);\nlods[15] = E(15); lods[16] = E(16); lods[17] = E(17);\n#if USE_LAPLACIAN\n#define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nmat3 strengths[2] = mat3[2](mat3(\n#define Lm(u,v) abs(decodeFloat16(L(potMinus,(u),(v)).xy))\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n), mat3(\n#define Lp(u,v) abs(decodeFloat16(L(potPlus,(u),(v)).zw))\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n));\nfloat myStrength = abs(laplacian(pyramid, vec2(thread), lod));\n#else\n#define L(u,v) (((v)+1)*3 + ((u)+1))\nmat3 strengths[2] = mat3[2](mat3(\n#define Lm(u,v) scores[L((u),(v))]\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n), mat3(\n#define Lp(u,v) scores[9 + L((u),(v))]\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n));\nfloat myStrength = score;\n#endif\n#define B(j,lod) float(isSameLod(lods[j], (lod))) * float(scores[j] > 0.0f)\nmat3 nearLod[2] = mat3[2](mat3(\n#define Bm(j) B((j), lodMinus)\nBm(0), Bm(1), Bm(2),\nBm(3), Bm(4), Bm(5),\nBm(6), Bm(7), Bm(8)\n), mat3(\n#define Bp(j) B((j), lodPlus)\nBp(9), Bp(10), Bp(11),\nBp(12), Bp(13), Bp(14),\nBp(15), Bp(16), Bp(17)\n));\nmat3 upStrengths = matrixCompMult(strengths[1], nearLod[1]);\nmat3 downStrengths = matrixCompMult(strengths[0], nearLod[0]);\nvec3 maxUpStrength3 = max(upStrengths[0], max(upStrengths[1], upStrengths[2]));\nvec3 maxDownStrength3 = max(downStrengths[0], max(downStrengths[1], downStrengths[2]));\nvec3 maxStrength3 = max(maxUpStrength3, maxDownStrength3);\nfloat maxStrength = max(maxStrength3.x, max(maxStrength3.y, maxStrength3.z));\ncolor.rb = encodeFloat16(score * step(maxStrength, myStrength));\n}"
 
 /***/ }),
 
@@ -4723,7 +4723,7 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
 /***/ 9743:
 /***/ ((module) => {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if !defined(MULTISCALE)\n#error Must define MULTISCALE\n#elif MULTISCALE != 0\n#define LOD_STEP (lodStep)\n#define USE_MIDDLE_RING\n#else\n#define LOD_STEP (0.0f)\n#endif\n#define PIX(x,y) pixelAtShortOffset(image, ivec2((x),(y)))\n#define L2(v,i) bvec2(isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define L3(v,i) bvec3(isSameEncodedLod(v[i].a, alpha), isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define S3(v,i) decodeFloat16(v[i].rb) * float(any(L3(v,i)))\n#define S2(v,i) decodeFloat16(v[i].rb) * float(any(L2(v,i)))\n#define P(i) S3(p,i)\n#define Q(i) S2(q,i)\n#define R(i) S2(r,i)\nconst vec4 O = vec4(0.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\nvec4 p[8] = vec4[8](\nPIX(0,1), PIX(1,1), PIX(1,0), PIX(1,-1),\nPIX(0,-1), PIX(-1,-1), PIX(-1,0), PIX(-1,1)\n);\n#ifdef USE_MIDDLE_RING\nvec4 q[16] = vec4[16](\nPIX(0,2), PIX(1,2), PIX(2,2), PIX(2,1),\nPIX(2,0), PIX(2,-1), PIX(2,-2), PIX(1,-2),\nPIX(0,-2), PIX(-1,-2), PIX(-2,-2), PIX(-2,-1),\nPIX(-2,0), PIX(-2,1), PIX(-2,2), PIX(-1,2)\n);\n#else\nvec4 q[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);\n#endif\n#ifdef USE_OUTER_RING\nvec4 r[16] = vec4[16](\nPIX(0,3), PIX(1,3), PIX(3,1), PIX(3,0),\nPIX(3,-1), PIX(1,-3), PIX(0,-3), PIX(-1,-3),\nPIX(-3,-1), PIX(-3,0), PIX(-3,1), PIX(-1,3),\nPIX(0,4), PIX(4,0), PIX(0,-4), PIX(-4,0)\n);\n#else\nvec4 r[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);\n#endif\nfloat alphaPlus = encodeLod(lod + LOD_STEP);\nfloat alphaMinus = encodeLod(lod - LOD_STEP);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\nP(0), P(1), P(2), P(3),\nP(4), P(5), P(6), P(7),\n0.0f);\nmat4 middleScore = mat4(\nQ(0), Q(1), Q(2), Q(3),\nQ(4), Q(5), Q(6), Q(7),\nQ(8), Q(9), Q(10), Q(11),\nQ(12), Q(13), Q(14), Q(15)\n);\nmat4 outerScore = mat4(\nR(0), R(1), R(2), R(3),\nR(4), R(5), R(6), R(7),\nR(8), R(9), R(10), R(11),\nR(12), R(13), R(14), R(15)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if !defined(MULTISCALE)\n#error Must define MULTISCALE\n#elif MULTISCALE != 0\n#define LOD_STEP (lodStep)\n#define USE_MIDDLE_RING\n#else\n#define LOD_STEP (0.0f)\n#endif\n#define PIX(x,y) pixelAtShortOffset(image, ivec2((x),(y)))\n#define L2(v,i) bvec2(isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define L3(v,i) bvec3(isSameEncodedLod(v[i].a, alpha), isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define S3(v,i) decodeFloat16(v[i].rb) * float(any(L3(v,i)))\n#define S2(v,i) decodeFloat16(v[i].rb) * float(any(L2(v,i)))\n#define P(i) S3(p,i)\n#define Q(i) S2(q,i)\n#define R(i) S2(r,i)\nconst vec4 O = vec4(0.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\nvec4 p[8];\np[0] = PIX(0,1); p[1] = PIX(1,1); p[2] = PIX(1,0); p[3] = PIX(1,-1);\np[4] = PIX(0,-1); p[5] = PIX(-1,-1); p[6] = PIX(-1,0); p[7] = PIX(-1,1);\n#ifdef USE_MIDDLE_RING\nvec4 q[16];\nq[0] = PIX(0,2); q[1] = PIX(1,2); q[2] = PIX(2,2); q[3] = PIX(2,1);\nq[4] = PIX(2,0); q[5] = PIX(2,-1); q[6] = PIX(2,-2); q[7] = PIX(1,-2);\nq[8] = PIX(0,-2); q[9] = PIX(-1,-2); q[10] = PIX(-2,-2); q[11] = PIX(-2,-1);\nq[12] = PIX(-2,0); q[13] = PIX(-2,1); q[14] = PIX(-2,2); q[15] = PIX(-1,2);\n#else\nvec4 q[16];\nq[0] = O; q[1] = O; q[2] = O; q[3] = O;\nq[4] = O; q[5] = O; q[6] = O; q[7] = O;\nq[8] = O; q[9] = O; q[10] = O; q[11] = O;\nq[12] = O; q[13] = O; q[14] = O; q[15] = O;\n#endif\n#ifdef USE_OUTER_RING\nvec4 r[16];\nr[0] = PIX(0,3); r[1] = PIX(1,3); r[2] = PIX(3,1); r[3] = PIX(3,0);\nr[4] = PIX(3,-1); r[5] = PIX(1,-3); r[6] = PIX(0,-3); r[7] = PIX(-1,-3);\nr[8] = PIX(-3,-1); r[9] = PIX(-3,0); r[10] = PIX(-3,1); r[11] = PIX(-1,3);\nr[12] = PIX(0,4); r[13] = PIX(4,0); r[14] = PIX(0,-4); r[15] = PIX(-4,0);\n#else\nvec4 r[16];\nr[0] = O; r[1] = O; r[2] = O; r[3] = O;\nr[4] = O; r[5] = O; r[6] = O; r[7] = O;\nr[8] = O; r[9] = O; r[10] = O; r[11] = O;\nr[12] = O; r[13] = O; r[14] = O; r[15] = O;\n#endif\nfloat alphaPlus = encodeLod(lod + LOD_STEP);\nfloat alphaMinus = encodeLod(lod - LOD_STEP);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\nP(0), P(1), P(2), P(3),\nP(4), P(5), P(6), P(7),\n0.0f);\nmat4 middleScore = mat4(\nQ(0), Q(1), Q(2), Q(3),\nQ(4), Q(5), Q(6), Q(7),\nQ(8), Q(9), Q(10), Q(11),\nQ(12), Q(13), Q(14), Q(15)\n);\nmat4 outerScore = mat4(\nR(0), R(1), R(2), R(3),\nR(4), R(5), R(6), R(7),\nR(8), R(9), R(10), R(11),\nR(12), R(13), R(14), R(15)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
 
 /***/ }),
 
@@ -9494,7 +9494,7 @@ var types = __webpack_require__(6731);
 
 
 
-/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} SpeedyMediaSourceNativeElement */
+/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} SpeedyMediaSourceNativeElement */
 
 /** Internal token for protected constructors */
 const PRIVATE_TOKEN = Symbol();
@@ -9534,6 +9534,8 @@ class SpeedyMediaSource
             return SpeedyVideoMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof HTMLCanvasElement)
             return SpeedyCanvasMediaSource.load(wrappedObject);
+        else if(typeof OffscreenCanvas !== 'undefined' && wrappedObject instanceof OffscreenCanvas)
+            return SpeedyOffscreenCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
         else
@@ -9970,6 +9972,103 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
 }
 
 /**
+ * OffscreenCanvas media source:
+ * a wrapper around OffscreenCanvas
+ */
+class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
+{
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token)
+    {
+        super(token);
+
+        /** @type {OffscreenCanvas} offscreen canvas element */
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {OffscreenCanvas}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
+    /**
+     * The type of the underlying media source
+     * @returns {MediaType}
+     */
+    get type()
+    {
+        return types/* MediaType.Canvas */.DD.Canvas; // or a new MediaType for OffscreenCanvas if necessary
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
+     * Clone this media source
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    clone()
+    {
+        if(this._data == null)
+            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+
+        const newCanvas = new OffscreenCanvas(this.width, this.height);
+        const newContext = newCanvas.getContext('2d');
+        newContext.drawImage(this._data, 0, 0);
+
+        return SpeedyOffscreenCanvasMediaSource.load(newCanvas);
+    }
+
+    /**
+     * Load the underlying media
+     * @param {OffscreenCanvas} offscreenCanvas
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    _load(offscreenCanvas)
+    {
+        if(this.isLoaded())
+            this.release();
+
+        return new speedy_promise/* SpeedyPromise */.s(resolve => {
+            this._data = offscreenCanvas;
+            resolve(this);
+        });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {OffscreenCanvas} offscreenCanvas
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(offscreenCanvas)
+    {
+        return new SpeedyOffscreenCanvasMediaSource(PRIVATE_TOKEN)._load(offscreenCanvas);
+    }
+}
+
+/**
  * Bitmap media source:
  * a wrapper around ImageBitmap
  */
@@ -10081,6 +10180,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         return new SpeedyBitmapMediaSource(PRIVATE_TOKEN)._load(bitmap);
     }
 }
+
 ;// CONCATENATED MODULE: ./src/gpu/speedy-texture-uploader.js
 /*
  * speedy-vision.js
