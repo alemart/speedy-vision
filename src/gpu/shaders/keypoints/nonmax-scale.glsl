@@ -126,10 +126,16 @@ void main()
         lods[12] = E(12); lods[13] = E(13); lods[14] = E(14);
         lods[15] = E(15); lods[16] = E(16); lods[17] = E(17);
 
+    /*
+    // the following initializers crash on Google Pixel 7A:
+    // "no default precision defined for variable 'mat3[2]'"
+
     #if USE_LAPLACIAN
 
     //#define L(p,u,v) abs(laplacian(pyramid, texCoord + (p) * vec2((u),(v)), decodeLod(encodedLod[((v)+1)*3+(u)+1])))
     #define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)
+
+
     mat3 strengths[2] = mat3[2](mat3(
         // absolute value of the scale-normalized laplacian of each neighbor (lod - lodStep)
         #define Lm(u,v) abs(decodeFloat16(L(potMinus,(u),(v)).xy))
@@ -175,6 +181,64 @@ void main()
         Bp(12), Bp(13), Bp(14),
         Bp(15), Bp(16), Bp(17)
     ));
+    */
+
+#if USE_LAPLACIAN
+
+    #define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)
+
+    mat3 strengths[2];
+    strengths[0] = mat3(
+        // absolute value of the scale-normalized laplacian of each neighbor (lod - lodStep)
+        #define Lm(u,v) abs(decodeFloat16(L(potMinus,(u),(v)).xy))
+        Lm(-1,-1), Lm(0,-1), Lm(1,-1),
+        Lm(-1,0), Lm(0,0), Lm(1,0),
+        Lm(-1,1), Lm(0,1), Lm(1,1)
+    );
+    strengths[1] = mat3(
+        // absolute value of the scale-normalized laplacian of each neighbor (lod + lodStep)
+        #define Lp(u,v) abs(decodeFloat16(L(potPlus,(u),(v)).zw))
+        Lp(-1,-1), Lp(0,-1), Lp(1,-1),
+        Lp(-1,0), Lp(0,0), Lp(1,0),
+        Lp(-1,1), Lp(0,1), Lp(1,1)
+    );
+    float myStrength = abs(laplacian(pyramid, vec2(thread), lod));
+
+#else
+
+    #define L(u,v) (((v)+1)*3 + ((u)+1))
+
+    mat3 strengths[2];
+    stengths[0] = mat3(
+        #define Lm(u,v) scores[L((u),(v))]
+        Lm(-1,-1), Lm(0,-1), Lm(1,-1),
+        Lm(-1,0), Lm(0,0), Lm(1,0),
+        Lm(-1,1), Lm(0,1), Lm(1,1)
+    );
+    strengths[1] = mat3(
+        #define Lp(u,v) scores[9 + L((u),(v))]
+        Lp(-1,-1), Lp(0,-1), Lp(1,-1),
+        Lp(-1,0), Lp(0,0), Lp(1,0),
+        Lp(-1,1), Lp(0,1), Lp(1,1)
+    );
+    float myStrength = score;
+
+#endif
+
+    #define B(j,lod) float(isSameLod(lods[j], (lod))) * float(scores[j] > 0.0f)
+    mat3 nearLod[2];
+    nearLod[0] = mat3(
+        #define Bm(j) B((j), lodMinus)
+        Bm(0), Bm(1), Bm(2),
+        Bm(3), Bm(4), Bm(5),
+        Bm(6), Bm(7), Bm(8)
+    );
+    nearLod[1] = mat3(
+        #define Bp(j) B((j), lodPlus)
+        Bp(9), Bp(10), Bp(11),
+        Bp(12), Bp(13), Bp(14),
+        Bp(15), Bp(16), Bp(17)
+    );
 
     // Find the maximum strength in the 3x3 patches
     mat3 upStrengths = matrixCompMult(strengths[1], nearLod[1]);
