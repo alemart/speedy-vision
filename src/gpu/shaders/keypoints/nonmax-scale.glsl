@@ -209,7 +209,7 @@ void main()
     #define L(u,v) (((v)+1)*3 + ((u)+1))
 
     mat3 strengths[2];
-    stengths[0] = mat3(
+    strengths[0] = mat3(
         #define Lm(u,v) scores[L((u),(v))]
         Lm(-1,-1), Lm(0,-1), Lm(1,-1),
         Lm(-1,0), Lm(0,0), Lm(1,0),
