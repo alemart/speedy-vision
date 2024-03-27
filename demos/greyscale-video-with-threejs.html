@@ -1,0 +1,139 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  greyscale-video.html
+  Convert a video to greyscale
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Convert video to greyscale</title>
+        <link href="demo-base.css" rel="stylesheet">
+        <script src="demo-base.js"></script>
+        <script src="three.min.js"></script>
+        <script src="../dist/speedy-vision.js"></script>
+    </head>
+    <body>
+        <h1>Convert video to greyscale</h1>
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+            <canvas id="canvas-three"></canvas>
+        </div>
+        <video id="video"
+            poster="../assets/loading.jpg"
+            preload="auto"
+            loop muted autoplay playsinline
+            title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
+                <source src="../assets/flying-eagle.webm" type="video/webm" />
+                <source src="../assets/flying-eagle.mp4" type="video/mp4" />
+        </video>
+        <script>
+window.onload = async function()
+{
+    /*
+
+    This is our pipeline:
+
+    Image  ---> Convert to ---> Image
+    Source      greyscale       Sink
+
+    */
+
+    // Load a video
+    const video = document.getElementById('video');
+    const media = await Speedy.load(video);
+
+    // Setup the pipeline
+    const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
+    const greyscale = Speedy.Filter.Greyscale();
+
+    source.media = media; // set the media source
+
+    source.output().connectTo(greyscale.input()); // connect the nodes
+    greyscale.output().connectTo(sink.input());
+
+    pipeline.init(source, sink, greyscale); // add the nodes to the pipeline
+
+    // Main loop
+    (function() {
+        const canvas = setupCanvas('canvas-demo', media.width, media.height, video.title);
+        let image = null, frameReady = false;
+
+        async function update()
+        {
+            const result = await pipeline.run();
+            image = result.image;
+            frameReady = true;
+            setTimeout(update, 1000 / 60);
+        }    
+        update();
+
+        const canvas_three = document.getElementById('canvas-three');
+
+        // create a THREE WebGL Renderer to render the greyscale image onto a THREE plane.
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas_three, alpha: true, antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const scene = new THREE.Scene();
+
+        function render()
+        {
+            if(frameReady) {
+                const camera = new THREE.PerspectiveCamera( 75, image.source.width / image.source.height, 0.1, 1000 );
+                scene.add(camera); 
+
+                const texture = new THREE.Texture()
+                texture.image = image.source
+                texture.needsUpdate = true;
+                const geometry = new THREE.PlaneGeometry( image.source.width/35, image.source.height/35, 1 , 1);
+                const plane = new THREE.Mesh( geometry,  new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide }) );
+                plane.rotateX(Math.PI);
+                scene.add(plane);
+
+                camera.position.z = 5;
+
+                renderer.setSize( image.source.width, image.source.height );
+         
+                renderer.render(scene, camera);
+      
+                renderMedia(image, canvas);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
+
+        setInterval(renderStatus, 200);
+    })();
+}
+
+        </script>
+        <section id="speedy-vision">
+            <div>Like <a href="https://github.com/alemart/speedy-vision" target="_blank">speedy-vision.js</a> ?</div>
+            <a href="https://github.com/sponsors/alemart" target="_blank" class="button">
+                <img alt="GitHub Sponsors" src="https://img.shields.io/github/sponsors/alemart?style=for-the-badge&logo=github&label=Sponsor&labelColor=royalblue&color=gold">
+            </a>
+        </section>
+    </body>
+</html>
