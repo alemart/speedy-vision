@@ -33,7 +33,13 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode {
      * @returns {boolean}
      */
     get turbo(): boolean;
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyVector2[]>}
+     */
+    export(): SpeedyPromise<SpeedyVector2[]>;
 }
 import { SpeedyPipelineSinkNode } from "../../pipeline-node";
 import { SpeedyVector2 } from "../../../speedy-vector";
 import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
+import { SpeedyPromise } from "../../../speedy-promise";

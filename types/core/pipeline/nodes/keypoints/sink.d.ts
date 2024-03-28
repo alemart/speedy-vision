@@ -44,7 +44,7 @@ declare class SpeedyPipelineNodeAbstractKeypointSink<T extends SpeedyKeypoint> e
      * @param {number} [texCount]
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders]
      */
-    constructor(name?: string | undefined, texCount?: number | undefined, portBuilders?: any[] | undefined);
+    constructor(name?: string | undefined, texCount?: number | undefined, portBuilders?: SpeedyPipelinePortBuilder[] | undefined);
     /** @type {Array<T|null>} keypoints (output) */
     _keypoints: Array<T | null>;
     /** @type {SpeedyTextureReader} texture reader */
@@ -75,6 +75,11 @@ declare class SpeedyPipelineNodeAbstractKeypointSink<T extends SpeedyKeypoint> e
      * @returns {boolean}
      */
     get includeDiscarded(): boolean;
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<Array<T|null>>}
+     */
+    export(): SpeedyPromise<Array<T | null>>;
     /**
      * Download and decode keypoints from the GPU
      * @param {SpeedyGPU} gpu
@@ -124,8 +129,8 @@ import { SpeedyTrackedKeypoint } from "../../../speedy-keypoint";
 import { SpeedyMatchedKeypoint } from "../../../speedy-keypoint";
 import { SpeedyPipelineSinkNode } from "../../pipeline-node";
 import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
+import { SpeedyPromise } from "../../../speedy-promise";
 import { SpeedyGPU } from "../../../../gpu/speedy-gpu";
 import { SpeedyDrawableTexture } from "../../../../gpu/speedy-texture";
-import { SpeedyPromise } from "../../../speedy-promise";
 import { SpeedyTexture } from "../../../../gpu/speedy-texture";
 export {};

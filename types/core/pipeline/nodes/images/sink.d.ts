@@ -11,6 +11,13 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode {
     _bitmap: ImageBitmap;
     /** @type {ImageFormat} output format */
     _format: ImageFormat;
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+    export(): SpeedyPromise<SpeedyMedia>;
 }
 import { SpeedyPipelineSinkNode } from "../../pipeline-node";
 import { ImageFormat } from "../../../../utils/types";
+import { SpeedyPromise } from "../../../speedy-promise";
+import { SpeedyMedia } from "../../../speedy-media";

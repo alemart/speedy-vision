@@ -61,7 +61,7 @@ export class SpeedyMatrixFactory extends Function {
      * @returns {SpeedyPromise<[SpeedyMatrix,SpeedyMatrix]>} resolves to [Q,R]
      */
     qr(Q: SpeedyMatrix, R: SpeedyMatrix, mat: SpeedyMatrix, { mode }?: {
-        mode?: "reduced" | "full" | undefined;
+        mode?: "full" | "reduced" | undefined;
     } | undefined): SpeedyPromise<[SpeedyMatrix, SpeedyMatrix]>;
     /**
      * Solve a possibly overdetermined system of linear

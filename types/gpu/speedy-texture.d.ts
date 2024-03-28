@@ -171,6 +171,11 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      */
     copyTo(texture: SpeedyTexture, lod?: number | undefined): void;
     /**
+     * Clear the texture
+     * @returns {this}
+     */
+    clear(): this;
+    /**
      * Clear the texture to a color
      * @param {number} r red component, a value in [0,1]
      * @param {number} g green component, a value in [0,1]

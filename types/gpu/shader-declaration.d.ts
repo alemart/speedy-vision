@@ -98,16 +98,16 @@ export class ShaderDeclaration {
      * @returns {typeof DEFAULT_ATTRIBUTES}
      */
     get attributes(): Readonly<{
-        position: string;
-        texCoord: string;
+        position: "a_position";
+        texCoord: "a_texCoord";
     }>;
     /**
      * Get the pre-defined locations of the vertex shader attributes
      * @returns {typeof DEFAULT_ATTRIBUTES_LOCATION}
      */
     get locationOfAttributes(): Readonly<{
-        position: number;
-        texCoord: number;
+        position: 0;
+        texCoord: 1;
     }>;
     /**
      * Names of the arguments that will be passed to the Shader,
