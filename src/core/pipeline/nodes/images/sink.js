@@ -25,7 +25,7 @@ import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../../speedy-media';
-import { SpeedyMediaSource } from '../../../speedy-media-source';
+import { SpeedyImageDataMediaSource, SpeedyMediaSource } from '../../../speedy-media-source';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../speedy-promise';
@@ -60,6 +60,21 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
     {
         Utils.assert(this._bitmap != null);
         return SpeedyMedia.load(this._bitmap, { format: this._format }, false);
+    }
+
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+
+    exportImageData()
+    {
+        Utils.assert(this._bitmap != null);
+        const newCanvas = Utils.createCanvas(this._bitmap.width, this._bitmap.height);
+        const newContext = newCanvas.getContext('2d');
+        newContext.drawImage(this._bitmap, 0, 0);
+        let imageData = newContext.getImageData(0, 0, this._bitmap.width, this._bitmap.height);
+        return SpeedyMedia.load(imageData);
     }
 
     /**

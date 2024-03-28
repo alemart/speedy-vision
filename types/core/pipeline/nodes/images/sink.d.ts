@@ -16,6 +16,11 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode {
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
     export(): SpeedyPromise<SpeedyMedia>;
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyImageDataMediaSource>}
+     */
+    exportImageData(): SpeedyPromise<SpeedyImageDataMediaSource>;
 }
 import { SpeedyPipelineSinkNode } from "../../pipeline-node";
 import { ImageFormat } from "../../../../utils/types";

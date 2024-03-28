@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-03-28T21:49:37.983Z
+ * Date: 2024-03-28T22:58:51.893Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -14198,6 +14198,25 @@ class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
     {
         utils/* Utils */.A.assert(this._bitmap != null);
         return SpeedyMedia.load(this._bitmap, { format: this._format }, false);
+    }
+
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyImageDataMediaSource>}
+     */
+
+    exportImageData()
+    {
+        utils/* Utils */.A.assert(this._bitmap != null);
+        const newCanvas = utils/* Utils */.A.createCanvas(this._bitmap.width, this._bitmap.height);
+        console.log(newCanvas)
+        const newContext = newCanvas.getContext('2d');
+        console.log(this._bitmap)
+        newContext.drawImage(this._bitmap, 0, 0);
+        let imageData = newContext.getImageData(0, 0, this._bitmap.width, this._bitmap.height);
+        console.log(imageData)
+        //return SpeedyImageDataMediaSource.load(imageData);
+        return SpeedyMedia.load(imageData);
     }
 
     /**
