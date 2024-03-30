@@ -30,7 +30,7 @@ export class SpeedyMediaSource {
      * The underlying wrapped object
      * @returns {SpeedyMediaSourceNativeElement}
      */
-    get data(): SpeedyMediaSourceNativeElement;
+    get data(): any;
     /**
      * Is the underlying media loaded?
      * @returns {boolean}
@@ -73,5 +73,5 @@ export class SpeedyMediaSource {
      */
     _load(element: SpeedyMediaSourceNativeElement): SpeedyPromise<SpeedyMediaSource>;
 }
-export type SpeedyMediaSourceNativeElement = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap;
+export type SpeedyMediaSourceNativeElement = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | any | ImageBitmap | ImageData;
 import { SpeedyPromise } from "./speedy-promise";

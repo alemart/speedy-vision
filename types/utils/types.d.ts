@@ -11,6 +11,7 @@ export const MediaType: Readonly<{
     Video: symbol;
     Canvas: symbol;
     Bitmap: symbol;
+    ImageData: symbol;
 }>;
 /**
  * Image formats

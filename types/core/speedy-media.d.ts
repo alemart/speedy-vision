@@ -29,7 +29,7 @@ export class SpeedyMedia {
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
      * @returns {SpeedyMediaSourceNativeElement} the media element
      */
-    get source(): import("./speedy-media-source").SpeedyMediaSourceNativeElement;
+    get source(): any;
     /**
      * The type of the media attached to this SpeedyMedia object
      * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}

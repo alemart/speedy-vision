@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-01-10T13:44:25.122Z
+ * Date: 2024-03-30T17:01:38.430Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -3920,6 +3920,7 @@ const MediaType = Object.freeze({
     Video: Symbol('Video'),
     Canvas: Symbol('Canvas'),
     Bitmap: Symbol('Bitmap'),
+    ImageData: Symbol('ImageData')
 });
 
 /**
@@ -9494,7 +9495,7 @@ var types = __webpack_require__(6731);
 
 
 
-/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} SpeedyMediaSourceNativeElement */
+/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap|ImageData} SpeedyMediaSourceNativeElement */
 
 /** Internal token for protected constructors */
 const PRIVATE_TOKEN = Symbol();
@@ -9538,6 +9539,8 @@ class SpeedyMediaSource
             return SpeedyOffscreenCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof ImageData)
+            return SpeedyImageDataMediaSource.load(wrappedObject);
         else
             throw new utils_errors/* IllegalArgumentError */.mG(`Unsupported media type: ${wrappedObject}`);
     }
@@ -10178,6 +10181,105 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
     static load(bitmap)
     {
         return new SpeedyBitmapMediaSource(PRIVATE_TOKEN)._load(bitmap);
+    }
+}
+
+/**
+ * ImageData media source:
+ * a wrapper around ImageData
+ */
+class SpeedyImageDataMediaSource extends SpeedyMediaSource {
+    /**
+     * @private Constructor
+     * @param {symbol} token
+     */
+    constructor(token) {
+        super(token);
+        this._data = null;
+    }
+
+    /**
+     * The underlying wrapped object
+     * @returns {ImageData}
+     */
+    get data() {
+        return this._data;
+    }
+
+    /**
+     * The type of the underlying media source
+     * @returns {MediaType}
+     */
+    get type() {
+        return types/* MediaType.ImageData */.DD.ImageData;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width() {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height() {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
+     * Clone this media source
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    clone() {
+        if (this._data == null)
+            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+
+        const imageDataCopy = new ImageData(
+            new Uint8ClampedArray(this._data.data),
+            this._data.width,
+            this._data.height
+        )
+
+        return SpeedyImageDataMediaSource.load(imageDataCopy);
+    }
+
+    /**
+     * Release resources associated with this object
+     * @returns {null}
+     */
+    release() {
+        if (this._data != null)
+            this._data.close();
+
+        return super.release();
+    }
+
+    /**
+     * Load the underlying media
+     * @param {ImageData} imageData
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    _load(imageData) {
+        if (this.isLoaded())
+            this.release();
+
+        return new speedy_promise/* SpeedyPromise */.s(resolve => {
+            this._data = imageData;
+            resolve(this);
+        });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {ImageData} imageData
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(imageData) {
+        return new SpeedyImageDataMediaSource(PRIVATE_TOKEN)._load(imageData);
     }
 }
 
