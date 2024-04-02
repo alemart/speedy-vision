@@ -132,6 +132,9 @@ export class SpeedyMedia
             case MediaType.Bitmap:
                 return 'bitmap';
 
+            case MediaType.ImageData:
+                return 'data';
+
             default: // this shouldn't happen
                 return 'unknown';
         }

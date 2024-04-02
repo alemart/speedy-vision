@@ -724,6 +724,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      */
     constructor(token) {
         super(token);
+
+        /** @type {ImageData} image data */
         this._data = null;
     }
 

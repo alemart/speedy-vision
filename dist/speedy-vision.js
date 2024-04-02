@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-03-30T17:01:38.430Z
+ * Date: 2024-04-02T17:21:25.691Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -10195,6 +10195,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      */
     constructor(token) {
         super(token);
+
+        /** @type {ImageData} image data */
         this._data = null;
     }
 
@@ -10795,6 +10797,9 @@ class SpeedyMedia
 
             case types/* MediaType.Bitmap */.DD.Bitmap:
                 return 'bitmap';
+
+            case types/* MediaType.ImageData */.DD.ImageData:
+                return 'data';
 
             default: // this shouldn't happen
                 return 'unknown';
