@@ -112,7 +112,7 @@ export class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
+     * @returns {"image" | "video" | "canvas" | "bitmap" | "data" | "unknown"}
      */
     get type()
     {
@@ -131,6 +131,9 @@ export class SpeedyMedia
 
             case MediaType.Bitmap:
                 return 'bitmap';
+            
+            case MediaType.ImageData:
+                return 'data';  
 
             default: // this shouldn't happen
                 return 'unknown';
