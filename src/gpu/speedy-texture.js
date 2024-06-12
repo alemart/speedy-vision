@@ -116,14 +116,26 @@ export class SpeedyTexture
 
     /**
      * Upload pixel data to the texture. The texture will be resized if needed.
-     * @param {TexImageSource} pixels
+     * @param {TexImageSource} data
      * @param {number} [width] in pixels
      * @param {number} [height] in pixels
      * @return {SpeedyTexture} this
      */
-    upload(pixels, width = this._width, height = this._height)
+    upload(data, width = this._width, height = this._height)
     {
         const gl = this._gl;
+
+        // bugfix: if the media is a video, we can't really
+        // upload it to the GPU unless it's ready
+        if(data instanceof HTMLVideoElement) {
+            if(data.readyState < 2) {
+                // this may happen when the video loops (Firefox)
+                // keep the previously uploaded texture
+                //Utils.warning(`Trying to process a video that isn't ready yet`);
+                return this;
+            }
+        }
+
         Utils.assert(width > 0 && height > 0);
 
         this.discardMipmaps();
@@ -133,7 +145,7 @@ export class SpeedyTexture
         this._format = gl.RGBA;
         this._dataType = gl.UNSIGNED_BYTE;
 
-        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._dataType);
+        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, data, 0, this._format, this._internalFormat, this._dataType);
         return this;
     }
 
@@ -356,6 +368,7 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
+
     /**
      * Upload pixel data to a WebGL texture
      * @param {WebGL2RenderingContext} gl

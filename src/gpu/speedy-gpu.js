@@ -23,7 +23,6 @@ import { SpeedyGL } from './speedy-gl';
 import { SpeedyTexture } from './speedy-texture';
 import { SpeedyProgramCenter } from './speedy-program-center';
 import { SpeedyTexturePool } from './speedy-texture-pool';
-import { SpeedyTextureUploader } from './speedy-texture-uploader';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
 import { SpeedyPromise } from '../core/speedy-promise';
 import { Utils } from '../utils/utils';
@@ -50,9 +49,6 @@ export class SpeedyGPU extends Observable
 
         /** @type {SpeedyTexturePool} texture pool */
         this._texturePool = new SpeedyTexturePool(this);
-
-        /** @type {SpeedyTextureUploader} texture uploader */
-        this._textureUploader = new SpeedyTextureUploader(this);
 
 
 
@@ -131,7 +127,7 @@ export class SpeedyGPU extends Observable
      */
     upload(source, outputTexture)
     {
-        return this._textureUploader.upload(source, outputTexture);
+        return outputTexture.upload(source.data, source.width, source.height);
     }
 
     /**
@@ -145,7 +141,6 @@ export class SpeedyGPU extends Observable
         // release internal components
         this._programs = this._programs.release();
         this._texturePool = this._texturePool.release();
-        this._textureUploader = this._textureUploader.release();
 
         // unsubscribe
         this._speedyGL.unsubscribe(this._reset);
@@ -181,7 +176,6 @@ export class SpeedyGPU extends Observable
 
         this._programs = new SpeedyProgramCenter(this);
         this._texturePool = new SpeedyTexturePool(this);
-        this._textureUploader = new SpeedyTextureUploader(this);
 
         this._notify();
     }
