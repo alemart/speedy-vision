@@ -197,14 +197,14 @@ export class SpeedyGL extends Observable
     {
         const gl = this._gl;
 
-        // nothing to do?
-        if(gl.isContextLost())
-            return;
-
         // find the appropriate extension
         const ext = gl.getExtension('WEBGL_lose_context');
         if(!ext)
             throw new NotSupportedError('WEBGL_lose_context extension is unavailable');
+
+        // nothing to do?
+        if(gl.isContextLost())
+            return ext;
 
         // disable reinitialization
         this._reinitializeOnContextLoss = false;
