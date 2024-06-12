@@ -717,12 +717,14 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
  * ImageData media source:
  * a wrapper around ImageData
  */
-class SpeedyImageDataMediaSource extends SpeedyMediaSource {
+class SpeedyImageDataMediaSource extends SpeedyMediaSource
+{
     /**
      * @private Constructor
      * @param {symbol} token
      */
-    constructor(token) {
+    constructor(token)
+    {
         super(token);
 
         /** @type {ImageData} image data */
@@ -733,7 +735,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * The underlying wrapped object
      * @returns {ImageData}
      */
-    get data() {
+    get data()
+    {
         return this._data;
     }
 
@@ -741,7 +744,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * The type of the underlying media source
      * @returns {MediaType}
      */
-    get type() {
+    get type()
+    {
         return MediaType.ImageData;
     }
 
@@ -749,7 +753,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * Media width, in pixels
      * @returns {number}
      */
-    get width() {
+    get width()
+    {
         return this._data ? this._data.width : 0;
     }
 
@@ -757,7 +762,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * Media height, in pixels
      * @returns {number}
      */
-    get height() {
+    get height()
+    {
         return this._data ? this._data.height : 0;
     }
 
@@ -765,8 +771,9 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * Clone this media source
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
-    clone() {
-        if (this._data == null)
+    clone()
+    {
+        if(this._data == null)
             throw new IllegalOperationError(`Media not loaded`);
 
         const imageDataCopy = new ImageData(
@@ -783,8 +790,9 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * @param {ImageData} imageData
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
-    _load(imageData) {
-        if (this.isLoaded())
+    _load(imageData)
+    {
+        if(this.isLoaded())
             this.release();
 
         return new SpeedyPromise(resolve => {
@@ -798,7 +806,8 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource {
      * @param {ImageData} imageData
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
-    static load(imageData) {
+    static load(imageData)
+    {
         return new SpeedyImageDataMediaSource(PRIVATE_TOKEN)._load(imageData);
     }
 }
