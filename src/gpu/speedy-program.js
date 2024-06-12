@@ -60,8 +60,7 @@ const UNIFORM_SETTERS = Object.freeze({
 /** @typedef {number|number[]|boolean|boolean[]|SpeedyTexture} SpeedyProgramUniformValue */
 
 /**
- * A SpeedyProgram is a Function that
- * runs GPU-accelerated GLSL code
+ * A SpeedyProgram is a Function that runs GLSL code
  */
 export class SpeedyProgram extends Function
 {
@@ -133,6 +132,9 @@ export class SpeedyProgram extends Function
         /** @type {number} height of the output */
         this._height = 1;
 
+        /** @type {[number,number]} cached object that stores the size of the output */
+        this._size = [ 1, 1 ];
+
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._texture = (new Array(options.pingpong ? 2 : 1)).fill(null);
 
@@ -158,7 +160,7 @@ export class SpeedyProgram extends Function
         for(let j = 0; j < this._argnames.length; j++) {
             const argname = this._argnames[j];
             if(!this._uniform.has(argname)) {
-                this._argIsArray[j] = this._uniform.has(argname + '[0]');
+                this._argIsArray[j] = this._uniform.has(indexedVariable(argname, 0));
                 if(!this._argIsArray[j])
                     throw new IllegalOperationError(`Expected uniform "${argname}", as declared in the argument list`);
             }
@@ -174,21 +176,31 @@ export class SpeedyProgram extends Function
     {
         const gl = this._gl;
         const argnames = this._argnames;
+        const texture = this._texture[this._textureIndex];
 
         // matching arguments?
         if(args.length != argnames.length)
             throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // can't use the output texture as an input
+        /*
+        // slower method
         const flatArgs = Utils.flatten(args);
         for(let j = flatArgs.length - 1; j >= 0; j--) {
             if(flatArgs[j] === this._texture[this._textureIndex])
                 throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
         }
+        */
+        for(let j = args.length - 1; j >= 0; j--) {
+            if(args[j] === texture)
+                throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+            // else if(Array.isArray(args[j])) ...
+            // we don't support passing arrays of textures at the time of this writing
+        }
 
         // context loss?
         if(gl.isContextLost())
-            return this._texture[this._textureIndex];
+            return texture;
 
         // use program
         gl.useProgram(this._program);
@@ -197,14 +209,13 @@ export class SpeedyProgram extends Function
         gl.bindVertexArray(this._geometry.vao);
 
         // select the render target
-        const texture = this._texture[this._textureIndex];
         const fbo = this._renderToTexture ? texture.glFbo : null;
 
         // update texSize uniform (available in all fragment shaders)
-        const width = this._width, height = this._height;
         const texSize = this._uniform.get('texSize');
-        texSize.setValue(gl, [ width, height ]);
-        //gl.uniform2f(texSize.location, width, height);
+        this._size[0] = this._width;
+        this._size[1] = this._height;
+        texSize.setValue(gl, this._size);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -219,9 +230,9 @@ export class SpeedyProgram extends Function
                 // uniform array matches argument name
                 const array = args[i];
                 if(Array.isArray(array)) {
-                    if(this._uniform.has(`${argname}[${array.length}]`))
+                    if(this._uniform.has(indexedVariable(argname, array.length)))
                         throw new IllegalArgumentError(`Can't run shader: too few elements in the "${argname}" array`);
-                    for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
+                    for(let j = 0, uniform = undefined; (uniform = this._uniform.get(indexedVariable(argname, j))) !== undefined; j++)
                         texNo = uniform.setValue(gl, array[j], texNo);
                 }
                 else
@@ -237,7 +248,7 @@ export class SpeedyProgram extends Function
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
         // draw call
-        gl.viewport(0, 0, width, height);
+        gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
 
         // unbind the FBO
@@ -758,3 +769,30 @@ UBOHelper.prototype.release = function()
 
     return null;
 }
+
+/**
+ * Generates an indexed variable name, as in variable[index]
+ * @param {string} variable
+ * @param {number} index
+ * @returns {string} variable[index]
+ */
+function indexedVariable(variable, index)
+{
+    //return `${variable}[${index}]`; // no caching
+
+    // is this cache lookup really faster than string concatenation?
+    // what about memory consumption?
+    const cache = indexedVariable.cache;
+    let nameList = cache.get(variable);
+
+    if(nameList === undefined)
+        cache.set(variable, nameList = []);
+
+    if(nameList[index] === undefined)
+        nameList[index] = `${variable}[${index}]`;
+
+    return nameList[index];
+}
+
+/** @type {Map<string,string[]>} cached argument names */
+indexedVariable.cache = new Map(); // Object.create(null)
