@@ -77,6 +77,6 @@ export class Observable
     _notify()
     {
         for(let i = 0; i < this._subscribers.length; i++)
-            this._subscribers[i].call(this._thisptr[i], ...(this._args[i]));
+            this._subscribers[i].apply(this._thisptr[i], this._args[i]);
     }
 }

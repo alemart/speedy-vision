@@ -52,7 +52,7 @@ let powerPreference = DEFAULT_POWER_PREFERENCE;
 
 
 /**
- * A wrapper around the WebGL Rendering Context
+ * A wrapper around a WebGL Rendering Context
  */
 export class SpeedyGL extends Observable
 {
@@ -66,20 +66,13 @@ export class SpeedyGL extends Observable
         Utils.assert(key === SINGLETON_KEY);
         super();
 
-
-
         /** @type {boolean} internal flag */
         this._reinitializeOnContextLoss = true;
 
-        /** @type {HTMLCanvasElement} canvas */
+        /** @type {HTMLCanvasElement} internal canvas */
         this._canvas = this._createCanvas(this._reinitialize.bind(this));
 
         /** @type {WebGL2RenderingContext} WebGL rendering context */
-        this._gl = null;
-
-
-
-        // create WebGL2 rendering context
         this._gl = this._createContext(this._canvas);
     }
 
@@ -94,7 +87,7 @@ export class SpeedyGL extends Observable
 
     /**
      * The WebGL Rendering Context
-     * Be careful not to cache this, as the WebGL Rendering Context may be lost!
+     * Be careful not to cache this rendering context, as it may be lost!
      * @returns {WebGL2RenderingContext}
      */
     get gl()
@@ -103,7 +96,7 @@ export class SpeedyGL extends Observable
     }
 
     /**
-     * The canvas
+     * The internal canvas
      * @returns {HTMLCanvasElement}
      */
     get canvas()

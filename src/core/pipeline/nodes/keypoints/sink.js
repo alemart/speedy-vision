@@ -314,7 +314,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
     }
 
     /**
-     * Allocate extra soace
+     * Allocate extra space
      * @param {SpeedyGPU} gpu
      * @param {SpeedyDrawableTexture} output output texture
      * @param {SpeedyTexture} inputEncodedKeypoints input with no extra space
