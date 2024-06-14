@@ -112,7 +112,7 @@ export class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {"image" | "video" | "canvas" | "bitmap" | "data" | "unknown"}
+     * @returns {"image" | "video" | "canvas" | "offscreen-canvas" | "bitmap" | "data" | "unknown"}
      */
     get type()
     {
