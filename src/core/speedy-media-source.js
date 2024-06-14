@@ -69,7 +69,7 @@ export class SpeedyMediaSource
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageData)
-            return SpeedyImageDataMediaSource.load(wrappedObject);
+            return SpeedyDataMediaSource.load(wrappedObject);
         else
             throw new IllegalArgumentError(`Unsupported media type: ${wrappedObject}`);
     }
@@ -714,10 +714,10 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
 }
 
 /**
- * ImageData media source:
+ * Data media source:
  * a wrapper around ImageData
  */
-class SpeedyImageDataMediaSource extends SpeedyMediaSource
+class SpeedyDataMediaSource extends SpeedyMediaSource
 {
     /**
      * @private Constructor
@@ -746,7 +746,7 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return MediaType.ImageData;
+        return MediaType.Data;
     }
 
     /**
@@ -782,7 +782,7 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource
             this._data.height
         )
 
-        return SpeedyImageDataMediaSource.load(imageDataCopy);
+        return SpeedyDataMediaSource.load(imageDataCopy);
     }
 
     /**
@@ -808,6 +808,6 @@ class SpeedyImageDataMediaSource extends SpeedyMediaSource
      */
     static load(imageData)
     {
-        return new SpeedyImageDataMediaSource(PRIVATE_TOKEN)._load(imageData);
+        return new SpeedyDataMediaSource(PRIVATE_TOKEN)._load(imageData);
     }
 }

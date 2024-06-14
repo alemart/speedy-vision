@@ -135,7 +135,7 @@ export class SpeedyMedia
             case MediaType.Bitmap:
                 return 'bitmap';
             
-            case MediaType.ImageData:
+            case MediaType.Data:
                 return 'data';  
 
             default: // this shouldn't happen
