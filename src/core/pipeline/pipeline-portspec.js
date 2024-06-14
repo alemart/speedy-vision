@@ -31,7 +31,7 @@ import { Utils } from '../../utils/utils';
  * A validation predicate that validates all messages
  * @type {SpeedyPipelineMessageConstraint}
  */
-const none = message => true;
+const always = message => true;
 
 /**
  * Specification (requirements) of a port of a node of a pipeline
@@ -43,13 +43,13 @@ export class SpeedyPipelinePortSpec
      * @param {SpeedyPipelineMessageType} expectedMessageType expected message type
      * @param {SpeedyPipelineMessageConstraint} [messageConstraint] message validation function
      */
-    constructor(expectedMessageType, messageConstraint = none)
+    constructor(expectedMessageType, messageConstraint = always)
     {
         /** @type {SpeedyPipelineMessageType} expected message type */
         this._expectedMessageType = expectedMessageType;
 
         /** @type {SpeedyPipelineMessageConstraint} message validation function */
-        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : none;
+        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : always;
 
 
         // expect a valid type
