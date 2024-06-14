@@ -129,6 +129,9 @@ export class SpeedyMedia
             case MediaType.Canvas:
                 return 'canvas';
 
+            case MediaType.OffscreenCanvas:
+                return 'offscreen-canvas';
+
             case MediaType.Bitmap:
                 return 'bitmap';
             

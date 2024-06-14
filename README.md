@@ -319,7 +319,7 @@ Returns `null`.
 
 ##### SpeedyMedia.source
 
-`SpeedyMedia.source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, read-only`
+`SpeedyMedia.source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap | ImageData, read-only`
 
 The media source associated with the `SpeedyMedia` object.
 
@@ -327,7 +327,7 @@ The media source associated with the `SpeedyMedia` object.
 
 `SpeedyMedia.type: string, read-only`
 
-The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"bitmap"`.
+The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"offscreen-canvas"`, `"bitmap"`, `"data"`.
 
 ##### SpeedyMedia.width
 

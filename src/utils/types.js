@@ -27,6 +27,7 @@ export const MediaType = Object.freeze({
     Image: Symbol('Image'),
     Video: Symbol('Video'),
     Canvas: Symbol('Canvas'),
+    OffscreenCanvas: Symbol('OffscreenCanvas'),
     Bitmap: Symbol('Bitmap'),
     ImageData: Symbol('ImageData')
 });

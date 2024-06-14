@@ -536,7 +536,7 @@ class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return MediaType.Canvas; // or a new MediaType for OffscreenCanvas if necessary
+        return MediaType.OffscreenCanvas;
     }
 
     /**
