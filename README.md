@@ -329,6 +329,8 @@ The media source associated with the `SpeedyMedia` object.
 
 The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"offscreen-canvas"`, `"bitmap"`, `"data"`.
 
+See also: [SpeedyMedia.source](#speedymediasource).
+
 ##### SpeedyMedia.width
 
 `SpeedyMedia.width: number, read-only`
@@ -548,6 +550,10 @@ Creates an image source with the specified name. If the name is not specified, S
 `Speedy.Image.Sink(name?: string): SpeedyPipelineNodeImageOutput`
 
 Creates an image sink with the specified name. If the name is not specified, Speedy will call this node `"image"`. A `SpeedyMedia` object will be exported from the pipeline.
+
+###### Parameters
+
+* `mediaType: "bitmap" | "data"`. The desired [type](#speedymediatype) of the [source](#speedymediasource) of the exported `SpeedyMedia`. Use `"bitmap"` to be able to draw the exported image to a canvas without undue latency, or `"data"` to be able to access its pixel data directly. Defaults to `"bitmap"`.
 
 ###### Ports
 

@@ -36,7 +36,10 @@ function renderMedia(media, canvas, x = 0, y = 0, width = media.width, height = 
 {
     const context = canvas.getContext('2d');
 
-    context.drawImage(media.source, x, y, width, height);
+    if(media.type != 'data')
+        context.drawImage(media.source, x, y, width, height);
+    else
+        context.putImageData(media.source, x, y, 0, 0, width, height);
 }
 
 function renderKeypoints(canvas, keypoints, color = 'yellow', size = 1, thickness = 1)
