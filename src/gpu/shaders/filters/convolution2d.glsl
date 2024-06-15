@@ -20,7 +20,7 @@
  */
 
 #ifndef KERNEL_SIZE_SQUARED
-#define Must define KERNEL_SIZE_SQUARED
+#error Must define KERNEL_SIZE_SQUARED
 #endif
 
 uniform sampler2D image;
