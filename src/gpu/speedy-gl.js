@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
+import { Settings } from '../core/settings';
 import { Observable } from '../utils/observable';
 import { SpeedyPromise } from '../core/speedy-promise';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
@@ -74,6 +75,16 @@ export class SpeedyGL extends Observable
 
         /** @type {WebGL2RenderingContext} WebGL rendering context */
         this._gl = this._createContext(this._canvas);
+
+        /** @type {string} vendor string of the video driver */
+        this._vendor = '';
+
+        /** @type {string} renderer string of the video driver */
+        this._renderer = '';
+
+
+        // read driver info
+        this._readDriverInfo();
     }
 
     /**
@@ -102,6 +113,24 @@ export class SpeedyGL extends Observable
     get canvas()
     {
         return this._canvas;
+    }
+
+    /**
+     * Renderer string of the video driver
+     * @returns {string}
+     */
+    get renderer()
+    {
+        return this._renderer;
+    }
+
+    /**
+     * Vendor string of the video driver
+     * @returns {string}
+     */
+    get vendor()
+    {
+        return this._vendor;
     }
 
     /**
@@ -176,9 +205,42 @@ export class SpeedyGL extends Observable
         // create new context
         this._gl = this._createContext(this._canvas);
 
+        // is this needed?
+        this._readDriverInfo();
+
         // notify observers: we have a new context!
         // we need to recreate all textures...
         this._notify();
+    }
+
+    /**
+     * Read debugging information about the video driver of the user
+     */
+    _readDriverInfo()
+    {
+        // Depending on the privacy settings of the browser, this information
+        // may be unavailable. When available, it may not be entirely correct.
+        // See https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_debug_renderer_info
+        const gl = this._gl;
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+
+        if(debugInfo != null) {
+            this._vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+            this._renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        }
+        else if(navigator.userAgent.includes('Firefox')) {
+            this._vendor = ''; //gl.getParameter(gl.VENDOR); // not useful
+            this._renderer = gl.getParameter(gl.RENDERER); // only useful on Firefox, apparently
+        }
+        else {
+            this._vendor = ''; // unavailable information
+            this._renderer = '';
+        }
+
+        if(Settings.logging === 'diagnostic') {
+            Utils.log('GL vendor: ' + this._vendor);
+            Utils.log('GL renderer: ' + this._renderer);
+        }
     }
 
     /**
