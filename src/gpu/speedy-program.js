@@ -640,8 +640,9 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
 
         texNo++;
     }
-    else if(value === this._value) {
+    else if(value === this._value && typeof value !== 'object') {
         // do not update the uniform if it hasn't changed
+        // note that value may be an array whose entries may have been updated
         void(0);
     }
     else if(typeof value === 'number' || typeof value === 'boolean') {
