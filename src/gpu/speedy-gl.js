@@ -222,15 +222,15 @@ export class SpeedyGL extends Observable
         // may be unavailable. When available, it may not be entirely correct.
         // See https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_debug_renderer_info
         const gl = this._gl;
-        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        let debugInfo = null;
 
-        if(debugInfo != null) {
-            this._vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-            this._renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-        }
-        else if(navigator.userAgent.includes('Firefox')) {
+        if(navigator.userAgent.includes('Firefox')) {
             this._vendor = ''; //gl.getParameter(gl.VENDOR); // not useful
             this._renderer = gl.getParameter(gl.RENDERER); // only useful on Firefox, apparently
+        }
+        else if(null != (debugInfo = gl.getExtension('WEBGL_debug_renderer_info'))) {
+            this._vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+            this._renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
         }
         else {
             this._vendor = ''; // unavailable information
