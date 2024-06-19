@@ -54,7 +54,7 @@ const unrollRegex = [
     /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
 
-/** @typedef {Map<string,number>} ShaderDefines */
+/** @typedef {import('./shader-declaration').ShaderDeclarationPreprocessorConstants} ShaderPreprocessorConstants */
 
 /**
  * Custom preprocessor for the shaders
@@ -62,27 +62,30 @@ const unrollRegex = [
 export class ShaderPreprocessor
 {
     /**
-     * Runs the preprocessor
-     * @param {string} code 
-     * @param {ShaderDefines} [defines]
-     * @returns {string} preprocessed code
+     * Runs the preprocessor and generates GLSL code
+     * @param {ShaderPreprocessorConstants} defines
+     * @param {string} infix
+     * @param {string} [prefix]
+     * @param {string} [suffix]
+     * @returns {string} preprocessed GLSL code
      */
-    static run(code, defines = new Map())
+    static generateGLSL(defines, infix, prefix = null, suffix = null)
     {
-        const errors = []; // compile-time errors
-
         //
         // The preprocessor will remove comments from GLSL code,
         // include requested GLSL files and import global constants
         // defined for all shaders (see above)
         //
+        const code = generateUnprocessedGLSL(defines, infix, prefix, suffix);
+        const errors = []; // compile-time errors
+
         return unrollLoops(
-            String(code)
+            code
                 .replace(commentsRegex[0], '')
                 .replace(commentsRegex[1], '')
                 .replace(includeRegex, (_, filename) =>
                     // FIXME: no cycle detection for @include
-                    ShaderPreprocessor.run(readfileSync(filename), defines)
+                    ShaderPreprocessor.generateGLSL(defines, readfileSync(filename))
                 )
                 .replace(constantRegex, (_, name) => String(
                     // Find a defined constant. If not possible, find a global constant
@@ -95,6 +98,32 @@ export class ShaderPreprocessor
             defines
         ) + (errors.length > 0 ? errors.map(msg => `\n#error ${msg}\n`).join('') : '');
     }
+}
+
+/**
+ * Generate GLSL code based on the input arguments
+ * @param {ShaderPreprocessorConstants} defines
+ * @param {string} infix
+ * @param {string} [prefix]
+ * @param {string} [suffix]
+ * @returns {string} GLSL code
+ */
+function generateUnprocessedGLSL(defines, infix, prefix = null, suffix = null)
+{
+    const parts = [];
+
+    if(prefix !== null)
+        parts.push(prefix);
+
+    for(const [key, value] of defines)
+        parts.push(`#define ${key} ${Number(value)}`);
+
+    parts.push(infix);
+
+    if(suffix !== null)
+        parts.push(suffix);
+
+    return parts.join('\n');
 }
 
  /**
@@ -113,7 +142,7 @@ function readfileSync(filename)
 /**
  * Unroll for loops in our own preprocessor
  * @param {string} code
- * @param {ShaderDefines} defines
+ * @param {ShaderPreprocessorConstants} defines
  * @returns {string}
  */
 function unrollLoops(code, defines)
@@ -152,7 +181,7 @@ function unrollLoops(code, defines)
  */
 function unroll(match, type, counter, start, cmp, end, step, loopcode)
 {
-    const defines = /** @type {ShaderDefines} */ ( this );
+    const defines = /** @type {ShaderPreprocessorConstants} */ ( this );
 
     // check if the loop limits are numeric constants or #defined numbers from the outside
     const hasStart = Number.isFinite(+start) || defines.has(start);

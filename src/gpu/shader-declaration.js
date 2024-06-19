@@ -20,7 +20,7 @@
  */
 
 import { ShaderPreprocessor } from './shader-preprocessor';
-import { FileNotFoundError, IllegalArgumentError, IllegalOperationError, ParseError } from '../utils/errors';
+import { FileNotFoundError, IllegalArgumentError, IllegalOperationError, ParseError, AbstractMethodError } from '../utils/errors';
 
 const DEFAULT_ATTRIBUTES = Object.freeze({
     position: 'a_position',
@@ -76,163 +76,52 @@ uniform highp vec2 texSize;
 
 const PRIVATE_TOKEN = Symbol();
 
-/**
- * @typedef {object} ShaderDeclarationFilepathOptions
- * @property {"filepath"} type
- * @property {string} filepath
- * @property {string} [vsfilepath]
- *
- * @typedef {object} ShaderDeclarationSourceOptions
- * @property {"source"} type
- * @property {string} source
- * @property {string} [vssource]
- *
- * @typedef {ShaderDeclarationFilepathOptions | ShaderDeclarationSourceOptions} ShaderDeclarationOptions
- */
-
-/** @typedef {import('./shader-preprocessor').ShaderDefines} ShaderDefines */
+/** @typedef {string} ShaderDeclarationUnprocessedGLSL */
+/** @typedef {string[]} ShaderDeclarationArgumentList */
+/** @typedef {Map<string,string>} ShaderDeclarationUniformTypes */
+/** @typedef {Map<string,number>} ShaderDeclarationPreprocessorConstants */
 
 /**
  * Shader Declaration
+ * @abstract
  */
 export class ShaderDeclaration
 {
     /**
      * @private Constructor
-     * @param {ShaderDeclarationOptions} options
      * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource unprocessed GLSL code of the fragment shader
+     * @param {ShaderDeclarationUnprocessedGLSL} vsSource unprocessed GLSL code of the vertex shader
      */
-    constructor(options, privateToken)
+    constructor(privateToken, argumentList, defines, fsSource, vsSource)
     {
+        // private constructor!
         if(privateToken !== PRIVATE_TOKEN)
-            throw new IllegalOperationError(); // private constructor!
+            throw new IllegalOperationError();
 
-        /** @type {string} original source code provided by the user (fragment shader) */
-        this._source = (() => {
-            switch(options.type) {
-                case 'filepath': return require('./shaders/' + options.filepath);
-                case 'source':   return options.source;
-                default:         return /** @type {never} */ ( '' );
-             }
-        })();
+        /** @type {ShaderDeclarationArgumentList} an ordered list of uniform names */
+        this._arguments = [...argumentList];
 
-        /** @type {string} vertex shader source code (without preprocessing) */
-        this._vssource = (() => {
-            switch(options.type) {
-                case 'filepath': return options.vsfilepath ? require('./shaders/' + options.vsfilepath) : DEFAULT_VERTEX_SHADER;
-                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER;
-                default:         return /** @type {never} */ ( '' );
-             }
-        })();
+        /** @type {ShaderDeclarationPreprocessorConstants} externally #defined pre-processor constants */
+        this._defines = new Map(defines);
 
         /** @type {string} preprocessed source code of the fragment shader */
-        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
+        this._fragmentSource = ShaderPreprocessor.generateGLSL(this._defines, fsSource, DEFAULT_FRAGMENT_SHADER_PREFIX);
 
         /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX);
+        this._vertexSource = ShaderPreprocessor.generateGLSL(this._defines, vsSource, DEFAULT_VERTEX_SHADER_PREFIX, DEFAULT_VERTEX_SHADER_SUFFIX);
 
-        /** @type {string} filepath of the fragment shader */
-        this._filepath = options.type === 'filepath' ? options.filepath : '<in-memory>';
-
-        /** @type {string} filepath of the vertex shader */
-        this._vsfilepath = options.type === 'filepath' && options.vsfilepath ? options.vsfilepath : '<in-memory>';
-
-        /** @type {string[]} an ordered list of uniform names */
-        this._arguments = [];
-
-        /** @type {Map<string,string>} it maps uniform names to their types */
+        /** @type {ShaderDeclarationUniformTypes} it maps uniform names to their types */
         this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
-        /** @type {ShaderDefines} it maps externally #defined constants to their values */
-        this._defines = new Map();
+        // validate arguments
+        this._validateArguments(this._arguments, this._uniforms);
     }
 
     /**
-     * Creates a new Shader directly from a GLSL source
-     * @param {string} source fragment shader
-     * @param {string|null} [vssource] vertex shader
-     * @returns {ShaderDeclaration}
-     */
-    static create(source, vssource = null)
-    {
-        return new ShaderDeclaration({ type: 'source', source, vssource }, PRIVATE_TOKEN);
-    }
-
-    /**
-     * Import a Shader from a file containing a GLSL source
-     * @param {string} filepath path to .glsl file relative to the shaders/ folder
-     * @param {string} [vsfilepath] path to a .vs.glsl file relative to the shaders/ folder
-     * @returns {ShaderDeclaration}
-     */
-    static import(filepath, vsfilepath = null)
-    {
-        if(!String(filepath).match(/^[a-zA-Z0-9_\-/]+\.glsl$/))
-            throw new FileNotFoundError(`Can't import fragment shader at "${filepath}"`);
-        else if(vsfilepath != null && !String(vsfilepath).match(/^[a-zA-Z0-9_\-/]+\.vs\.glsl$/))
-            throw new FileNotFoundError(`Can't import vertex shader at "${vsfilepath}"`);
-
-        return new ShaderDeclaration({ type: 'filepath', filepath, vsfilepath }, PRIVATE_TOKEN);
-    }
-
-    /**
-     * Specify the list & order of arguments to be
-     * passed to the shader
-     * @param  {...string} args argument names
-     * @returns {this}
-     */
-    withArguments(...args)
-    {
-        // the list of arguments may be declared only once
-        if(this._arguments.length > 0)
-            throw new IllegalOperationError(`Redefinition of shader arguments`);
-
-        // get arguments
-        this._arguments = args.map(arg => String(arg));
-
-        // validate
-        for(const argname of this._arguments) {
-            if(!this._uniforms.has(argname)) {
-                if(!this._uniforms.has(argname + '[0]'))
-                    throw new IllegalArgumentError(`Argument "${argname}" has not been declared in the shader`);
-            }
-        }
-
-        // done!
-        return this;
-    }
-
-    /**
-     * Specify a set of #defines to be prepended to the fragment shader
-     * @param {Object<string,number>} defines key-value pairs (define-name: define-value)
-     * @returns {this}
-     */
-    withDefines(defines)
-    {
-        // the list of #defines may be defined only once
-        if(this._defines.size > 0)
-            throw new IllegalOperationError(`Redefinition of externally defined constants of a shader`);
-
-        // store and write the #defines
-        const defs = [], keys = Object.keys(defines);
-        for(const key of keys) {
-            const value = Number(defines[key]); // force numeric values (just in case)
-            this._defines.set(key, value);
-            defs.push(`#define ${key} ${value}\n`);
-        }
-
-        // update the shaders & the uniforms
-        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
-        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX;
-        this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
-        this._vertexSource = ShaderPreprocessor.run(vssource, this._defines);
-        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
-
-        // done!
-        return this;
-    }
-
-    /**
-     * Return the GLSL source of the fragment shader
+     * Return the preprocessed GLSL source code of the fragment shader
      * @returns {string}
      */
     get fragmentSource()
@@ -241,7 +130,7 @@ export class ShaderDeclaration
     }
 
     /**
-     * Return the GLSL source of the vertex shader
+     * Return the preprocessed GLSL source code of the vertex shader
      * @returns {string}
      */
     get vertexSource()
@@ -274,7 +163,7 @@ export class ShaderDeclaration
      */
     get arguments()
     {
-        return this._arguments;
+        return [].concat(this._arguments);
     }
 
     /**
@@ -316,13 +205,13 @@ export class ShaderDeclaration
      * Parses a GLSL source and detects the uniform variables,
      * as well as their types
      * @param {string} preprocessedSource 
-     * @returns {Map<string,string>} specifies the types of all uniforms
+     * @returns {ShaderDeclarationUniformTypes} specifies the types of all uniforms
      */
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
         const regex = /^\s*uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/gm;
-        const uniforms = new Map();
+        const uniforms = /** @type {ShaderDeclarationUniformTypes} */ ( new Map() );
 
         let match;
         while((match = regex.exec(sourceWithoutComments)) !== null) {
@@ -354,26 +243,244 @@ export class ShaderDeclaration
 
         return uniforms;
     }
+
+    /**
+     * Checks if all the arguments of the shader declaration are backed by a
+     * uniform variable in GLSL code
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationUniformTypes} uniforms
+     * @throws {IllegalArgumentError}
+     */
+    _validateArguments(argumentList, uniforms)
+    {
+        for(const argname of argumentList) {
+            if(!uniforms.has(argname)) {
+                if(!uniforms.has(argname + '[0]'))
+                    throw new IllegalArgumentError(`Argument "${argname}" has not been declared in the shader`);
+            }
+        }
+    }
+}
+
+/**
+ * A ShaderDeclaration that has its GLSL code stored in-memory
+ */
+class MemoryShaderDeclaration extends ShaderDeclaration
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource unprocessed GLSL code of the fragment shader
+     * @param {ShaderDeclarationUnprocessedGLSL} [vsSource] unprocessed GLSL code of the vertex shader
+     */
+    constructor(privateToken, argumentList, defines, fsSource, vsSource = DEFAULT_VERTEX_SHADER)
+    {
+        super(privateToken, argumentList, defines, fsSource, vsSource);
+
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} unprocessed GLSL code of the fragment shader */
+        this._fsUnprocessedSource = String(fsSource);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} unprocessed GLSL code of the vertex shader */
+        this._vsUnprocessedSource = String(vsSource);
+    }
+}
+
+/**
+ * A ShaderDeclaration that has its GLSL code stored in a file
+ */
+class FileShaderDeclaration extends ShaderDeclaration
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {string} fsFilepath path to the file of the unprocessed GLSL code of the fragment shader
+     * @param {string} [vsFilepath] path to the file of the unprocessed GLSL code of the vertex shader
+     */
+    constructor(privateToken, argumentList, defines, fsFilepath, vsFilepath = '')
+    {
+        // validate paths
+        if(!String(fsFilepath).match(/^[a-zA-Z0-9_\-/]+\.glsl$/))
+            throw new FileNotFoundError(`Can't import fragment shader at "${fsFilepath}"`);
+        else if(vsFilepath != '' && !String(vsFilepath).match(/^[a-zA-Z0-9_\-/]+\.vs\.glsl$/))
+            throw new FileNotFoundError(`Can't import vertex shader at "${vsFilepath}"`);
+
+        // import files
+        const fsSource = require('./shaders/' + String(fsFilepath));
+        const vsSource = vsFilepath != '' ? require('./shaders/' + String(vsFilepath)) : DEFAULT_VERTEX_SHADER;
+
+        // super class
+        super(privateToken, argumentList, defines, fsSource, vsSource);
+
+
+        /** @type {string} filepath of the fragment shader */
+        this._fsFilepath = String(fsFilepath);
+
+        /** @type {string} filepath of the vertex shader */
+        this._vsFilepath = String(vsFilepath);
+    }
+}
+
+/**
+ * A builder of a ShaderDeclaration
+ * @abstract
+ */
+export class ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     */
+    constructor(privateToken)
+    {
+        if(privateToken !== PRIVATE_TOKEN)
+            throw new IllegalOperationError(); // private constructor!
+
+        /** @type {string[]} ordered list of uniform names */
+        this._arguments = [];
+
+        /** @type {ShaderDeclarationPreprocessorConstants} externally #defined pre-processor constants */
+        this._defines = new Map();
+    }
+
+    /**
+     * Specify the list & order of arguments to be
+     * passed to the shader
+     * @param  {string[]} args argument names
+     * @returns {this}
+     */
+    withArguments(...args)
+    {
+        // the list of arguments may be declared only once
+        if(this._arguments.length > 0)
+            throw new IllegalOperationError(`Redefinition of shader arguments`);
+
+        // get arguments
+        for(let j = 0; j < args.length; j++)
+            this._arguments.push(String(args[j]));
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Specify a set of #defines to be prepended to the shader
+     * @param {Object<string,number>} defines key-value pairs
+     * @returns {this}
+     */
+    withDefines(defines)
+    {
+        // the list of #defines may be defined only once
+        if(this._defines.size > 0)
+            throw new IllegalOperationError(`Redefinition of externally defined constants of a shader`);
+
+        // store and write the #defines
+        const keys = Object.keys(defines);
+        for(const key of keys) {
+            const value = Number(defines[key]); // force numeric values (just in case)
+            this._defines.set(key, value);
+        }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Build a ShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        throw new AbstractMethodError();
+    }
+}
+
+/**
+ * A builder of a MemoryShaderDeclaration
+ */
+class MemoryShaderDeclarationBuilder extends ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource
+     * @param {ShaderDeclarationUnprocessedGLSL} [vsSource]
+     */
+    constructor(privateToken, fsSource, vsSource)
+    {
+        super(privateToken);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} the unprocessed GLSL code of the fragment shader */
+        this._fsSource = String(fsSource);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL|undefined} the unprocessed GLSL code of the vertex shader */
+        this._vsSource = vsSource !== undefined ? String(vsSource) : undefined;
+    }
+
+    /**
+     * Build a MemoryShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        return new MemoryShaderDeclaration(PRIVATE_TOKEN, this._arguments, this._defines, this._fsSource, this._vsSource);
+    }
+}
+
+/**
+ * A builder of a FileShaderDeclaration
+ */
+class FileShaderDeclarationBuilder extends ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {string} fsFilepath
+     * @param {string} [vsFilepath]
+     */
+    constructor(privateToken, fsFilepath, vsFilepath)
+    {
+        super(privateToken);
+
+        /** @type {string} path to the unprocessed GLSL code of the fragment shader */
+        this._fsFilepath = String(fsFilepath);
+
+        /** @type {string|undefined} path to the unprocessed GLSL code of the vertex shader */
+        this._vsFilepath = vsFilepath !== undefined ? String(vsFilepath) : undefined;
+    }
+
+    /**
+     * Build a FileShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        return new FileShaderDeclaration(PRIVATE_TOKEN, this._arguments, this._defines, this._fsFilepath, this._vsFilepath);
+    }
 }
 
 /**
  * Import a ShaderDeclaration from a GLSL file
  * @param {string} filepath relative to the shaders/ folder (a .glsl file)
- * @param {string|null} [vsfilepath] optional vertex shader (a .vs.glsl file)
+ * @param {string} [vsfilepath] optional vertex shader (a .vs.glsl file)
  * @returns {ShaderDeclaration}
  */
-export function importShader(filepath, vsfilepath = null)
+export function importShader(filepath, vsfilepath = undefined)
 {
-    return ShaderDeclaration.import(filepath, vsfilepath);
+    return new FileShaderDeclarationBuilder(PRIVATE_TOKEN, filepath, vsfilepath);
 }
 
 /**
  * Create a ShaderDeclaration from a GLSL source code
  * @param {string} source fragment shader
- * @param {string|null} [vssource] optional vertex shader
+ * @param {string} [vssource] optional vertex shader
  * @returns {ShaderDeclaration}
  */
-export function createShader(source, vssource = null)
+export function createShader(source, vssource = undefined)
 {
-    return ShaderDeclaration.create(source, vssource);
+    return new MemoryShaderDeclarationBuilder(PRIVATE_TOKEN, source, vssource);
 }

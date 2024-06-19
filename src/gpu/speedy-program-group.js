@@ -19,7 +19,7 @@
  * An abstract group of programs that run on the GPU
  */
 
-import { ShaderDeclaration } from './shader-declaration';
+import { ShaderDeclaration, ShaderDeclarationBuilder } from './shader-declaration';
 import { SpeedyProgram } from './speedy-program';
 import { SpeedyGPU } from './speedy-gpu';
 
@@ -86,11 +86,11 @@ export class SpeedyProgramGroup
      * Declare a program
      * @protected
      * @param {string} name Program name
-     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {ShaderDeclarationBuilder} builder Builder of a ShaderDeclaration
      * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {this}
      */
-    declare(name, shaderdecl, options = {})
+    declare(name, builder, options = {})
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
@@ -98,6 +98,7 @@ export class SpeedyProgramGroup
                 // Why cast a symbol to symbol?
                 // Suppress error TS9005: Declaration emit for this file requires using private name 'key'.
                 const key = /** @type {symbol} */ ( Symbol(name) );
+                const shaderdecl = builder.build();
                 return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
             })()
         });
