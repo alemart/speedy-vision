@@ -408,4 +408,24 @@ export class Utils
 
         return array.join(' ');
     }
+
+    /**
+     * Returns a string containing platform brand information
+     * @returns {string}
+     */
+    static platformString()
+    {
+        // navigator.userAgent is easily and often spoofed, and thus is unreliable
+
+        // use the NavigatorUAData interface if available
+        if(navigator.userAgentData !== undefined) {
+            // use only low entropy data, so we don't need to ask the permission
+            // of the user to read this string
+            return navigator.userAgentData.platform;
+        }
+
+        // navigator.platform is deprecated. It can be spoofed on Firefox, but,
+        // at the time of this writing, there is no alternative apparently.
+        return navigator.platform;
+    }
 }
