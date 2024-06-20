@@ -22,6 +22,8 @@
 #ifndef _INT32_GLSL
 #define _INT32_GLSL
 
+@include "platform.glsl"
+
 /**
  * Convert a RGBA tuple into a uint32 using little-endian
  * @param {vec4} rgba in [0,1]^4
@@ -38,18 +40,39 @@ uint decodeUint32(vec4 rgba)
  * @param {uint} value
  * @returns {vec4} RGBA tuple
  */
-#if 1 // FIXME: temporary fix (driver bug)
 vec4 encodeUint32(uint value)
 {
+#if defined(APPLE_GPU) || (defined(APPLE) && defined(INTEL_GRAPHICS))
+
+    /*
+
+    A user with a MacBook Air (2014) reported that the feature matching demos
+    were not working. After performing a detailed investigation, we tracked the
+    problem down to this function. It was giving incorrect output, probably due
+    to a driver bug. We replaced its bitwise operations by equivalent arithmetic
+    operations and then we found that the demos worked properly.
+
+    The device had an Intel HD Graphics 5000 card. Different browsers identified
+    the video card in different ways: (OS: Big Sur)
+
+    - Chrome: Intel HD Graphics 5000
+    - Firefox: Intel HD Graphics 400
+    - Safari: Apple GPU
+
+    The extent of that driver bug is unknown. I haven't received any other
+    similar complaints.
+
+    */
+
     uvec4 v = uvec4(value, value / 256u, value / 65536u, value / 16777216u) % 256u;
     return vec4(v) / 255.0f;
-}
+
 #else
-vec4 encodeUint32(uint value)
-{
+
     uvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;
     return vec4(v) / 255.0f;
-}
+
 #endif
+}
 
 #endif
