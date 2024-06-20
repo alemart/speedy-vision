@@ -418,7 +418,7 @@ export class Utils
         // navigator.userAgent is easily and often spoofed, and thus is unreliable
 
         // use the NavigatorUAData interface if available
-        if(navigator.userAgentData !== undefined) {
+        if(typeof navigator.userAgentData === 'object') {
             // use only low entropy data, so we don't need to ask the permission
             // of the user to read this string
             return navigator.userAgentData.platform;
