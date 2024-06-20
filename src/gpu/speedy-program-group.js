@@ -98,8 +98,7 @@ export class SpeedyProgramGroup
                 // Why cast a symbol to symbol?
                 // Suppress error TS9005: Declaration emit for this file requires using private name 'key'.
                 const key = /** @type {symbol} */ ( Symbol(name) );
-                const shaderdecl = builder.build();
-                return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
+                return () => this[key] || (this[key] = this._createProgram(builder.build(), options));
             })()
         });
 

@@ -19,18 +19,25 @@
  * Custom preprocessor for shaders
  */
 
+import { SpeedyGL } from './speedy-gl';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError, ParseError } from '../utils/errors';
 
+/** @typedef {Object<string,number>} ShaderPreprocessorTemplateOfConstants */
+/** @typedef {import('./shader-declaration').ShaderDeclarationPreprocessorConstants} ShaderPreprocessorConstants */
+
 // Import numeric globals
 const globals = require('../utils/globals');
-const numericGlobals = Object.keys(globals).filter(key => typeof globals[key] == 'number').reduce(
-    (obj, key) => ((obj[key] = globals[key]), obj), {}
+const numericGlobals = /** @type {ShaderPreprocessorTemplateOfConstants} */ (
+    Object.keys(globals).filter(key => typeof globals[key] == 'number').reduce(
+        (obj, key) => ((obj[key] = globals[key]), obj),
+        {}
+    )
 );
 
-// Constants accessible by all shaders
-const constants = Object.freeze({
+/** @type {ShaderPreprocessorTemplateOfConstants} Constants available to all shaders */
+const basicConstants = Object.freeze({
     // numeric globals
     ...numericGlobals,
 
@@ -45,6 +52,13 @@ const constants = Object.freeze({
     'PIXELCOMPONENT_ALPHA': PixelComponent.ALPHA,
 });
 
+/** @type {function(string,string):ShaderPreprocessorTemplateOfConstants} Platform-related constants available to all shaders */
+const platformConstants = (platform, glRenderer) => Object.freeze({
+    'APPLE': /(Mac|iPhone|iPod|iPad)/i.test(platform) | 0, // "MacIntel", "iPhone", "iPad"...
+    'APPLE_GPU': /Apple/.test(glRenderer) | 0, // the renderer is always "Apple GPU" on Safari and on Epiphany at the time of this writing; on Chrome, it may be "Apple M1" for example...
+    'INTEL_GRAPHICS': /Intel.*Graphics/.test(glRenderer) | 0, // Intel[(R)] ... [HD] Graphics xyz ...
+});
+
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
@@ -54,8 +68,6 @@ const unrollRegex = [
     /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
 
-/** @typedef {import('./shader-declaration').ShaderDeclarationPreprocessorConstants} ShaderPreprocessorConstants */
-
 /**
  * Custom preprocessor for the shaders
  */
@@ -63,8 +75,8 @@ export class ShaderPreprocessor
 {
     /**
      * Runs the preprocessor and generates GLSL code
-     * @param {ShaderPreprocessorConstants} defines
-     * @param {string} infix
+     * @param {ShaderPreprocessorConstants} defines user-provided preprocessor constants for this shader
+     * @param {string} infix annotated GLSL code
      * @param {string} [prefix]
      * @param {string} [suffix]
      * @returns {string} preprocessed GLSL code
@@ -76,27 +88,27 @@ export class ShaderPreprocessor
         // include requested GLSL files and import global constants
         // defined for all shaders (see above)
         //
-        const code = generateUnprocessedGLSL(defines, infix, prefix, suffix);
         const errors = []; // compile-time errors
+        const constants = generateConstants(defines);
+        const annotatedGLSL = generateUnprocessedGLSL(defines, infix, prefix, suffix);
 
         return unrollLoops(
-            code
+            annotatedGLSL
                 .replace(commentsRegex[0], '')
                 .replace(commentsRegex[1], '')
-                .replace(includeRegex, (_, filename) =>
-                    // FIXME: no cycle detection for @include
-                    ShaderPreprocessor.generateGLSL(defines, readfileSync(filename))
-                )
                 .replace(constantRegex, (_, name) => String(
-                    // Find a defined constant. If not possible, find a global constant
-                    defines.has(name) ? Number(defines.get(name)) : (
-                        constants[name] !== undefined ? Number(constants[name]) : (
-                            errors.push(`Undefined constant: ${name}`), 0
-                        )
+                    // Replace preprocessor @CONSTANTS@ by their numeric values
+                    constants.has(name) ? Number(constants.get(name)) : (
+                        errors.push(`Undefined constant ${name}`), 0
                     )
-                )),
+                ))
+                .replace(includeRegex, (_, filename) =>
+                    // Included files may include other files.
+                    // XXX no cycle detection!
+                    ShaderPreprocessor.generateGLSL(defines, readfileSync(filename))
+                ),
             defines
-        ) + (errors.length > 0 ? errors.map(msg => `\n#error ${msg}\n`).join('') : '');
+        ) + errors.map(msg => `\n#error ${msg}\n`).join('');
     }
 }
 
@@ -124,6 +136,36 @@ function generateUnprocessedGLSL(defines, infix, prefix = null, suffix = null)
         parts.push(suffix);
 
     return parts.join('\n');
+}
+
+/**
+ * Generate pre-processor constants. Constants provided by the
+ * user have higher priority than globally available constants.
+ * @param {ShaderPreprocessorConstants} defines user-provided
+ * @returns {ShaderPreprocessorConstants}
+ */
+function generateConstants(defines)
+{
+    Utils.assert(SpeedyGL.isInitialized());
+
+    const myConstants = /** @type {ShaderPreprocessorConstants} */ ( new Map() );
+    const globalConstants = Object.assign(Object.create(null),
+        basicConstants,
+        platformConstants(Utils.platformString(), SpeedyGL.instance.renderer)
+    );
+
+    // globally available constants have lower priority
+    for(const key in globalConstants) {
+        //if(Object.prototype.hasOwnProperty.call(globalConstants, key))
+            myConstants.set(key, globalConstants[key]);
+    }
+
+    // user-defined constants have higher priority
+    for(const [key, value] of defines)
+        myConstants.set(key, value);
+
+    // done!
+    return myConstants;
 }
 
  /**
