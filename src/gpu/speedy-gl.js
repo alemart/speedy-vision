@@ -85,6 +85,10 @@ export class SpeedyGL extends Observable
 
         // read driver info
         this._readDriverInfo();
+
+        // log driver info
+        if(Settings.logging === 'diagnostic')
+            this._logDriverInfo();
     }
 
     /**
@@ -236,11 +240,16 @@ export class SpeedyGL extends Observable
             this._vendor = ''; // unavailable information
             this._renderer = '';
         }
+    }
 
-        if(Settings.logging === 'diagnostic') {
-            Utils.log('GL vendor: ' + this._vendor);
-            Utils.log('GL renderer: ' + this._renderer);
-        }
+    /**
+     * Log debugging information about the video driver and the platform
+     */
+    _logDriverInfo()
+    {
+        Utils.log('Platform: ' + Utils.platformString());
+        Utils.log('GL vendor: ' + this.vendor);
+        Utils.log('GL renderer: ' + this.renderer);
     }
 
     /**
@@ -318,5 +327,14 @@ export class SpeedyGL extends Observable
             if(instance != null)
                 instance.loseAndRestoreContext();
         }
+    }
+
+    /**
+     * Check if an instance of SpeedyGL has already been created
+     * @returns {boolean}
+     */
+    static isInitialized()
+    {
+        return instance != null;
     }
 }
