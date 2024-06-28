@@ -1,5 +1,5 @@
 /**
- * A wrapper around the WebGL Rendering Context
+ * A wrapper around a WebGL Rendering Context
  */
 export class SpeedyGL extends Observable {
     /**
@@ -18,6 +18,11 @@ export class SpeedyGL extends Observable {
      */
     static get powerPreference(): PowerPreference;
     /**
+     * Check if an instance of SpeedyGL has already been created
+     * @returns {boolean}
+     */
+    static isInitialized(): boolean;
+    /**
      * Constructor
      * @param {Symbol} key
      * @private
@@ -25,21 +30,35 @@ export class SpeedyGL extends Observable {
     private constructor();
     /** @type {boolean} internal flag */
     _reinitializeOnContextLoss: boolean;
-    /** @type {HTMLCanvasElement} canvas */
+    /** @type {HTMLCanvasElement} internal canvas */
     _canvas: HTMLCanvasElement;
     /** @type {WebGL2RenderingContext} WebGL rendering context */
     _gl: WebGL2RenderingContext;
+    /** @type {string} vendor string of the video driver */
+    _vendor: string;
+    /** @type {string} renderer string of the video driver */
+    _renderer: string;
     /**
      * The WebGL Rendering Context
-     * Be careful not to cache this, as the WebGL Rendering Context may be lost!
+     * Be careful not to cache this rendering context, as it may be lost!
      * @returns {WebGL2RenderingContext}
      */
     get gl(): WebGL2RenderingContext;
     /**
-     * The canvas
+     * The internal canvas
      * @returns {HTMLCanvasElement}
      */
     get canvas(): HTMLCanvasElement;
+    /**
+     * Renderer string of the video driver
+     * @returns {string}
+     */
+    get renderer(): string;
+    /**
+     * Vendor string of the video driver
+     * @returns {string}
+     */
+    get vendor(): string;
     /**
      * Create a WebGL-capable canvas
      * @param {Function} reinitialize to be called if we get a WebGL context loss event
@@ -56,6 +75,14 @@ export class SpeedyGL extends Observable {
      * Reinitialize WebGL
      */
     _reinitialize(): void;
+    /**
+     * Read debugging information about the video driver of the user
+     */
+    _readDriverInfo(): void;
+    /**
+     * Log debugging information about the video driver and the platform
+     */
+    _logDriverInfo(): void;
     /**
      * Lose the WebGL context. This is used to manually
      * free resources, and also for purposes of testing

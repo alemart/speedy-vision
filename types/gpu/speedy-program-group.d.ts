@@ -19,11 +19,11 @@ export class SpeedyProgramGroup {
      * Declare a program
      * @protected
      * @param {string} name Program name
-     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {ShaderDeclarationBuilder} builder Builder of a ShaderDeclaration
      * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {this}
      */
-    protected declare(name: string, shaderdecl: ShaderDeclaration, options?: import("./speedy-program").SpeedyProgramOptions | undefined): this;
+    protected declare(name: string, builder: ShaderDeclarationBuilder, options?: import("./speedy-program").SpeedyProgramOptions | undefined): this;
     /**
      * Neat helpers to be used when declaring programs
      * @returns {SpeedyProgramHelpers}
@@ -49,4 +49,5 @@ export type SpeedyProgramHelpers = {
 };
 import { SpeedyGPU } from "./speedy-gpu";
 import { SpeedyProgram } from "./speedy-program";
+import { ShaderDeclarationBuilder } from "./shader-declaration";
 import { ShaderDeclaration } from "./shader-declaration";

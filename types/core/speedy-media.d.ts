@@ -32,9 +32,9 @@ export class SpeedyMedia {
     get source(): import("./speedy-media-source").SpeedyMediaSourceNativeElement;
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
+     * @returns {"image" | "video" | "canvas" | "offscreen-canvas" | "bitmap" | "data" | "unknown"}
      */
-    get type(): "canvas" | "video" | "image" | "unknown" | "bitmap";
+    get type(): "data" | "canvas" | "video" | "image" | "unknown" | "offscreen-canvas" | "bitmap";
     /**
      * Gets the width of the media
      * @returns {number} media width

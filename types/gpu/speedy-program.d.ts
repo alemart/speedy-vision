@@ -5,8 +5,7 @@
  */
 /** @typedef {number|number[]|boolean|boolean[]|SpeedyTexture} SpeedyProgramUniformValue */
 /**
- * A SpeedyProgram is a Function that
- * runs GPU-accelerated GLSL code
+ * A SpeedyProgram is a Function that runs GLSL code
  */
 export class SpeedyProgram extends Function {
     /**
@@ -51,6 +50,8 @@ export class SpeedyProgram extends Function {
     _width: number | undefined;
     /** @type {number} height of the output */
     _height: number | undefined;
+    /** @type {[number,number]} cached object that stores the size of the output */
+    _size: [number, number] | undefined;
     /** @type {SpeedyDrawableTexture[]} output texture(s) */
     _texture: SpeedyDrawableTexture[] | undefined;
     /** @type {number} used for pingpong rendering */

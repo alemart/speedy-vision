@@ -1,14 +1,18 @@
-/** @typedef {Map<string,number>} ShaderDefines */
 /**
  * Custom preprocessor for the shaders
  */
 export class ShaderPreprocessor {
     /**
-     * Runs the preprocessor
-     * @param {string} code
-     * @param {ShaderDefines} [defines]
-     * @returns {string} preprocessed code
+     * Runs the preprocessor and generates GLSL code
+     * @param {ShaderPreprocessorConstants} defines user-provided preprocessor constants for this shader
+     * @param {string} infix annotated GLSL code
+     * @param {string} [prefix]
+     * @param {string} [suffix]
+     * @returns {string} preprocessed GLSL code
      */
-    static run(code: string, defines?: ShaderDefines | undefined): string;
+    static generateGLSL(defines: import("./shader-declaration").ShaderDeclarationPreprocessorConstants, infix: string, prefix?: string | undefined, suffix?: string | undefined): string;
 }
-export type ShaderDefines = Map<string, number>;
+export type ShaderPreprocessorTemplateOfConstants = {
+    [x: string]: number;
+};
+export type ShaderPreprocessorConstants = import('./shader-declaration').ShaderDeclarationPreprocessorConstants;

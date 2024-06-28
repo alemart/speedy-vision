@@ -79,6 +79,11 @@ export class SpeedyPipelineMessageWithNothing extends SpeedyPipelineMessage {
      * Constructor
      */
     constructor();
+    /**
+     * Set parameters
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(): SpeedyPipelineMessage;
 }
 /**
  * A message transporting an image
@@ -92,6 +97,13 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage {
     _image: SpeedyDrawableTexture;
     /** @type {ImageFormat} image format */
     _format: ImageFormat;
+    /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} image the image we carry
+     * @param {ImageFormat} [format] image format
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(image: SpeedyDrawableTexture, format?: Symbol | undefined): SpeedyPipelineMessage;
     /**
      * The image we carry
      * @returns {SpeedyDrawableTexture}
@@ -119,6 +131,15 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage {
     _extraSize: number;
     /** @type {number} encoder length */
     _encoderLength: number;
+    /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} encodedKeypoints encoded keypoints
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength positive integer
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(encodedKeypoints: SpeedyDrawableTexture, descriptorSize: number, extraSize: number, encoderLength: number): SpeedyPipelineMessage;
     /**
      * Encoded keypoints
      * @returns {SpeedyDrawableTexture}
@@ -148,6 +169,12 @@ export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage {
     /** @type {SpeedyDrawableTexture} the set of vectors */
     _vectors: SpeedyDrawableTexture;
     /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} vectors the set of vectors
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(vectors: SpeedyDrawableTexture): SpeedyPipelineMessage;
+    /**
      * The set of vectors
      * @returns {SpeedyDrawableTexture}
      */
@@ -164,6 +191,12 @@ export class SpeedyPipelineMessageWithLSHTables extends SpeedyPipelineMessage {
     /** @type {SpeedyLSH} LSH data structure */
     _lsh: SpeedyLSH;
     /**
+     * Set parameters
+     * @param {SpeedyLSH} lsh
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(lsh: SpeedyLSH): SpeedyPipelineMessage;
+    /**
      * LSH data structure
      * @returns {SpeedyLSH}
      */
@@ -178,6 +211,13 @@ export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMess
     _encodedMatches: SpeedyDrawableTexture;
     /** @type {number} number of matches per keypoint */
     _matchesPerKeypoint: number;
+    /**
+     * Set parameters
+     * @param {SpeedyDrawableTexture} encodedMatches
+     * @param {number} matchesPerKeypoint
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(encodedMatches: SpeedyDrawableTexture, matchesPerKeypoint: number): SpeedyPipelineMessage;
     /**
      * The matches
      * @returns {SpeedyDrawableTexture}

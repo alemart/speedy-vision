@@ -8,8 +8,6 @@ export class SpeedyGPU extends Observable {
     _programs: SpeedyProgramCenter;
     /** @type {SpeedyTexturePool} texture pool */
     _texturePool: SpeedyTexturePool;
-    /** @type {SpeedyTextureUploader} texture uploader */
-    _textureUploader: SpeedyTextureUploader;
     /**
      * Access point to all GPU programs
      * @returns {SpeedyProgramCenter}
@@ -69,7 +67,6 @@ import { Observable } from "../utils/observable";
 import { SpeedyGL } from "./speedy-gl";
 import { SpeedyProgramCenter } from "./speedy-program-center";
 import { SpeedyTexturePool } from "./speedy-texture-pool";
-import { SpeedyTextureUploader } from "./speedy-texture-uploader";
 import { SpeedyTexture } from "./speedy-texture";
 import { SpeedyMediaSource } from "../core/speedy-media-source";
 import { SpeedyPromise } from "../core/speedy-promise";

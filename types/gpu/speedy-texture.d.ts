@@ -73,12 +73,12 @@ export class SpeedyTexture {
     release(): null;
     /**
      * Upload pixel data to the texture. The texture will be resized if needed.
-     * @param {TexImageSource} pixels
+     * @param {TexImageSource} data
      * @param {number} [width] in pixels
      * @param {number} [height] in pixels
      * @return {SpeedyTexture} this
      */
-    upload(pixels: TexImageSource, width?: number | undefined, height?: number | undefined): SpeedyTexture;
+    upload(data: TexImageSource, width?: number | undefined, height?: number | undefined): SpeedyTexture;
     /**
      * Clear the texture
      * @returns {this}
@@ -170,6 +170,11 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      * @param {number} [lod] level-of-detail of the target texture
      */
     copyTo(texture: SpeedyTexture, lod?: number | undefined): void;
+    /**
+     * Clear the texture
+     * @returns {this}
+     */
+    clear(): this;
     /**
      * Clear the texture to a color
      * @param {number} r red component, a value in [0,1]

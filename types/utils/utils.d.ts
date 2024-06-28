@@ -42,14 +42,6 @@ export class Utils {
      */
     static createCanvas(width: number, height: number): HTMLCanvasElement;
     /**
-     * Generates a random number with
-     * Gaussian distribution (mu, sigma)
-     * @param {number} mu mean
-     * @param {number} sigma standard deviation
-     * @returns {number} random number
-     */
-    static gaussianNoise(mu?: number, sigma?: number): number;
-    /**
      * Generate a 1D gaussian kernel with custom sigma
      * Tip: use kernelSize >= (5 * sigma), kernelSize odd
      * @param {number} sigma gaussian sigma
@@ -117,5 +109,10 @@ export class Utils {
      * @returns {string}
      */
     static formatBinaryData(bytes: ArrayBuffer): string;
+    /**
+     * Returns a string containing platform brand information
+     * @returns {string}
+     */
+    static platformString(): string;
 }
 import { SpeedyPromise } from "../core/speedy-promise";

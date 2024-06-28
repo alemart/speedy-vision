@@ -10,7 +10,9 @@ export const MediaType: Readonly<{
     Image: symbol;
     Video: symbol;
     Canvas: symbol;
+    OffscreenCanvas: symbol;
     Bitmap: symbol;
+    Data: symbol;
 }>;
 /**
  * Image formats
@@ -33,15 +35,18 @@ export type PixelComponent = number;
  * @typedef {number} PixelComponent
  */
 export const PixelComponent: Readonly<{
-    RED: number;
-    GREEN: number;
-    BLUE: number;
-    ALPHA: number;
-    ALL: number;
+    RED: 1;
+    GREEN: 2;
+    BLUE: 4;
+    ALPHA: 8;
+    ALL: 15;
 }>;
 /**
  * Component ID utility
  */
 export const ColorComponentId: Readonly<{
-    [x: number]: number;
+    1: 0;
+    2: 1;
+    4: 2;
+    8: 3;
 }>;

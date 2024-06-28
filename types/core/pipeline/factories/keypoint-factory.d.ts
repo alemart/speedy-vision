@@ -121,13 +121,13 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeDistanceFilter}
      */
-    static DistanceFilter(name?: string | undefined): any;
+    static DistanceFilter(name?: string | undefined): SpeedyPipelineNodeDistanceFilter;
     /**
      * Hamming distance filter
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeHammingDistanceFilter}
      */
-    static HammingDistanceFilter(name?: string | undefined): any;
+    static HammingDistanceFilter(name?: string | undefined): SpeedyPipelineNodeHammingDistanceFilter;
 }
 import { SpeedyNamespace } from "../../speedy-namespace";
 import { SpeedyPipelineNodeKeypointPortalSource } from "../nodes/keypoints/portal";

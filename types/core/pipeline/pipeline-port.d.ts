@@ -88,6 +88,11 @@ export class SpeedyPipelineOutputPort extends SpeedyPipelinePort {
     /** @type {SpeedyPipelineMessage} cached message */
     _cachedMessage: SpeedyPipelineMessage;
     /**
+     * Connect this port to another
+     * @param {SpeedyPipelineInputPort} port
+     */
+    connectTo(port: SpeedyPipelineInputPort): void;
+    /**
      * Write a message to this port using a cached message object
      * @param  {...any} args to be passed to SpeedyPipelineMessage.set()
      */
@@ -104,6 +109,11 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort {
      * @returns {SpeedyPipelineOutputPort|null}
      */
     get incomingLink(): SpeedyPipelineOutputPort | null;
+    /**
+     * Connect this port to another
+     * @param {SpeedyPipelineOutputPort} port
+     */
+    connectTo(port: SpeedyPipelineOutputPort): void;
     /**
      * Unlink this port
      */
