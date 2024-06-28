@@ -19,7 +19,7 @@
  * Convolution shader generators
  */
 
-import { createShader } from '../../shader-declaration';
+import { ShaderDeclarationBuilder, createShader } from '../../shader-declaration';
 import { Utils } from '../../../utils/utils';
 import { IllegalArgumentError } from '../../../utils/errors';
 
@@ -29,6 +29,7 @@ import { IllegalArgumentError } from '../../../utils/errors';
  * Generate a 2D convolution with a square kernel
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 export function conv2D(kernel, normalizationConstant = 1.0)
 {
@@ -83,6 +84,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
  * Generate a 1D convolution function on the x-axis
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 export function convX(kernel, normalizationConstant = 1.0)
 {
@@ -96,6 +98,7 @@ export function convX(kernel, normalizationConstant = 1.0)
  * Generate a 1D convolution function on the y-axis
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 export function convY(kernel, normalizationConstant = 1.0)
 {
@@ -110,6 +113,7 @@ export function convY(kernel, normalizationConstant = 1.0)
  * @param {string} axis either "x" or "y"
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 function conv1D(axis, kernel, normalizationConstant = 1.0)
 {
