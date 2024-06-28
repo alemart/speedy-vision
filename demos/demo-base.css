@@ -222,10 +222,18 @@ input[type=range]::-ms-track {
     position: fixed;
     bottom: 0px;
     right: 0px;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+
     padding: 0.5em;
+    font-weight: bold;
+    text-align: right;
+
     color: lightslategrey;
     background: rgba(255, 255, 255, 0.8);
-    font-weight: bold;
 }
 
 #speedy-vision a:any-link {
@@ -234,10 +242,10 @@ input[type=range]::-ms-track {
 
 #speedy-vision .button {
     float: right;
-    padding-top: 8px;
-    transition: transform  0.125s ease-in-out;
+    transition: opacity 0.125s ease;
+    opacity: 0.8;
 }
 
 #speedy-vision .button:hover {
-    transform: scale(1.125);
+    opacity: 1.0;
 }
