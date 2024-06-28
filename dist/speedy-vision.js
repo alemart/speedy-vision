@@ -1,11 +1,11 @@
 /*!
- * Speedy Vision version 0.9.1-wip
+ * Speedy Vision version 0.9.1
  * GPU-accelerated Computer Vision for JavaScript
  * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-01-10T13:44:25.122Z
+ * Date: 2024-06-28T15:13:44.513Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -16,25 +16,25 @@
 		exports["Speedy"] = factory();
 	else
 		root["Speedy"] = factory();
-})(self, function() {
+})(self, () => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 3135:
+/***/ 5637:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Z": () => (/* binding */ Settings)
+/* harmony export */   w: () => (/* binding */ Settings)
 /* harmony export */ });
-/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(2411);
-/* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(7905);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5484);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3841);
+/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(416);
+/* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(1567);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(2191);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(5619);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ let loggingMode = 'default';
 /**
  * Global settings
  */
-class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyNamespace */ .R
+class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyNamespace */ .Q
 {
     /**
      * Power preference of the WebGL context
@@ -82,7 +82,7 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
      */
     static get powerPreference()
     {
-        return _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyGL.powerPreference */ .$.powerPreference;
+        return _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyGL */ .c.powerPreference;
     }
 
     /**
@@ -91,7 +91,7 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
      */
     static set powerPreference(value)
     {
-        _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyGL.powerPreference */ .$.powerPreference = value;
+        _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyGL */ .c.powerPreference = value;
     }
 
     /**
@@ -110,7 +110,7 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
     static set gpuPollingMode(value)
     {
         if(value !== 'raf' && value !== 'asap')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .mG(`Invalid GPU polling mode: "${value}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .qw(`Invalid GPU polling mode: "${value}"`);
 
         gpuPollingMode = value;
     }
@@ -131,9 +131,9 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
     static set logging(mode)
     {
         if(mode !== 'default' && mode !== 'none' && mode !== 'diagnostic')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .mG(`Invalid logging mode: "${mode}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .qw(`Invalid logging mode: "${mode}"`);
         else if(mode === 'diagnostic')
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.log */ .c.log('%c DIAGNOSTIC MODE ', 'background:red;color:white;font-size:36pt;font-weight:bold');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils */ .A.log('%c DIAGNOSTIC MODE ', 'background:red;color:white;font-size:36pt;font-weight:bold');
 
         loggingMode = mode;
     }
@@ -141,20 +141,20 @@ class Settings extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyN
 
 /***/ }),
 
-/***/ 5137:
+/***/ 4292:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "N": () => (/* binding */ SpeedyMatrixExpr)
+/* harmony export */   r: () => (/* binding */ SpeedyMatrixExpr)
 /* harmony export */ });
-/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(4368);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(5484);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3841);
+/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(4247);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(2191);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5619);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,8 +204,8 @@ class SpeedyMatrixExpr
      */
     constructor(rows, columns, dtype)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(rows > 0 && columns > 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(dtype === SpeedyMatrixExpr.DEFAULT_DTYPE); // we only support float32 for now
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(rows > 0 && columns > 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(dtype === SpeedyMatrixExpr.DEFAULT_DTYPE); // we only support float32 for now
 
         /** @type {number} number of rows */
         this._rows = rows | 0;
@@ -351,11 +351,11 @@ class SpeedyMatrixExpr
      */
     _evaluate(wasm, memory)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .Mi();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .aQ();
     }
 }
 
-const { SpeedyMatrix } = __webpack_require__(8007);
+const { SpeedyMatrix } = __webpack_require__(3286);
 
 /**
  * @abstract operation storing a temporary matrix
@@ -408,21 +408,21 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
         const result = this._tempMatrix;
 
         // allocate matrices
-        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.allocateMat32 */ .r.allocateMat32(wasm, memory, result);
-        const operandptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.allocateMat32 */ .r.allocateMat32(wasm, memory, operand);
+        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.allocateMat32(wasm, memory, result);
+        const operandptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.allocateMat32(wasm, memory, operand);
 
         // copy operand to WASM memory
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.copyToMat32 */ .r.copyToMat32(wasm, memory, operandptr, operand);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.copyToMat32(wasm, memory, operandptr, operand);
 
         // run the WASM routine
         this._compute(wasm, memory, resultptr, operandptr);
 
         // copy result from WASM memory
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.copyFromMat32 */ .r.copyFromMat32(wasm, memory, resultptr, result);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.copyFromMat32(wasm, memory, resultptr, result);
 
         // deallocate matrices
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.deallocateMat32 */ .r.deallocateMat32(wasm, memory, operandptr);
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.deallocateMat32 */ .r.deallocateMat32(wasm, memory, resultptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.deallocateMat32(wasm, memory, operandptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.deallocateMat32(wasm, memory, resultptr);
 
         // done!
         return result;
@@ -438,7 +438,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
      */
     _compute(wasm, memory, resultptr, operandptr)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .Mi();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .aQ();
     }
 }
 
@@ -456,7 +456,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
      */
     constructor(rows, columns, left, right)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(left.dtype === right.dtype);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(left.dtype === right.dtype);
         super(rows, columns, left.dtype);
 
         /** @type {SpeedyMatrixExpr} left operand */
@@ -479,24 +479,24 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
         const result = this._tempMatrix;
 
         // allocate matrices
-        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.allocateMat32 */ .r.allocateMat32(wasm, memory, result);
-        const leftptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.allocateMat32 */ .r.allocateMat32(wasm, memory, left);
-        const rightptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.allocateMat32 */ .r.allocateMat32(wasm, memory, right);
+        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.allocateMat32(wasm, memory, result);
+        const leftptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.allocateMat32(wasm, memory, left);
+        const rightptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.allocateMat32(wasm, memory, right);
 
         // copy input matrices to WASM memory
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.copyToMat32 */ .r.copyToMat32(wasm, memory, leftptr, left);
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.copyToMat32 */ .r.copyToMat32(wasm, memory, rightptr, right);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.copyToMat32(wasm, memory, leftptr, left);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.copyToMat32(wasm, memory, rightptr, right);
 
         // run the WASM routine
         this._compute(wasm, memory, resultptr, leftptr, rightptr);
 
         // copy output matrix from WASM memory
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.copyFromMat32 */ .r.copyFromMat32(wasm, memory, resultptr, result);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.copyFromMat32(wasm, memory, resultptr, result);
 
         // deallocate matrices
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.deallocateMat32 */ .r.deallocateMat32(wasm, memory, rightptr);
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.deallocateMat32 */ .r.deallocateMat32(wasm, memory, leftptr);
-        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM.deallocateMat32 */ .r.deallocateMat32(wasm, memory, resultptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.deallocateMat32(wasm, memory, rightptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.deallocateMat32(wasm, memory, leftptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixWASM */ .U.deallocateMat32(wasm, memory, resultptr);
 
         // done!
         return result;
@@ -513,7 +513,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
      */
     _compute(wasm, memory, resultptr, leftptr, rightptr)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .Mi();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .AbstractMethodError */ .aQ();
     }
 }
 
@@ -555,7 +555,7 @@ class SpeedyMatrixInvertExpr extends SpeedyMatrixUnaryOperationExpr
      */
     constructor(operand)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(operand.rows === operand.columns);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(operand.rows === operand.columns);
         super(operand.rows, operand.columns, operand);
 
         /** @type {number} size of the matrix */
@@ -635,7 +635,7 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryOperationExpr
      */
     constructor(left, right)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(left.rows === right.rows && left.columns === right.columns);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(left.rows === right.rows && left.columns === right.columns);
         super(left.rows, left.columns, left, right);
     }
 
@@ -665,7 +665,7 @@ class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryOperationExpr
      */
     constructor(left, right)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(left.rows === right.rows && left.columns === right.columns);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(left.rows === right.rows && left.columns === right.columns);
         super(left.rows, left.columns, left, right);
     }
 
@@ -695,7 +695,7 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryOperationExpr
      */
     constructor(left, right)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(left.columns === right.rows);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(left.columns === right.rows);
         super(left.rows, right.columns, left, right);
     }
 
@@ -725,7 +725,7 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
      */
     constructor(left, right)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(left.rows === right.rows && left.columns === right.columns);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(left.rows === right.rows && left.columns === right.columns);
         super(right.rows, right.columns, left, right);
     }
 
@@ -758,7 +758,7 @@ class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
         const m = left.rows, n = left.columns;
 
         // TODO right doesn't need to be a column vector
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.assert */ .c.assert(m >= n && right.rows === m && right.columns === 1);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.assert(m >= n && right.rows === m && right.columns === 1);
         super(n, 1, left, right);
     }
 
@@ -778,21 +778,21 @@ class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
 
 /***/ }),
 
-/***/ 4368:
+/***/ 4247:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "r": () => (/* binding */ SpeedyMatrixWASM)
+/* harmony export */   U: () => (/* binding */ SpeedyMatrixWASM)
 /* harmony export */ });
-/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(4500);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3841);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5484);
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3020);
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(8902);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(5619);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(2191);
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(1814);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -836,7 +836,7 @@ class SpeedyMatrixLdivExpr extends SpeedyMatrixBinaryOperationExpr
  */
 
 /** @type {Uint8Array} WebAssembly binary */
-const WASM_BINARY = __webpack_require__(4209);
+const WASM_BINARY = __webpack_require__(3575);
 
 /** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
 let _instance = null;
@@ -870,7 +870,7 @@ class SpeedyMatrixWASM
      */
     static ready()
     {
-        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyPromise */ .s((resolve, reject) => {
+        return new _speedy_promise__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyPromise */ .i((resolve, reject) => {
             SpeedyMatrixWASM._ready(resolve, reject);
         });
     }
@@ -882,7 +882,7 @@ class SpeedyMatrixWASM
     static get handle()
     {
         if(!_instance || !_module)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .IT(`Can't get WASM handle: routines not yet loaded`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .NO(`Can't get WASM handle: routines not yet loaded`);
 
         return {
             wasm: _instance,
@@ -955,7 +955,7 @@ class SpeedyMatrixWASM
         // 2. the allocated pointers are 4-byte aligned (the bump allocator guarantees this)
         // 3. the data type is float32
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.assert */ .c.assert(
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils */ .A.assert(
             //matrix.dtype === 'float32' &&
             matrix.data.byteLength === wasm.exports.Mat32_dataSize(matptr)
         );
@@ -981,7 +981,7 @@ class SpeedyMatrixWASM
         // 2. the allocated pointers are 4-byte aligned (the bump allocator guarantees this)
         // 3. the data type is float32
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.assert */ .c.assert(
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils */ .A.assert(
             //matrix.dtype === 'float32' &&
             matrix.data.byteLength === wasm.exports.Mat32_dataSize(matptr)
         );
@@ -1004,7 +1004,7 @@ class SpeedyMatrixWASM
         if(_instance !== null && _module !== null)
             resolve({ wasm: _instance, memory: _memory, module: _module });
         else if(counter <= 0)
-            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .TimeoutError */ .W5(`Can't load WASM routines`));
+            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .TimeoutError */ .MU(`Can't load WASM routines`));
         else
             setTimeout(SpeedyMatrixWASM._ready, 0, resolve, reject, counter - 1);
     }
@@ -1047,7 +1047,7 @@ class SpeedyMatrixWASMImports
      */
     print(ptr)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.log */ .c.log(this.cstring.get(ptr));
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils */ .A.log(this.cstring.get(ptr));
     }
 
     /**
@@ -1056,7 +1056,7 @@ class SpeedyMatrixWASMImports
      */
     fatal(ptr)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .IT(this.cstring.get(ptr));
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .NO(this.cstring.get(ptr));
     }
 
     /**
@@ -1127,10 +1127,10 @@ class CStringUtils
 
     // Endianness check
     if(!_utils_globals__WEBPACK_IMPORTED_MODULE_3__.LITTLE_ENDIAN)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .NotSupportedError */ .B8(`Can't run WebAssembly code: not in a little-endian machine!`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .NotSupportedError */ .EM(`Can't run WebAssembly code: not in a little-endian machine!`);
 
     // Load the WASM binary
-    _speedy_promise__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyPromise.resolve */ .s.resolve(WASM_BINARY)
+    _speedy_promise__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyPromise */ .i.resolve(WASM_BINARY)
     .then(data => base64decode(data))
     .then(bytes => WebAssembly.instantiate(bytes, {
         env: {
@@ -1144,32 +1144,32 @@ class CStringUtils
 
         wasm.instance.exports.srand((Date.now() * 0.001) & 0xffffffff); // srand(time(NULL))
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils.log */ .c.log(`The WebAssembly routines have been loaded!`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__/* .Utils */ .A.log(`The WebAssembly routines have been loaded!`);
     })
     .catch(err => {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .IT(`Can't load the WebAssembly routines: ${err}`, err);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__/* .WebAssemblyError */ .NO(`Can't load the WebAssembly routines: ${err}`, err);
     });
 })(_memory);
 
 
 /***/ }),
 
-/***/ 8007:
+/***/ 3286:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SpeedyMatrix": () => (/* binding */ SpeedyMatrix)
+/* harmony export */   SpeedyMatrix: () => (/* binding */ SpeedyMatrix)
 /* harmony export */ });
-/* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(5137);
-/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4368);
-/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4500);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(5484);
+/* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(4292);
+/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4247);
+/* harmony import */ var _speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(8902);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(2191);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1201,7 +1201,7 @@ __webpack_require__.r(__webpack_exports__);
 /**
  * Matrix class
  */
-class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .N
+class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r
 {
     /**
      * @private
@@ -1215,11 +1215,11 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      */
     constructor(rows, columns, step0, step1, data)
     {
-        super(rows, columns, _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.DEFAULT_DTYPE */ .N.DEFAULT_DTYPE);
+        super(rows, columns, _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.DEFAULT_DTYPE);
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(data.constructor === _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE[this.dtype]);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(step0 > 0 && step1 >= step0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(data.constructor === _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE[this.dtype]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(step0 > 0 && step1 >= step0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(
             data.length + rows * columns === 0 || // empty matrix and empty buffer, or
             data.length === 1 + step0 * (rows - 1) + step1 * (columns - 1) // correctly sized buffer
         );
@@ -1242,13 +1242,13 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Create(rows, columns, entries, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.DEFAULT_DTYPE */ .N.DEFAULT_DTYPE)
+    static Create(rows, columns, entries, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.DEFAULT_DTYPE)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(rows * columns > 0, `Can't create a matrix without a shape`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(rows * columns === entries.length, `Can't create matrix: expected ${rows * columns} entries, but found ${entries.length}`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(rows * columns === entries.length, `Can't create matrix: expected ${rows * columns} entries, but found ${entries.length}`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
 
-        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE[dtype], [entries]));
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE[dtype], [entries]));
     }
 
     /**
@@ -1258,12 +1258,12 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Zeros(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.DEFAULT_DTYPE */ .N.DEFAULT_DTYPE)
+    static Zeros(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.DEFAULT_DTYPE)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(rows * columns > 0, `Can't create a matrix without a shape`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
 
-        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE[dtype], [rows * columns]));
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE[dtype], [rows * columns]));
     }
 
     /**
@@ -1273,12 +1273,12 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Ones(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.DEFAULT_DTYPE */ .N.DEFAULT_DTYPE)
+    static Ones(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.DEFAULT_DTYPE)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(rows * columns > 0, `Can't create a matrix without a shape`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
 
-        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE[dtype], [rows * columns]).fill(1));
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE[dtype], [rows * columns]).fill(1));
     }
 
     /**
@@ -1288,12 +1288,12 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      * @param {SpeedyMatrixDtype} [dtype] data type
      * @returns {SpeedyMatrix}
      */
-    static Eye(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.DEFAULT_DTYPE */ .N.DEFAULT_DTYPE)
+    static Eye(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.DEFAULT_DTYPE)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(rows * columns > 0, `Can't create a matrix without a shape`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
 
-        const data = Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr.BUFFER_TYPE */ .N.BUFFER_TYPE[dtype], [rows * columns]);
+        const data = Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyMatrixExpr */ .r.BUFFER_TYPE[dtype], [rows * columns]);
         for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
             data[j * rows + j] = 1;
 
@@ -1317,7 +1317,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      */
     static ready()
     {
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM.ready */ .r.ready().then(_ => void(0));
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM */ .U.ready().then(_ => void(0));
     }
 
     /**
@@ -1357,7 +1357,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      */
     block(firstRow, lastRow, firstColumn, lastColumn)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(
             firstRow <= lastRow && firstColumn <= lastColumn,
             `Invalid indices: [${firstRow}:${lastRow},${firstColumn}:${lastColumn}]`
         );
@@ -1485,7 +1485,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      */
     setTo(expr)
     {
-        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM.ready */ .r.ready().then(_ => {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM */ .U.ready().then(_ => {
 
             // TODO: add support for WebWorkers
             return this.setToSync(expr);
@@ -1500,7 +1500,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
      */
     setToSync(expr)
     {
-        const { wasm, memory } = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM.handle */ .r.handle;
+        const { wasm, memory } = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyMatrixWASM */ .U.handle;
 
         // evaluate the expression
         const result = expr._evaluate(wasm, memory);
@@ -1518,7 +1518,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
         */
 
         // validate shape
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils.assert */ .c.assert(
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__/* .Utils */ .A.assert(
             this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
             `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
         );
@@ -1549,7 +1549,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
     fill(value)
     {
         this.fillSync(value);
-        return _speedy_promise__WEBPACK_IMPORTED_MODULE_2__/* .SpeedyPromise.resolve */ .s.resolve(this);
+        return _speedy_promise__WEBPACK_IMPORTED_MODULE_2__/* .SpeedyPromise */ .i.resolve(this);
     }
 
     /**
@@ -1590,18 +1590,18 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__/* .S
 
 /***/ }),
 
-/***/ 2411:
+/***/ 416:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "R": () => (/* binding */ SpeedyNamespace)
+/* harmony export */   Q: () => (/* binding */ SpeedyNamespace)
 /* harmony export */ });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(3841);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(5619);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1636,23 +1636,23 @@ class SpeedyNamespace
     constructor()
     {
         // only static methods are allowed
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__/* .AbstractMethodError */ .Mi(`Namespaces can't be instantiated`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__/* .AbstractMethodError */ .aQ(`Namespaces can't be instantiated`);
     }
 }
 
 /***/ }),
 
-/***/ 4500:
+/***/ 8902:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "s": () => (/* binding */ SpeedyPromise)
+/* harmony export */   i: () => (/* binding */ SpeedyPromise)
 /* harmony export */ });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2107,30 +2107,32 @@ Promise.prototype.turbocharge = function() { return this };
 
 /***/ }),
 
-/***/ 9759:
+/***/ 3112:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "ef": () => (/* binding */ createShader),
-  "Nt": () => (/* binding */ importShader)
+  gx: () => (/* binding */ createShader),
+  bf: () => (/* binding */ importShader)
 });
 
-// UNUSED EXPORTS: ShaderDeclaration
+// UNUSED EXPORTS: ShaderDeclaration, ShaderDeclarationBuilder
 
+// EXTERNAL MODULE: ./src/gpu/speedy-gl.js
+var speedy_gl = __webpack_require__(1567);
 // EXTERNAL MODULE: ./src/utils/utils.js
-var utils = __webpack_require__(5484);
+var utils = __webpack_require__(2191);
 // EXTERNAL MODULE: ./src/utils/types.js
-var types = __webpack_require__(6731);
+var types = __webpack_require__(6467);
 // EXTERNAL MODULE: ./src/utils/errors.js
-var errors = __webpack_require__(3841);
+var errors = __webpack_require__(5619);
 ;// CONCATENATED MODULE: ./src/gpu/shader-preprocessor.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2152,14 +2154,21 @@ var errors = __webpack_require__(3841);
 
 
 
+
+/** @typedef {Object<string,number>} ShaderPreprocessorTemplateOfConstants */
+/** @typedef {import('./shader-declaration').ShaderDeclarationPreprocessorConstants} ShaderPreprocessorConstants */
+
 // Import numeric globals
-const globals = __webpack_require__(3020);
-const numericGlobals = Object.keys(globals).filter(key => typeof globals[key] == 'number').reduce(
-    (obj, key) => ((obj[key] = globals[key]), obj), {}
+const globals = __webpack_require__(1814);
+const numericGlobals = /** @type {ShaderPreprocessorTemplateOfConstants} */ (
+    Object.keys(globals).filter(key => typeof globals[key] == 'number').reduce(
+        (obj, key) => ((obj[key] = globals[key]), obj),
+        {}
+    )
 );
 
-// Constants accessible by all shaders
-const constants = Object.freeze({
+/** @type {ShaderPreprocessorTemplateOfConstants} Constants available to all shaders */
+const basicConstants = Object.freeze({
     // numeric globals
     ...numericGlobals,
 
@@ -2168,10 +2177,17 @@ const constants = Object.freeze({
     'FS_OUTPUT_TYPE': 0, // normalized RGBA
 
     // colors
-    'PIXELCOMPONENT_RED': types/* PixelComponent.RED */.hE.RED,
-    'PIXELCOMPONENT_GREEN': types/* PixelComponent.GREEN */.hE.GREEN,
-    'PIXELCOMPONENT_BLUE': types/* PixelComponent.BLUE */.hE.BLUE,
-    'PIXELCOMPONENT_ALPHA': types/* PixelComponent.ALPHA */.hE.ALPHA,
+    'PIXELCOMPONENT_RED': types/* PixelComponent */.kQ.RED,
+    'PIXELCOMPONENT_GREEN': types/* PixelComponent */.kQ.GREEN,
+    'PIXELCOMPONENT_BLUE': types/* PixelComponent */.kQ.BLUE,
+    'PIXELCOMPONENT_ALPHA': types/* PixelComponent */.kQ.ALPHA,
+});
+
+/** @type {function(string,string):ShaderPreprocessorTemplateOfConstants} Platform-related constants available to all shaders */
+const platformConstants = (platform, glRenderer) => Object.freeze({
+    'APPLE': /(Mac|iOS|iPhone|iPad|iPod)/i.test(platform) | 0, // "MacIntel", "macOS", "iOS", "iPhone", "iPad"...
+    'APPLE_GPU': /Apple/.test(glRenderer) | 0, // the renderer is always "Apple GPU" on Safari and on Epiphany at the time of this writing; on Chrome, it may be "Apple M1" for example...
+    'INTEL_GRAPHICS': /Intel.*Graphics/.test(glRenderer) | 0, // Intel[(R)] ... [HD] Graphics xyz ...
 });
 
 // Regular Expressions
@@ -2183,47 +2199,104 @@ const unrollRegex = [
     /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
 
-/** @typedef {Map<string,number>} ShaderDefines */
-
 /**
  * Custom preprocessor for the shaders
  */
 class ShaderPreprocessor
 {
     /**
-     * Runs the preprocessor
-     * @param {string} code 
-     * @param {ShaderDefines} [defines]
-     * @returns {string} preprocessed code
+     * Runs the preprocessor and generates GLSL code
+     * @param {ShaderPreprocessorConstants} defines user-provided preprocessor constants for this shader
+     * @param {string} infix annotated GLSL code
+     * @param {string} [prefix]
+     * @param {string} [suffix]
+     * @returns {string} preprocessed GLSL code
      */
-    static run(code, defines = new Map())
+    static generateGLSL(defines, infix, prefix = null, suffix = null)
     {
-        const errors = []; // compile-time errors
-
         //
         // The preprocessor will remove comments from GLSL code,
         // include requested GLSL files and import global constants
         // defined for all shaders (see above)
         //
+        const errors = []; // compile-time errors
+        const constants = generateConstants(defines);
+        const annotatedGLSL = generateUnprocessedGLSL(defines, infix, prefix, suffix);
+
         return unrollLoops(
-            String(code)
+            annotatedGLSL
                 .replace(commentsRegex[0], '')
                 .replace(commentsRegex[1], '')
-                .replace(includeRegex, (_, filename) =>
-                    // FIXME: no cycle detection for @include
-                    ShaderPreprocessor.run(readfileSync(filename), defines)
-                )
                 .replace(constantRegex, (_, name) => String(
-                    // Find a defined constant. If not possible, find a global constant
-                    defines.has(name) ? Number(defines.get(name)) : (
-                        constants[name] !== undefined ? Number(constants[name]) : (
-                            errors.push(`Undefined constant: ${name}`), 0
-                        )
+                    // Replace preprocessor @CONSTANTS@ by their numeric values
+                    constants.has(name) ? Number(constants.get(name)) : (
+                        errors.push(`Undefined constant ${name}`), 0
                     )
-                )),
+                ))
+                .replace(includeRegex, (_, filename) =>
+                    // Included files may include other files.
+                    // XXX no cycle detection!
+                    ShaderPreprocessor.generateGLSL(defines, readfileSync(filename))
+                ),
             defines
-        ) + (errors.length > 0 ? errors.map(msg => `\n#error ${msg}\n`).join('') : '');
+        ) + errors.map(msg => `\n#error ${msg}\n`).join('');
     }
+}
+
+/**
+ * Generate GLSL code based on the input arguments
+ * @param {ShaderPreprocessorConstants} defines
+ * @param {string} infix
+ * @param {string} [prefix]
+ * @param {string} [suffix]
+ * @returns {string} GLSL code
+ */
+function generateUnprocessedGLSL(defines, infix, prefix = null, suffix = null)
+{
+    const parts = [];
+
+    if(prefix !== null)
+        parts.push(prefix);
+
+    for(const [key, value] of defines)
+        parts.push(`#define ${key} ${Number(value)}`);
+
+    parts.push(infix);
+
+    if(suffix !== null)
+        parts.push(suffix);
+
+    return parts.join('\n');
+}
+
+/**
+ * Generate pre-processor constants. Constants provided by the
+ * user have higher priority than globally available constants.
+ * @param {ShaderPreprocessorConstants} defines user-provided
+ * @returns {ShaderPreprocessorConstants}
+ */
+function generateConstants(defines)
+{
+    utils/* Utils */.A.assert(speedy_gl/* SpeedyGL */.c.isInitialized());
+
+    const myConstants = /** @type {ShaderPreprocessorConstants} */ ( new Map() );
+    const globalConstants = Object.assign(Object.create(null),
+        basicConstants,
+        platformConstants(utils/* Utils */.A.platformString(), speedy_gl/* SpeedyGL */.c.instance.renderer)
+    );
+
+    // globally available constants have lower priority
+    for(const key in globalConstants) {
+        //if(Object.prototype.hasOwnProperty.call(globalConstants, key))
+            myConstants.set(key, globalConstants[key]);
+    }
+
+    // user-defined constants have higher priority
+    for(const [key, value] of defines)
+        myConstants.set(key, value);
+
+    // done!
+    return myConstants;
 }
 
  /**
@@ -2234,15 +2307,15 @@ class ShaderPreprocessor
 function readfileSync(filename)
 {
     if(String(filename).match(/^[a-zA-Z0-9_-]+\.glsl$/))
-        return __webpack_require__(524)("./" + filename);
+        return __webpack_require__(5235)("./" + filename);
 
-    throw new errors/* FileNotFoundError */.Xg(`Shader preprocessor: can't read file "${filename}"`);
+    throw new errors/* FileNotFoundError */.kG(`Shader preprocessor: can't read file "${filename}"`);
 }
 
 /**
  * Unroll for loops in our own preprocessor
  * @param {string} code
- * @param {ShaderDefines} defines
+ * @param {ShaderPreprocessorConstants} defines
  * @returns {string}
  */
 function unrollLoops(code, defines)
@@ -2281,14 +2354,14 @@ function unrollLoops(code, defines)
  */
 function unroll(match, type, counter, start, cmp, end, step, loopcode)
 {
-    const defines = /** @type {ShaderDefines} */ ( this );
+    const defines = /** @type {ShaderPreprocessorConstants} */ ( this );
 
     // check if the loop limits are numeric constants or #defined numbers from the outside
     const hasStart = Number.isFinite(+start) || defines.has(start);
     const hasEnd = Number.isFinite(+end) || defines.has(end);
     if(!hasStart || !hasEnd) {
         if(defines.size > 0)
-            throw new errors/* ParseError */.D3(`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
+            throw new errors/* ParseError */.mB(`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
         else
             return match; // don't unroll now, because defines is empty - maybe we'll succeed in the next pass
     }
@@ -2297,7 +2370,7 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     let istart = defines.has(start) ? defines.get(start) : parseInt(start);
     let iend = defines.has(end) ? defines.get(end) : parseInt(end);
     let istep = (step.length == 0) ? 1 : parseInt(step);
-    utils/* Utils.assert */.c.assert(istart <= iend && istep > 0);
+    utils/* Utils */.A.assert(istart <= iend && istep > 0);
 
     /*
     // debug
@@ -2334,11 +2407,12 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     // done!
     return unrolledCode;
 }
+
 ;// CONCATENATED MODULE: ./src/gpu/shader-declaration.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2413,163 +2487,52 @@ uniform highp vec2 texSize;
 
 const PRIVATE_TOKEN = Symbol();
 
-/**
- * @typedef {object} ShaderDeclarationFilepathOptions
- * @property {"filepath"} type
- * @property {string} filepath
- * @property {string} [vsfilepath]
- *
- * @typedef {object} ShaderDeclarationSourceOptions
- * @property {"source"} type
- * @property {string} source
- * @property {string} [vssource]
- *
- * @typedef {ShaderDeclarationFilepathOptions | ShaderDeclarationSourceOptions} ShaderDeclarationOptions
- */
-
-/** @typedef {import('./shader-preprocessor').ShaderDefines} ShaderDefines */
+/** @typedef {string} ShaderDeclarationUnprocessedGLSL */
+/** @typedef {string[]} ShaderDeclarationArgumentList */
+/** @typedef {Map<string,string>} ShaderDeclarationUniformTypes */
+/** @typedef {Map<string,number>} ShaderDeclarationPreprocessorConstants */
 
 /**
  * Shader Declaration
+ * @abstract
  */
 class ShaderDeclaration
 {
     /**
      * @private Constructor
-     * @param {ShaderDeclarationOptions} options
      * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource unprocessed GLSL code of the fragment shader
+     * @param {ShaderDeclarationUnprocessedGLSL} vsSource unprocessed GLSL code of the vertex shader
      */
-    constructor(options, privateToken)
+    constructor(privateToken, argumentList, defines, fsSource, vsSource)
     {
+        // private constructor!
         if(privateToken !== PRIVATE_TOKEN)
-            throw new errors/* IllegalOperationError */.js(); // private constructor!
+            throw new errors/* IllegalOperationError */.Er();
 
-        /** @type {string} original source code provided by the user (fragment shader) */
-        this._source = (() => {
-            switch(options.type) {
-                case 'filepath': return __webpack_require__(2863)("./" + options.filepath);
-                case 'source':   return options.source;
-                default:         return /** @type {never} */ ( '' );
-             }
-        })();
+        /** @type {ShaderDeclarationArgumentList} an ordered list of uniform names */
+        this._arguments = [...argumentList];
 
-        /** @type {string} vertex shader source code (without preprocessing) */
-        this._vssource = (() => {
-            switch(options.type) {
-                case 'filepath': return options.vsfilepath ? __webpack_require__(2863)("./" + options.vsfilepath) : DEFAULT_VERTEX_SHADER;
-                case 'source':   return options.vssource ? options.vssource : DEFAULT_VERTEX_SHADER;
-                default:         return /** @type {never} */ ( '' );
-             }
-        })();
+        /** @type {ShaderDeclarationPreprocessorConstants} externally #defined pre-processor constants */
+        this._defines = new Map(defines);
 
         /** @type {string} preprocessed source code of the fragment shader */
-        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
+        this._fragmentSource = ShaderPreprocessor.generateGLSL(this._defines, fsSource, DEFAULT_FRAGMENT_SHADER_PREFIX);
 
         /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX);
+        this._vertexSource = ShaderPreprocessor.generateGLSL(this._defines, vsSource, DEFAULT_VERTEX_SHADER_PREFIX, DEFAULT_VERTEX_SHADER_SUFFIX);
 
-        /** @type {string} filepath of the fragment shader */
-        this._filepath = options.type === 'filepath' ? options.filepath : '<in-memory>';
-
-        /** @type {string} filepath of the vertex shader */
-        this._vsfilepath = options.type === 'filepath' && options.vsfilepath ? options.vsfilepath : '<in-memory>';
-
-        /** @type {string[]} an ordered list of uniform names */
-        this._arguments = [];
-
-        /** @type {Map<string,string>} it maps uniform names to their types */
+        /** @type {ShaderDeclarationUniformTypes} it maps uniform names to their types */
         this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
-        /** @type {ShaderDefines} it maps externally #defined constants to their values */
-        this._defines = new Map();
+        // validate arguments
+        this._validateArguments(this._arguments, this._uniforms);
     }
 
     /**
-     * Creates a new Shader directly from a GLSL source
-     * @param {string} source fragment shader
-     * @param {string|null} [vssource] vertex shader
-     * @returns {ShaderDeclaration}
-     */
-    static create(source, vssource = null)
-    {
-        return new ShaderDeclaration({ type: 'source', source, vssource }, PRIVATE_TOKEN);
-    }
-
-    /**
-     * Import a Shader from a file containing a GLSL source
-     * @param {string} filepath path to .glsl file relative to the shaders/ folder
-     * @param {string} [vsfilepath] path to a .vs.glsl file relative to the shaders/ folder
-     * @returns {ShaderDeclaration}
-     */
-    static import(filepath, vsfilepath = null)
-    {
-        if(!String(filepath).match(/^[a-zA-Z0-9_\-/]+\.glsl$/))
-            throw new errors/* FileNotFoundError */.Xg(`Can't import fragment shader at "${filepath}"`);
-        else if(vsfilepath != null && !String(vsfilepath).match(/^[a-zA-Z0-9_\-/]+\.vs\.glsl$/))
-            throw new errors/* FileNotFoundError */.Xg(`Can't import vertex shader at "${vsfilepath}"`);
-
-        return new ShaderDeclaration({ type: 'filepath', filepath, vsfilepath }, PRIVATE_TOKEN);
-    }
-
-    /**
-     * Specify the list & order of arguments to be
-     * passed to the shader
-     * @param  {...string} args argument names
-     * @returns {this}
-     */
-    withArguments(...args)
-    {
-        // the list of arguments may be declared only once
-        if(this._arguments.length > 0)
-            throw new errors/* IllegalOperationError */.js(`Redefinition of shader arguments`);
-
-        // get arguments
-        this._arguments = args.map(arg => String(arg));
-
-        // validate
-        for(const argname of this._arguments) {
-            if(!this._uniforms.has(argname)) {
-                if(!this._uniforms.has(argname + '[0]'))
-                    throw new errors/* IllegalArgumentError */.mG(`Argument "${argname}" has not been declared in the shader`);
-            }
-        }
-
-        // done!
-        return this;
-    }
-
-    /**
-     * Specify a set of #defines to be prepended to the fragment shader
-     * @param {Object<string,number>} defines key-value pairs (define-name: define-value)
-     * @returns {this}
-     */
-    withDefines(defines)
-    {
-        // the list of #defines may be defined only once
-        if(this._defines.size > 0)
-            throw new errors/* IllegalOperationError */.js(`Redefinition of externally defined constants of a shader`);
-
-        // store and write the #defines
-        const defs = [], keys = Object.keys(defines);
-        for(const key of keys) {
-            const value = Number(defines[key]); // force numeric values (just in case)
-            this._defines.set(key, value);
-            defs.push(`#define ${key} ${value}\n`);
-        }
-
-        // update the shaders & the uniforms
-        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
-        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource + DEFAULT_VERTEX_SHADER_SUFFIX;
-        this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
-        this._vertexSource = ShaderPreprocessor.run(vssource, this._defines);
-        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
-
-        // done!
-        return this;
-    }
-
-    /**
-     * Return the GLSL source of the fragment shader
+     * Return the preprocessed GLSL source code of the fragment shader
      * @returns {string}
      */
     get fragmentSource()
@@ -2578,7 +2541,7 @@ class ShaderDeclaration
     }
 
     /**
-     * Return the GLSL source of the vertex shader
+     * Return the preprocessed GLSL source code of the vertex shader
      * @returns {string}
      */
     get vertexSource()
@@ -2611,7 +2574,7 @@ class ShaderDeclaration
      */
     get arguments()
     {
-        return this._arguments;
+        return [].concat(this._arguments);
     }
 
     /**
@@ -2631,7 +2594,7 @@ class ShaderDeclaration
     uniformType(name)
     {
         if(!this._uniforms.has(name))
-            throw new errors/* IllegalArgumentError */.mG(`Unrecognized uniform variable: "${name}"`);
+            throw new errors/* IllegalArgumentError */.qw(`Unrecognized uniform variable: "${name}"`);
 
         return this._uniforms.get(name);
     }
@@ -2644,7 +2607,7 @@ class ShaderDeclaration
     definedConstant(name)
     {
         if(!this._defines.has(name))
-            throw new errors/* IllegalArgumentError */.mG(`Unrecognized externally defined constant: "${name}"`);
+            throw new errors/* IllegalArgumentError */.qw(`Unrecognized externally defined constant: "${name}"`);
 
         return this._defines.get(name);
     }
@@ -2653,13 +2616,13 @@ class ShaderDeclaration
      * Parses a GLSL source and detects the uniform variables,
      * as well as their types
      * @param {string} preprocessedSource 
-     * @returns {Map<string,string>} specifies the types of all uniforms
+     * @returns {ShaderDeclarationUniformTypes} specifies the types of all uniforms
      */
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
         const regex = /^\s*uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/gm;
-        const uniforms = new Map();
+        const uniforms = /** @type {ShaderDeclarationUniformTypes} */ ( new Map() );
 
         let match;
         while((match = regex.exec(sourceWithoutComments)) !== null) {
@@ -2670,7 +2633,7 @@ class ShaderDeclaration
                 if(name.endsWith(']')) {
                     // is it an array?
                     if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
-                        throw new errors/* ParseError */.D3(`Unspecified array length for uniform "${name}" in the shader`);
+                        throw new errors/* ParseError */.mB(`Unspecified array length for uniform "${name}" in the shader`);
 
                     // read array name & size
                     const [ array, size ] = [ match[1], Number(match[2]) ];
@@ -2684,56 +2647,275 @@ class ShaderDeclaration
                     if(!uniforms.has(name) || uniforms.get(name) === type)
                         uniforms.set(name, type);
                     else
-                        throw new errors/* IllegalOperationError */.js(`Redefinition of uniform "${name}" in the shader`);
+                        throw new errors/* IllegalOperationError */.Er(`Redefinition of uniform "${name}" in the shader`);
                 }
             }
         }
 
         return uniforms;
     }
+
+    /**
+     * Checks if all the arguments of the shader declaration are backed by a
+     * uniform variable in GLSL code
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationUniformTypes} uniforms
+     * @throws {IllegalArgumentError}
+     */
+    _validateArguments(argumentList, uniforms)
+    {
+        for(const argname of argumentList) {
+            if(!uniforms.has(argname)) {
+                if(!uniforms.has(argname + '[0]'))
+                    throw new errors/* IllegalArgumentError */.qw(`Argument "${argname}" has not been declared in the shader`);
+            }
+        }
+    }
+}
+
+/**
+ * A ShaderDeclaration that has its GLSL code stored in-memory
+ */
+class MemoryShaderDeclaration extends ShaderDeclaration
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource unprocessed GLSL code of the fragment shader
+     * @param {ShaderDeclarationUnprocessedGLSL} [vsSource] unprocessed GLSL code of the vertex shader
+     */
+    constructor(privateToken, argumentList, defines, fsSource, vsSource = DEFAULT_VERTEX_SHADER)
+    {
+        super(privateToken, argumentList, defines, fsSource, vsSource);
+
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} unprocessed GLSL code of the fragment shader */
+        this._fsUnprocessedSource = String(fsSource);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} unprocessed GLSL code of the vertex shader */
+        this._vsUnprocessedSource = String(vsSource);
+    }
+}
+
+/**
+ * A ShaderDeclaration that has its GLSL code stored in a file
+ */
+class FileShaderDeclaration extends ShaderDeclaration
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationArgumentList} argumentList
+     * @param {ShaderDeclarationPreprocessorConstants} defines
+     * @param {string} fsFilepath path to the file of the unprocessed GLSL code of the fragment shader
+     * @param {string} [vsFilepath] path to the file of the unprocessed GLSL code of the vertex shader
+     */
+    constructor(privateToken, argumentList, defines, fsFilepath, vsFilepath = '')
+    {
+        // validate paths
+        if(!String(fsFilepath).match(/^[a-zA-Z0-9_\-/]+\.glsl$/))
+            throw new errors/* FileNotFoundError */.kG(`Can't import fragment shader at "${fsFilepath}"`);
+        else if(vsFilepath != '' && !String(vsFilepath).match(/^[a-zA-Z0-9_\-/]+\.vs\.glsl$/))
+            throw new errors/* FileNotFoundError */.kG(`Can't import vertex shader at "${vsFilepath}"`);
+
+        // import files
+        const fsSource = __webpack_require__(4606)("./" + String(fsFilepath));
+        const vsSource = vsFilepath != '' ? __webpack_require__(4606)("./" + String(vsFilepath)) : DEFAULT_VERTEX_SHADER;
+
+        // super class
+        super(privateToken, argumentList, defines, fsSource, vsSource);
+
+
+        /** @type {string} filepath of the fragment shader */
+        this._fsFilepath = String(fsFilepath);
+
+        /** @type {string} filepath of the vertex shader */
+        this._vsFilepath = String(vsFilepath);
+    }
+}
+
+/**
+ * A builder of a ShaderDeclaration
+ * @abstract
+ */
+class ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     */
+    constructor(privateToken)
+    {
+        if(privateToken !== PRIVATE_TOKEN)
+            throw new errors/* IllegalOperationError */.Er(); // private constructor!
+
+        /** @type {string[]} ordered list of uniform names */
+        this._arguments = [];
+
+        /** @type {ShaderDeclarationPreprocessorConstants} externally #defined pre-processor constants */
+        this._defines = new Map();
+    }
+
+    /**
+     * Specify the list & order of arguments to be
+     * passed to the shader
+     * @param  {string[]} args argument names
+     * @returns {this}
+     */
+    withArguments(...args)
+    {
+        // the list of arguments may be declared only once
+        if(this._arguments.length > 0)
+            throw new errors/* IllegalOperationError */.Er(`Redefinition of shader arguments`);
+
+        // get arguments
+        for(let j = 0; j < args.length; j++)
+            this._arguments.push(String(args[j]));
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Specify a set of #defines to be prepended to the shader
+     * @param {Object<string,number>} defines key-value pairs
+     * @returns {this}
+     */
+    withDefines(defines)
+    {
+        // the list of #defines may be defined only once
+        if(this._defines.size > 0)
+            throw new errors/* IllegalOperationError */.Er(`Redefinition of externally defined constants of a shader`);
+
+        // store and write the #defines
+        const keys = Object.keys(defines);
+        for(const key of keys) {
+            const value = Number(defines[key]); // force numeric values (just in case)
+            this._defines.set(key, value);
+        }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Build a ShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        throw new errors/* AbstractMethodError */.aQ();
+    }
+}
+
+/**
+ * A builder of a MemoryShaderDeclaration
+ */
+class MemoryShaderDeclarationBuilder extends ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {ShaderDeclarationUnprocessedGLSL} fsSource
+     * @param {ShaderDeclarationUnprocessedGLSL} [vsSource]
+     */
+    constructor(privateToken, fsSource, vsSource)
+    {
+        super(privateToken);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL} the unprocessed GLSL code of the fragment shader */
+        this._fsSource = String(fsSource);
+
+        /** @type {ShaderDeclarationUnprocessedGLSL|undefined} the unprocessed GLSL code of the vertex shader */
+        this._vsSource = vsSource !== undefined ? String(vsSource) : undefined;
+    }
+
+    /**
+     * Build a MemoryShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        return new MemoryShaderDeclaration(PRIVATE_TOKEN, this._arguments, this._defines, this._fsSource, this._vsSource);
+    }
+}
+
+/**
+ * A builder of a FileShaderDeclaration
+ */
+class FileShaderDeclarationBuilder extends ShaderDeclarationBuilder
+{
+    /**
+     * @private Constructor
+     * @param {Symbol} privateToken
+     * @param {string} fsFilepath
+     * @param {string} [vsFilepath]
+     */
+    constructor(privateToken, fsFilepath, vsFilepath)
+    {
+        super(privateToken);
+
+        /** @type {string} path to the unprocessed GLSL code of the fragment shader */
+        this._fsFilepath = String(fsFilepath);
+
+        /** @type {string|undefined} path to the unprocessed GLSL code of the vertex shader */
+        this._vsFilepath = vsFilepath !== undefined ? String(vsFilepath) : undefined;
+    }
+
+    /**
+     * Build a FileShaderDeclaration
+     * @returns {ShaderDeclaration}
+     */
+    build()
+    {
+        return new FileShaderDeclaration(PRIVATE_TOKEN, this._arguments, this._defines, this._fsFilepath, this._vsFilepath);
+    }
 }
 
 /**
  * Import a ShaderDeclaration from a GLSL file
  * @param {string} filepath relative to the shaders/ folder (a .glsl file)
- * @param {string|null} [vsfilepath] optional vertex shader (a .vs.glsl file)
+ * @param {string} [vsfilepath] optional vertex shader (a .vs.glsl file)
  * @returns {ShaderDeclaration}
  */
-function importShader(filepath, vsfilepath = null)
+function importShader(filepath, vsfilepath = undefined)
 {
-    return ShaderDeclaration.import(filepath, vsfilepath);
+    return new FileShaderDeclarationBuilder(PRIVATE_TOKEN, filepath, vsfilepath);
 }
 
 /**
  * Create a ShaderDeclaration from a GLSL source code
  * @param {string} source fragment shader
- * @param {string|null} [vssource] optional vertex shader
+ * @param {string} [vssource] optional vertex shader
  * @returns {ShaderDeclaration}
  */
-function createShader(source, vssource = null)
+function createShader(source, vssource = undefined)
 {
-    return ShaderDeclaration.create(source, vssource);
+    return new MemoryShaderDeclarationBuilder(PRIVATE_TOKEN, source, vssource);
 }
+
 
 /***/ }),
 
-/***/ 6776:
+/***/ 5282:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "conv2D": () => (/* binding */ conv2D),
-/* harmony export */   "convX": () => (/* binding */ convX),
-/* harmony export */   "convY": () => (/* binding */ convY)
+/* harmony export */   conv2D: () => (/* binding */ conv2D),
+/* harmony export */   convX: () => (/* binding */ convX),
+/* harmony export */   convY: () => (/* binding */ convY)
 /* harmony export */ });
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(9759);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(5484);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3841);
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(3112);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(2191);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5619);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2761,6 +2943,7 @@ __webpack_require__.r(__webpack_exports__);
  * Generate a 2D convolution with a square kernel
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 function conv2D(kernel, normalizationConstant = 1.0)
 {
@@ -2770,15 +2953,15 @@ function conv2D(kernel, normalizationConstant = 1.0)
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .qw(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
     else if(kSize * kSize != kernel32.length)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .qw(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
 
     // select the appropriate pixel function
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
-    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.cartesian */ .c.cartesian(_utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.symmetricRange */ .c.symmetricRange(N), _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.symmetricRange */ .c.symmetricRange(N)).map(
+    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.cartesian(_utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.symmetricRange(N), _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.symmetricRange(N)).map(
         cur => fn(
             kernel32[(cur[0] + N) * kSize + (cur[1] + N)],
             cur[0], cur[1]
@@ -2805,7 +2988,7 @@ function conv2D(kernel, normalizationConstant = 1.0)
     `;
 
     // done!
-    return (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_0__/* .createShader */ .ef)(source).withArguments('image');
+    return (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_0__/* .createShader */ .gx)(source).withArguments('image');
 }
 
 
@@ -2815,6 +2998,7 @@ function conv2D(kernel, normalizationConstant = 1.0)
  * Generate a 1D convolution function on the x-axis
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 function convX(kernel, normalizationConstant = 1.0)
 {
@@ -2828,6 +3012,7 @@ function convX(kernel, normalizationConstant = 1.0)
  * Generate a 1D convolution function on the y-axis
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 function convY(kernel, normalizationConstant = 1.0)
 {
@@ -2842,6 +3027,7 @@ function convY(kernel, normalizationConstant = 1.0)
  * @param {string} axis either "x" or "y"
  * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ * @returns {ShaderDeclarationBuilder}
  */
 function conv1D(axis, kernel, normalizationConstant = 1.0)
 {
@@ -2851,15 +3037,15 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .qw(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
     else if(axis != 'x' && axis != 'y')
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .qw(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
 
     // select the appropriate pixel function
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
-    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils.symmetricRange */ .c.symmetricRange(N).reduce(
+    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__/* .Utils */ .A.symmetricRange(N).reduce(
         (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
@@ -2884,27 +3070,28 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
     `;
 
     // done!
-    return (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_0__/* .createShader */ .ef)(source).withArguments('image');
+    return (0,_shader_declaration__WEBPACK_IMPORTED_MODULE_0__/* .createShader */ .gx)(source).withArguments('image');
 }
 
 /***/ }),
 
-/***/ 524:
+/***/ 5235:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var map = {
-	"./colors.glsl": 2545,
-	"./filters.glsl": 7373,
-	"./fixed-point.glsl": 2229,
-	"./float16.glsl": 919,
-	"./global.glsl": 3815,
-	"./int32.glsl": 1830,
-	"./keypoint-descriptors.glsl": 1364,
-	"./keypoint-matches.glsl": 4004,
-	"./keypoints.glsl": 8714,
-	"./math.glsl": 9010,
-	"./pyramids.glsl": 6433,
-	"./subpixel.glsl": 4697
+	"./colors.glsl": 8609,
+	"./filters.glsl": 4672,
+	"./fixed-point.glsl": 9778,
+	"./float16.glsl": 8710,
+	"./global.glsl": 2434,
+	"./int32.glsl": 439,
+	"./keypoint-descriptors.glsl": 8545,
+	"./keypoint-matches.glsl": 6762,
+	"./keypoints.glsl": 7639,
+	"./math.glsl": 431,
+	"./platform.glsl": 6822,
+	"./pyramids.glsl": 2728,
+	"./subpixel.glsl": 6823
 };
 
 
@@ -2925,88 +3112,89 @@ webpackContext.keys = function webpackContextKeys() {
 };
 webpackContext.resolve = webpackContextResolve;
 module.exports = webpackContext;
-webpackContext.id = 524;
+webpackContext.id = 5235;
 
 /***/ }),
 
-/***/ 2863:
+/***/ 4606:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var map = {
-	"./filters/convolution": 6776,
-	"./filters/convolution.js": 6776,
-	"./filters/convolution1d.glsl": 4645,
-	"./filters/convolution2d.glsl": 6942,
-	"./filters/fast-median.glsl": 7054,
-	"./filters/nightvision.glsl": 8961,
-	"./filters/normalize-image.glsl": 9571,
-	"./filters/rgb2grey.glsl": 8466,
-	"./include/colors.glsl": 2545,
-	"./include/filters.glsl": 7373,
-	"./include/fixed-point.glsl": 2229,
-	"./include/float16.glsl": 919,
-	"./include/global.glsl": 3815,
-	"./include/int32.glsl": 1830,
-	"./include/keypoint-descriptors.glsl": 1364,
-	"./include/keypoint-matches.glsl": 4004,
-	"./include/keypoints.glsl": 8714,
-	"./include/math.glsl": 9010,
-	"./include/pyramids.glsl": 6433,
-	"./include/subpixel.glsl": 4697,
-	"./keypoints/allocate-descriptors.glsl": 2289,
-	"./keypoints/allocate-extra.glsl": 5725,
-	"./keypoints/apply-homography.glsl": 3801,
-	"./keypoints/bf-knn.glsl": 2346,
-	"./keypoints/clip-border.glsl": 4180,
-	"./keypoints/clip.glsl": 7771,
-	"./keypoints/distance-filter.glsl": 8938,
-	"./keypoints/encode-keypoint-long-offsets.glsl": 4802,
-	"./keypoints/encode-keypoint-offsets.glsl": 6253,
-	"./keypoints/encode-keypoint-positions.glsl": 384,
-	"./keypoints/encode-keypoint-properties.glsl": 500,
-	"./keypoints/encode-keypoints.glsl": 3673,
-	"./keypoints/encode-null-keypoints.glsl": 1703,
-	"./keypoints/fast.glsl": 2633,
-	"./keypoints/fast.vs.glsl": 535,
-	"./keypoints/hamming-distance-filter.glsl": 3232,
-	"./keypoints/harris-cutoff.glsl": 8356,
-	"./keypoints/harris.glsl": 7339,
-	"./keypoints/knn-init.glsl": 3177,
-	"./keypoints/knn-transfer.glsl": 2769,
-	"./keypoints/laplacian.glsl": 2006,
-	"./keypoints/lk.glsl": 3329,
-	"./keypoints/lookup-of-locations.glsl": 4251,
-	"./keypoints/lookup-of-locations.vs.glsl": 4747,
-	"./keypoints/lsh-knn.glsl": 7421,
-	"./keypoints/mix-keypoints.glsl": 4523,
-	"./keypoints/nonmax-scale.glsl": 2277,
-	"./keypoints/nonmax-space.glsl": 8430,
-	"./keypoints/nonmax-suppression.glsl": 9743,
-	"./keypoints/orb-descriptor.glsl": 3464,
-	"./keypoints/orb-orientation.glsl": 7184,
-	"./keypoints/refine-scale.glsl": 7220,
-	"./keypoints/score-findmax.glsl": 805,
-	"./keypoints/shuffle.glsl": 8736,
-	"./keypoints/sort-keypoints.glsl": 9311,
-	"./keypoints/subpixel-refinement.glsl": 9423,
-	"./keypoints/transfer-flow.glsl": 2060,
-	"./keypoints/transfer-orientation.glsl": 5463,
-	"./keypoints/transfer-to-extra.glsl": 6986,
-	"./keypoints/upload-keypoints.glsl": 3179,
-	"./pyramids/downsample2.glsl": 8680,
-	"./pyramids/upsample2.glsl": 3384,
-	"./transforms/additive-mix.glsl": 1976,
-	"./transforms/resize.glsl": 4543,
-	"./transforms/warp-perspective.glsl": 6296,
-	"./utils/copy-components.glsl": 747,
-	"./utils/copy-raster.glsl": 9176,
-	"./utils/copy.glsl": 8960,
-	"./utils/fill-components.glsl": 3294,
-	"./utils/fill.glsl": 1959,
-	"./utils/flip-y.vs.glsl": 7290,
-	"./utils/scan-minmax2d.glsl": 7270,
-	"./utils/sobel-derivatives.glsl": 48,
-	"./utils/sobel-derivatives.vs.glsl": 3713
+	"./filters/convolution": 5282,
+	"./filters/convolution.js": 5282,
+	"./filters/convolution1d.glsl": 8211,
+	"./filters/convolution2d.glsl": 7360,
+	"./filters/fast-median.glsl": 8191,
+	"./filters/nightvision.glsl": 4438,
+	"./filters/normalize-image.glsl": 5867,
+	"./filters/rgb2grey.glsl": 9252,
+	"./include/colors.glsl": 8609,
+	"./include/filters.glsl": 4672,
+	"./include/fixed-point.glsl": 9778,
+	"./include/float16.glsl": 8710,
+	"./include/global.glsl": 2434,
+	"./include/int32.glsl": 439,
+	"./include/keypoint-descriptors.glsl": 8545,
+	"./include/keypoint-matches.glsl": 6762,
+	"./include/keypoints.glsl": 7639,
+	"./include/math.glsl": 431,
+	"./include/platform.glsl": 6822,
+	"./include/pyramids.glsl": 2728,
+	"./include/subpixel.glsl": 6823,
+	"./keypoints/allocate-descriptors.glsl": 1341,
+	"./keypoints/allocate-extra.glsl": 7833,
+	"./keypoints/apply-homography.glsl": 2352,
+	"./keypoints/bf-knn.glsl": 7541,
+	"./keypoints/clip-border.glsl": 4868,
+	"./keypoints/clip.glsl": 5591,
+	"./keypoints/distance-filter.glsl": 191,
+	"./keypoints/encode-keypoint-long-offsets.glsl": 5467,
+	"./keypoints/encode-keypoint-offsets.glsl": 336,
+	"./keypoints/encode-keypoint-positions.glsl": 8968,
+	"./keypoints/encode-keypoint-properties.glsl": 1733,
+	"./keypoints/encode-keypoints.glsl": 9674,
+	"./keypoints/encode-null-keypoints.glsl": 2090,
+	"./keypoints/fast.glsl": 1855,
+	"./keypoints/fast.vs.glsl": 4824,
+	"./keypoints/hamming-distance-filter.glsl": 2381,
+	"./keypoints/harris-cutoff.glsl": 6060,
+	"./keypoints/harris.glsl": 9974,
+	"./keypoints/knn-init.glsl": 3047,
+	"./keypoints/knn-transfer.glsl": 3266,
+	"./keypoints/laplacian.glsl": 8018,
+	"./keypoints/lk.glsl": 3168,
+	"./keypoints/lookup-of-locations.glsl": 3890,
+	"./keypoints/lookup-of-locations.vs.glsl": 8647,
+	"./keypoints/lsh-knn.glsl": 4776,
+	"./keypoints/mix-keypoints.glsl": 2648,
+	"./keypoints/nonmax-scale.glsl": 8825,
+	"./keypoints/nonmax-space.glsl": 5693,
+	"./keypoints/nonmax-suppression.glsl": 9280,
+	"./keypoints/orb-descriptor.glsl": 9108,
+	"./keypoints/orb-orientation.glsl": 7137,
+	"./keypoints/refine-scale.glsl": 9739,
+	"./keypoints/score-findmax.glsl": 8231,
+	"./keypoints/shuffle.glsl": 2518,
+	"./keypoints/sort-keypoints.glsl": 8096,
+	"./keypoints/subpixel-refinement.glsl": 5795,
+	"./keypoints/transfer-flow.glsl": 3169,
+	"./keypoints/transfer-orientation.glsl": 1337,
+	"./keypoints/transfer-to-extra.glsl": 6187,
+	"./keypoints/upload-keypoints.glsl": 477,
+	"./pyramids/downsample2.glsl": 4050,
+	"./pyramids/upsample2.glsl": 5545,
+	"./transforms/additive-mix.glsl": 7113,
+	"./transforms/resize.glsl": 1202,
+	"./transforms/warp-perspective.glsl": 7971,
+	"./utils/copy-components.glsl": 6122,
+	"./utils/copy-raster.glsl": 371,
+	"./utils/copy.glsl": 7307,
+	"./utils/fill-components.glsl": 8614,
+	"./utils/fill.glsl": 6271,
+	"./utils/flip-y.vs.glsl": 3016,
+	"./utils/scan-minmax2d.glsl": 3630,
+	"./utils/sobel-derivatives.glsl": 8508,
+	"./utils/sobel-derivatives.vs.glsl": 8073
 };
 
 
@@ -3027,25 +3215,26 @@ webpackContext.keys = function webpackContextKeys() {
 };
 webpackContext.resolve = webpackContextResolve;
 module.exports = webpackContext;
-webpackContext.id = 2863;
+webpackContext.id = 4606;
 
 /***/ }),
 
-/***/ 7905:
+/***/ 1567:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "$": () => (/* binding */ SpeedyGL)
+/* harmony export */   c: () => (/* binding */ SpeedyGL)
 /* harmony export */ });
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(5484);
-/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(9845);
-/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4500);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3841);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(2191);
+/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(5637);
+/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(4109);
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(8902);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(5619);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3062,6 +3251,7 @@ webpackContext.id = 2863;
  * speedy-gl.js
  * A wrapper around the WebGL Rendering Context
  */
+
 
 
 
@@ -3096,9 +3286,9 @@ let powerPreference = DEFAULT_POWER_PREFERENCE;
 
 
 /**
- * A wrapper around the WebGL Rendering Context
+ * A wrapper around a WebGL Rendering Context
  */
-class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observable */ .y
+class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_4__/* .Observable */ .c
 {
     /**
      * Constructor
@@ -3107,24 +3297,31 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
      */
     constructor(key)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils.assert */ .c.assert(key === SINGLETON_KEY);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.assert(key === SINGLETON_KEY);
         super();
-
-
 
         /** @type {boolean} internal flag */
         this._reinitializeOnContextLoss = true;
 
-        /** @type {HTMLCanvasElement} canvas */
+        /** @type {HTMLCanvasElement} internal canvas */
         this._canvas = this._createCanvas(this._reinitialize.bind(this));
 
         /** @type {WebGL2RenderingContext} WebGL rendering context */
-        this._gl = null;
-
-
-
-        // create WebGL2 rendering context
         this._gl = this._createContext(this._canvas);
+
+        /** @type {string} vendor string of the video driver */
+        this._vendor = '';
+
+        /** @type {string} renderer string of the video driver */
+        this._renderer = '';
+
+
+        // read driver info
+        this._readDriverInfo();
+
+        // log driver info
+        if(_core_settings__WEBPACK_IMPORTED_MODULE_1__/* .Settings */ .w.logging === 'diagnostic')
+            this._logDriverInfo();
     }
 
     /**
@@ -3138,7 +3335,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
 
     /**
      * The WebGL Rendering Context
-     * Be careful not to cache this, as the WebGL Rendering Context may be lost!
+     * Be careful not to cache this rendering context, as it may be lost!
      * @returns {WebGL2RenderingContext}
      */
     get gl()
@@ -3147,12 +3344,30 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
     }
 
     /**
-     * The canvas
+     * The internal canvas
      * @returns {HTMLCanvasElement}
      */
     get canvas()
     {
         return this._canvas;
+    }
+
+    /**
+     * Renderer string of the video driver
+     * @returns {string}
+     */
+    get renderer()
+    {
+        return this._renderer;
+    }
+
+    /**
+     * Vendor string of the video driver
+     * @returns {string}
+     */
+    get vendor()
+    {
+        return this._vendor;
     }
 
     /**
@@ -3162,10 +3377,10 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
      */
     _createCanvas(reinitialize)
     {
-        const canvas = _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils.createCanvas */ .c.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+        const canvas = _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
 
         canvas.addEventListener('webglcontextlost', ev => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils.warning */ .c.warning(`Lost WebGL2 context`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.warning(`Lost WebGL2 context`);
             setTimeout(reinitialize, 0);
             ev.preventDefault();
         }, false);
@@ -3185,11 +3400,11 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
      */
     _createContext(canvas)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils.log */ .c.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.log(`Creating a ${powerPreference} WebGL2 rendering context...`);
 
         // does the browser support WebGL2?
         if(typeof WebGL2RenderingContext === 'undefined')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .NotSupportedError */ .B8(`This application requires WebGL2. Please use a different browser.`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .NotSupportedError */ .EM(`This application requires WebGL2. Please use a different browser.`);
 
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
@@ -3203,7 +3418,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
         });
 
         if(!gl)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .NotSupportedError */ .B8(`Can't create a WebGL2 Rendering Context. Try a different browser!`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .NotSupportedError */ .EM(`Can't create a WebGL2 Rendering Context. Try a different browser!`);
 
         return gl;
     }
@@ -3218,7 +3433,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
             return;
 
         // warning
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils.warning */ .c.warning(`Reinitializing WebGL2...`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.warning(`Reinitializing WebGL2...`);
 
         // create new canvas
         this._canvas.remove();
@@ -3227,9 +3442,47 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
         // create new context
         this._gl = this._createContext(this._canvas);
 
+        // is this needed?
+        this._readDriverInfo();
+
         // notify observers: we have a new context!
         // we need to recreate all textures...
         this._notify();
+    }
+
+    /**
+     * Read debugging information about the video driver of the user
+     */
+    _readDriverInfo()
+    {
+        // Depending on the privacy settings of the browser, this information
+        // may be unavailable. When available, it may not be entirely correct.
+        // See https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_debug_renderer_info
+        const gl = this._gl;
+        let debugInfo = null;
+
+        if(navigator.userAgent.includes('Firefox')) {
+            this._vendor = ''; //gl.getParameter(gl.VENDOR); // not useful
+            this._renderer = gl.getParameter(gl.RENDERER); // only useful on Firefox, apparently
+        }
+        else if(null != (debugInfo = gl.getExtension('WEBGL_debug_renderer_info'))) {
+            this._vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+            this._renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        }
+        else {
+            this._vendor = ''; // unavailable information
+            this._renderer = '';
+        }
+    }
+
+    /**
+     * Log debugging information about the video driver and the platform
+     */
+    _logDriverInfo()
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.log('Platform: ' + _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.platformString());
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.log('GL vendor: ' + this.vendor);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__/* .Utils */ .A.log('GL renderer: ' + this.renderer);
     }
 
     /**
@@ -3241,14 +3494,14 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
     {
         const gl = this._gl;
 
-        // nothing to do?
-        if(gl.isContextLost())
-            return;
-
         // find the appropriate extension
         const ext = gl.getExtension('WEBGL_lose_context');
         if(!ext)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .NotSupportedError */ .B8('WEBGL_lose_context extension is unavailable');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .NotSupportedError */ .EM('WEBGL_lose_context extension is unavailable');
+
+        // nothing to do?
+        if(gl.isContextLost())
+            return ext;
 
         // disable reinitialization
         this._reinitializeOnContextLoss = false;
@@ -3270,7 +3523,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
         const ms = Math.max(secondsToRestore, 0) * 1000;
         const ext = this.loseContext();
 
-        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyPromise */ .s(resolve => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_2__/* .SpeedyPromise */ .i(resolve => {
             setTimeout(() => {
                 //ext.restoreContext();
                 this._reinitializeOnContextLoss = true;
@@ -3297,7 +3550,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
     {
         // validate
         if(!(value === 'default' || value === 'low-power' || value === 'high-performance'))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__/* .IllegalArgumentError */ .mG(`Invalid powerPreference: "${value}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__/* .IllegalArgumentError */ .qw(`Invalid powerPreference: "${value}"`);
 
         // the power preference should be set before we create the WebGL context
         if(instance == null || powerPreference !== value) {
@@ -3308,35 +3561,44 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_3__/* .Observa
                 instance.loseAndRestoreContext();
         }
     }
+
+    /**
+     * Check if an instance of SpeedyGL has already been created
+     * @returns {boolean}
+     */
+    static isInitialized()
+    {
+        return instance != null;
+    }
 }
 
 /***/ }),
 
-/***/ 3841:
+/***/ 5619:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "nU": () => (/* binding */ SpeedyError),
-/* harmony export */   "B8": () => (/* binding */ NotSupportedError),
-/* harmony export */   "Ql": () => (/* binding */ GLError),
-/* harmony export */   "Mi": () => (/* binding */ AbstractMethodError),
-/* harmony export */   "mG": () => (/* binding */ IllegalArgumentError),
-/* harmony export */   "js": () => (/* binding */ IllegalOperationError),
-/* harmony export */   "Cx": () => (/* binding */ OutOfMemoryError),
-/* harmony export */   "Xg": () => (/* binding */ FileNotFoundError),
-/* harmony export */   "tg": () => (/* binding */ ResourceNotLoadedError),
-/* harmony export */   "W5": () => (/* binding */ TimeoutError),
-/* harmony export */   "D3": () => (/* binding */ ParseError),
-/* harmony export */   "ps": () => (/* binding */ AssertionError),
-/* harmony export */   "$y": () => (/* binding */ AccessDeniedError),
-/* harmony export */   "IT": () => (/* binding */ WebAssemblyError)
+/* harmony export */   EM: () => (/* binding */ NotSupportedError),
+/* harmony export */   Er: () => (/* binding */ IllegalOperationError),
+/* harmony export */   FJ: () => (/* binding */ ResourceNotLoadedError),
+/* harmony export */   MU: () => (/* binding */ TimeoutError),
+/* harmony export */   NO: () => (/* binding */ WebAssemblyError),
+/* harmony export */   Uk: () => (/* binding */ AccessDeniedError),
+/* harmony export */   aQ: () => (/* binding */ AbstractMethodError),
+/* harmony export */   kG: () => (/* binding */ FileNotFoundError),
+/* harmony export */   l: () => (/* binding */ OutOfMemoryError),
+/* harmony export */   mB: () => (/* binding */ ParseError),
+/* harmony export */   pf: () => (/* binding */ AssertionError),
+/* harmony export */   qw: () => (/* binding */ IllegalArgumentError),
+/* harmony export */   wB: () => (/* binding */ GLError),
+/* harmony export */   xB: () => (/* binding */ SpeedyError)
 /* harmony export */ });
 /* unused harmony export NotImplementedError */
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3427,7 +3689,7 @@ class NotSupportedError extends SpeedyError
  * Not implemented error
  * The called method is not implemented
  */
-class NotImplementedError extends (/* unused pure expression or super */ null && (SpeedyError))
+class NotImplementedError extends SpeedyError
 {
     /**
      * Class constructor
@@ -3660,34 +3922,34 @@ class WebAssemblyError extends SpeedyError
 
 /***/ }),
 
-/***/ 3020:
+/***/ 1814:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "PYRAMID_MAX_LEVELS": () => (/* binding */ PYRAMID_MAX_LEVELS),
-/* harmony export */   "LOG2_PYRAMID_MAX_SCALE": () => (/* binding */ LOG2_PYRAMID_MAX_SCALE),
-/* harmony export */   "PYRAMID_MAX_SCALE": () => (/* binding */ PYRAMID_MAX_SCALE),
-/* harmony export */   "FIX_BITS": () => (/* binding */ FIX_BITS),
-/* harmony export */   "FIX_RESOLUTION": () => (/* binding */ FIX_RESOLUTION),
-/* harmony export */   "MAX_TEXTURE_LENGTH": () => (/* binding */ MAX_TEXTURE_LENGTH),
-/* harmony export */   "MIN_KEYPOINT_SIZE": () => (/* binding */ MIN_KEYPOINT_SIZE),
-/* harmony export */   "MIN_ENCODER_LENGTH": () => (/* binding */ MIN_ENCODER_LENGTH),
-/* harmony export */   "MAX_ENCODER_CAPACITY": () => (/* binding */ MAX_ENCODER_CAPACITY),
-/* harmony export */   "DEFAULT_ENCODER_CAPACITY": () => (/* binding */ DEFAULT_ENCODER_CAPACITY),
-/* harmony export */   "LOG2_MAX_DESCRIPTOR_SIZE": () => (/* binding */ LOG2_MAX_DESCRIPTOR_SIZE),
-/* harmony export */   "MAX_DESCRIPTOR_SIZE": () => (/* binding */ MAX_DESCRIPTOR_SIZE),
-/* harmony export */   "MATCH_INDEX_BITS": () => (/* binding */ MATCH_INDEX_BITS),
-/* harmony export */   "MATCH_INDEX_MASK": () => (/* binding */ MATCH_INDEX_MASK),
-/* harmony export */   "MATCH_MAX_INDEX": () => (/* binding */ MATCH_MAX_INDEX),
-/* harmony export */   "MATCH_MAX_DISTANCE": () => (/* binding */ MATCH_MAX_DISTANCE),
-/* harmony export */   "LITTLE_ENDIAN": () => (/* binding */ LITTLE_ENDIAN)
+/* harmony export */   DEFAULT_ENCODER_CAPACITY: () => (/* binding */ DEFAULT_ENCODER_CAPACITY),
+/* harmony export */   FIX_BITS: () => (/* binding */ FIX_BITS),
+/* harmony export */   FIX_RESOLUTION: () => (/* binding */ FIX_RESOLUTION),
+/* harmony export */   LITTLE_ENDIAN: () => (/* binding */ LITTLE_ENDIAN),
+/* harmony export */   LOG2_MAX_DESCRIPTOR_SIZE: () => (/* binding */ LOG2_MAX_DESCRIPTOR_SIZE),
+/* harmony export */   LOG2_PYRAMID_MAX_SCALE: () => (/* binding */ LOG2_PYRAMID_MAX_SCALE),
+/* harmony export */   MATCH_INDEX_BITS: () => (/* binding */ MATCH_INDEX_BITS),
+/* harmony export */   MATCH_INDEX_MASK: () => (/* binding */ MATCH_INDEX_MASK),
+/* harmony export */   MATCH_MAX_DISTANCE: () => (/* binding */ MATCH_MAX_DISTANCE),
+/* harmony export */   MATCH_MAX_INDEX: () => (/* binding */ MATCH_MAX_INDEX),
+/* harmony export */   MAX_DESCRIPTOR_SIZE: () => (/* binding */ MAX_DESCRIPTOR_SIZE),
+/* harmony export */   MAX_ENCODER_CAPACITY: () => (/* binding */ MAX_ENCODER_CAPACITY),
+/* harmony export */   MAX_TEXTURE_LENGTH: () => (/* binding */ MAX_TEXTURE_LENGTH),
+/* harmony export */   MIN_ENCODER_LENGTH: () => (/* binding */ MIN_ENCODER_LENGTH),
+/* harmony export */   MIN_KEYPOINT_SIZE: () => (/* binding */ MIN_KEYPOINT_SIZE),
+/* harmony export */   PYRAMID_MAX_LEVELS: () => (/* binding */ PYRAMID_MAX_LEVELS),
+/* harmony export */   PYRAMID_MAX_SCALE: () => (/* binding */ PYRAMID_MAX_SCALE)
 /* harmony export */ });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3788,17 +4050,17 @@ const LITTLE_ENDIAN = (function() {
 
 /***/ }),
 
-/***/ 9845:
+/***/ 4109:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "y": () => (/* binding */ Observable)
+/* harmony export */   c: () => (/* binding */ Observable)
 /* harmony export */ });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3874,26 +4136,26 @@ class Observable
     _notify()
     {
         for(let i = 0; i < this._subscribers.length; i++)
-            this._subscribers[i].call(this._thisptr[i], ...(this._args[i]));
+            this._subscribers[i].apply(this._thisptr[i], this._args[i]);
     }
 }
 
 /***/ }),
 
-/***/ 6731:
+/***/ 6467:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "DD": () => (/* binding */ MediaType),
-/* harmony export */   "D3": () => (/* binding */ ImageFormat),
-/* harmony export */   "hE": () => (/* binding */ PixelComponent),
-/* harmony export */   "rY": () => (/* binding */ ColorComponentId)
+/* harmony export */   f5: () => (/* binding */ ImageFormat),
+/* harmony export */   kQ: () => (/* binding */ PixelComponent),
+/* harmony export */   kg: () => (/* binding */ ColorComponentId),
+/* harmony export */   zu: () => (/* binding */ MediaType)
 /* harmony export */ });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3919,7 +4181,9 @@ const MediaType = Object.freeze({
     Image: Symbol('Image'),
     Video: Symbol('Video'),
     Canvas: Symbol('Canvas'),
+    OffscreenCanvas: Symbol('OffscreenCanvas'),
     Bitmap: Symbol('Bitmap'),
+    Data: Symbol('Data')
 });
 
 /**
@@ -3955,20 +4219,20 @@ const ColorComponentId = Object.freeze({
 
 /***/ }),
 
-/***/ 5484:
+/***/ 2191:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "c": () => (/* binding */ Utils)
+/* harmony export */   A: () => (/* binding */ Utils)
 /* harmony export */ });
-/* harmony import */ var _errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(3841);
-/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4500);
-/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3135);
+/* harmony import */ var _errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(5619);
+/* harmony import */ var _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(8902);
+/* harmony import */ var _core_settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5637);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4003,7 +4267,7 @@ class Utils
     static warning(text, ...args)
     {
         //if(Settings.logging === 'default' || Settings.logging === 'diagnostic') // TODO: warnings & errors only?
-        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
+        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings */ .w.logging !== 'none')
             console.warn('[speedy-vision] ' + text, ...args);
     }
 
@@ -4014,7 +4278,7 @@ class Utils
      */
     static log(text, ...args)
     {
-        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings.logging */ .Z.logging !== 'none')
+        if(_core_settings__WEBPACK_IMPORTED_MODULE_2__/* .Settings */ .w.logging !== 'none')
             console.log('[speedy-vision] ' + text, ...args);
     }
 
@@ -4027,7 +4291,7 @@ class Utils
     static assert(expr, text = '')
     {
         if(!expr)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AssertionError */ .ps(text);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AssertionError */ .pf(text);
     }
 
     /**
@@ -4051,7 +4315,7 @@ class Utils
             );
         }
         else
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .ParseError */ .D3(`Can't detect function arguments of ${code}`);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .ParseError */ .mB(`Can't detect function arguments of ${code}`);
     }
 
     /**
@@ -4089,25 +4353,6 @@ class Utils
     }
 
     /**
-     * Generates a random number with
-     * Gaussian distribution (mu, sigma)
-     * @param {number} mu mean
-     * @param {number} sigma standard deviation
-     * @returns {number} random number
-     */
-    static gaussianNoise(mu = 0, sigma = 1)
-    {
-        // Box-Muller transformation
-        const TWO_PI = 2.0 * Math.PI;
-        
-        let a, b = Math.random();
-        do { a = Math.random(); } while(a <= Number.EPSILON);
-        let z = Math.sqrt(-2 * Math.log(a)) * Math.sin(TWO_PI * b);
-
-        return z * sigma + mu;
-    }
-
-    /**
      * Generate a 1D gaussian kernel with custom sigma
      * Tip: use kernelSize >= (5 * sigma), kernelSize odd
      * @param {number} sigma gaussian sigma
@@ -4141,9 +4386,9 @@ class Utils
         // validate input
         kernelSize |= 0;
         if(kernelSize < 1 || kernelSize % 2 == 0)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .mG(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .qw(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
         else if(sigma <= 0.0)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .mG(`Invalid sigma given to gaussianKernel: ${sigma}`);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .qw(`Invalid sigma given to gaussianKernel: ${sigma}`);
 
         // function erf(x) = -erf(-x) can be approximated numerically. See:
         // https://en.wikipedia.org/wiki/Error_function#Numerical_approximations
@@ -4235,7 +4480,7 @@ class Utils
     static symmetricRange(n)
     {
         if((n |= 0) < 0)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .mG(`Expected a non-negative integer as input`);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .qw(`Expected a non-negative integer as input`);
 
         return [...(Array(2*n + 1).keys())].map(x => x - n);
     }
@@ -4248,7 +4493,7 @@ class Utils
     static range(n)
     {
         if((n |= 0) <= 0)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .mG(`Expected a positive integer as input`);
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .IllegalArgumentError */ .qw(`Expected a positive integer as input`);
 
         return [...(Array(n).keys())];
     }
@@ -4340,9 +4585,9 @@ class Utils
         Utils.log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .NotSupportedError */ .B8('Unsupported browser: no mediaDevices.getUserMedia()');
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__/* .NotSupportedError */ .EM('Unsupported browser: no mediaDevices.getUserMedia()');
 
-        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyPromise */ .s((resolve, reject) => {
+        return new _core_speedy_promise__WEBPACK_IMPORTED_MODULE_1__/* .SpeedyPromise */ .i((resolve, reject) => {
             navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
 
@@ -4361,19 +4606,19 @@ class Utils
             })
             .catch(err => {
                 if(err.name === 'NotAllowedError') {
-                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AccessDeniedError */ .$y(
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .AccessDeniedError */ .Uk(
                         `Please give access to the camera and reload the page.`,
                         err
                     ));
                 }
                 else if(err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
-                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .NotSupportedError */ .B8(
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .NotSupportedError */ .EM(
                         `Can't access the webcam with the requested constraints: ${JSON.stringify(constraints)}.`,
                         err
                     ));
                 }
                 else {
-                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyError */ .nU(
+                    reject(new _errors__WEBPACK_IMPORTED_MODULE_0__/* .SpeedyError */ .xB(
                         `Can't access the webcam.`,
                         err
                     ));
@@ -4394,515 +4639,542 @@ class Utils
 
         return array.join(' ');
     }
+
+    /**
+     * Returns a string containing platform brand information
+     * @returns {string}
+     */
+    static platformString()
+    {
+        // navigator.userAgent is easily and often spoofed, and thus is unreliable
+
+        // use the NavigatorUAData interface if available
+        if(typeof navigator.userAgentData === 'object') {
+            // use only low entropy data, so we don't need to ask the permission
+            // of the user to read this string
+            return navigator.userAgentData.platform;
+        }
+
+        // navigator.platform is deprecated. It can be spoofed on Firefox, but,
+        // at the time of this writing, there is no alternative apparently.
+        return navigator.platform;
+    }
 }
 
 /***/ }),
 
-/***/ 4645:
+/***/ 8211:
 /***/ ((module) => {
 
 module.exports = "#if !defined(KERNEL_SIZE) || !defined(AXIS) || (AXIS != 0 && AXIS != 1)\n#error Undefined KERNEL_SIZE / AXIS\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE@];\nconst ivec2 axis = ivec2(1-AXIS, AXIS);\n#define S(x,k) result += pixelAtShortOffset(image, ivec2((x),(x)) * axis) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE == 3\nS(-1, 2);\nS( 0, 1);\nS( 1, 0);\n#elif KERNEL_SIZE == 5\nS(-2, 4);\nS(-1, 3);\nS( 0, 2);\nS( 1, 1);\nS( 2, 0);\n#elif KERNEL_SIZE == 7\nS(-3, 6);\nS(-2, 5);\nS(-1, 4);\nS( 0, 3);\nS( 1, 2);\nS( 2, 1);\nS( 3, 0);\n#elif KERNEL_SIZE == 9\nS(-4, 8);\nS(-3, 7);\nS(-2, 6);\nS(-1, 5);\nS( 0, 4);\nS( 1, 3);\nS( 2, 2);\nS( 3, 1);\nS( 4, 0);\n#elif KERNEL_SIZE == 11\nS(-5, 10);\nS(-4, 9);\nS(-3, 8);\nS(-2, 7);\nS(-1, 6);\nS( 0, 5);\nS( 1, 4);\nS( 2, 3);\nS( 3, 2);\nS( 4, 1);\nS( 5, 0);\n#elif KERNEL_SIZE == 13\nS(-6, 12);\nS(-5, 11);\nS(-4, 10);\nS(-3, 9);\nS(-2, 8);\nS(-1, 7);\nS( 0, 6);\nS( 1, 5);\nS( 2, 4);\nS( 3, 3);\nS( 4, 2);\nS( 5, 1);\nS( 6, 0);\n#elif KERNEL_SIZE == 15\nS(-7, 14);\nS(-6, 13);\nS(-5, 12);\nS(-4, 11);\nS(-3, 10);\nS(-2, 9);\nS(-1, 8);\nS( 0, 7);\nS( 1, 6);\nS( 2, 5);\nS( 3, 4);\nS( 4, 3);\nS( 5, 2);\nS( 6, 1);\nS( 7, 0);\n#else\n#error Invalid parameters\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
 
 /***/ }),
 
-/***/ 6942:
+/***/ 7360:
 /***/ ((module) => {
 
-module.exports = "#ifndef KERNEL_SIZE_SQUARED\n#define Must define KERNEL_SIZE_SQUARED\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE_SQUARED@];\n#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE_SQUARED == 9\nS(-1,-1, 8);\nS(-1, 0, 7);\nS(-1, 1, 6);\nS( 0,-1, 5);\nS( 0, 0, 4);\nS( 0, 1, 3);\nS( 1,-1, 2);\nS( 1, 0, 1);\nS( 1, 1, 0);\n#elif KERNEL_SIZE_SQUARED == 25\nS(-2,-2, 24);\nS(-2,-1, 23);\nS(-2, 0, 22);\nS(-2, 1, 21);\nS(-2, 2, 20);\nS(-1,-2, 19);\nS(-1,-1, 18);\nS(-1, 0, 17);\nS(-1, 1, 16);\nS(-1, 2, 15);\nS( 0,-2, 14);\nS( 0,-1, 13);\nS( 0, 0, 12);\nS( 0, 1, 11);\nS( 0, 2, 10);\nS( 1,-2, 9);\nS( 1,-1, 8);\nS( 1, 0, 7);\nS( 1, 1, 6);\nS( 1, 2, 5);\nS( 2,-2, 4);\nS( 2,-1, 3);\nS( 2, 0, 2);\nS( 2, 1, 1);\nS( 2, 2, 0);\n#elif KERNEL_SIZE_SQUARED == 49\nS(-3,-3, 48);\nS(-3,-2, 47);\nS(-3,-1, 46);\nS(-3, 0, 45);\nS(-3, 1, 44);\nS(-3, 2, 43);\nS(-3, 3, 42);\nS(-2,-3, 41);\nS(-2,-2, 40);\nS(-2,-1, 39);\nS(-2, 0, 38);\nS(-2, 1, 37);\nS(-2, 2, 36);\nS(-2, 3, 35);\nS(-1,-3, 34);\nS(-1,-2, 33);\nS(-1,-1, 32);\nS(-1, 0, 31);\nS(-1, 1, 30);\nS(-1, 2, 29);\nS(-1, 3, 28);\nS( 0,-3, 27);\nS( 0,-2, 26);\nS( 0,-1, 25);\nS( 0, 0, 24);\nS( 0, 1, 23);\nS( 0, 2, 22);\nS( 0, 3, 21);\nS( 1,-3, 20);\nS( 1,-2, 19);\nS( 1,-1, 18);\nS( 1, 0, 17);\nS( 1, 1, 16);\nS( 1, 2, 15);\nS( 1, 3, 14);\nS( 2,-3, 13);\nS( 2,-2, 12);\nS( 2,-1, 11);\nS( 2, 0, 10);\nS( 2, 1, 9);\nS( 2, 2, 8);\nS( 2, 3, 7);\nS( 3,-3, 6);\nS( 3,-2, 5);\nS( 3,-1, 4);\nS( 3, 0, 3);\nS( 3, 1, 2);\nS( 3, 2, 1);\nS( 3, 3, 0);\n#else\n#error Invalid KERNEL_SIZE_SQUARED\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
+module.exports = "#ifndef KERNEL_SIZE_SQUARED\n#error Must define KERNEL_SIZE_SQUARED\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE_SQUARED@];\n#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE_SQUARED == 9\nS(-1,-1, 8);\nS(-1, 0, 7);\nS(-1, 1, 6);\nS( 0,-1, 5);\nS( 0, 0, 4);\nS( 0, 1, 3);\nS( 1,-1, 2);\nS( 1, 0, 1);\nS( 1, 1, 0);\n#elif KERNEL_SIZE_SQUARED == 25\nS(-2,-2, 24);\nS(-2,-1, 23);\nS(-2, 0, 22);\nS(-2, 1, 21);\nS(-2, 2, 20);\nS(-1,-2, 19);\nS(-1,-1, 18);\nS(-1, 0, 17);\nS(-1, 1, 16);\nS(-1, 2, 15);\nS( 0,-2, 14);\nS( 0,-1, 13);\nS( 0, 0, 12);\nS( 0, 1, 11);\nS( 0, 2, 10);\nS( 1,-2, 9);\nS( 1,-1, 8);\nS( 1, 0, 7);\nS( 1, 1, 6);\nS( 1, 2, 5);\nS( 2,-2, 4);\nS( 2,-1, 3);\nS( 2, 0, 2);\nS( 2, 1, 1);\nS( 2, 2, 0);\n#elif KERNEL_SIZE_SQUARED == 49\nS(-3,-3, 48);\nS(-3,-2, 47);\nS(-3,-1, 46);\nS(-3, 0, 45);\nS(-3, 1, 44);\nS(-3, 2, 43);\nS(-3, 3, 42);\nS(-2,-3, 41);\nS(-2,-2, 40);\nS(-2,-1, 39);\nS(-2, 0, 38);\nS(-2, 1, 37);\nS(-2, 2, 36);\nS(-2, 3, 35);\nS(-1,-3, 34);\nS(-1,-2, 33);\nS(-1,-1, 32);\nS(-1, 0, 31);\nS(-1, 1, 30);\nS(-1, 2, 29);\nS(-1, 3, 28);\nS( 0,-3, 27);\nS( 0,-2, 26);\nS( 0,-1, 25);\nS( 0, 0, 24);\nS( 0, 1, 23);\nS( 0, 2, 22);\nS( 0, 3, 21);\nS( 1,-3, 20);\nS( 1,-2, 19);\nS( 1,-1, 18);\nS( 1, 0, 17);\nS( 1, 1, 16);\nS( 1, 2, 15);\nS( 1, 3, 14);\nS( 2,-3, 13);\nS( 2,-2, 12);\nS( 2,-1, 11);\nS( 2, 0, 10);\nS( 2, 1, 9);\nS( 2, 2, 8);\nS( 2, 3, 7);\nS( 3,-3, 6);\nS( 3,-2, 5);\nS( 3,-1, 4);\nS( 3, 0, 3);\nS( 3, 1, 2);\nS( 3, 2, 1);\nS( 3, 3, 0);\n#else\n#error Invalid KERNEL_SIZE_SQUARED\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
 
 /***/ }),
 
-/***/ 7054:
+/***/ 8191:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\n#define X(i,j) t = vec2(min(p[i], p[j]), max(p[i], p[j])); p[i] = t.x; p[j] = t.y;\n#define S(i,x,y) p[i] = pixelAtShortOffset(image, ivec2((x),(y))).g\nvoid main()\n{\nfloat median;\nvec2 t;\n#if !defined(KERNEL_SIZE)\n#error Must define KERNEL_SIZE\n#elif KERNEL_SIZE == 3\nfloat p[9];\nS(0,-1,-1);\nS(1, 0,-1);\nS(2, 1,-1);\nS(3,-1, 0);\nS(4, 0, 0);\nS(5, 1, 0);\nS(6,-1, 1);\nS(7, 0, 1);\nS(8, 1, 1);\nX(1,2);X(4,5);X(7,8);X(0,1);X(3,4);X(6,7);X(1,2);X(4,5);X(7,8);X(0,3);X(5,8);X(4,7);X(3,6);X(1,4);X(2,5);X(4,7);X(4,2);X(6,4);X(4,2);\nmedian = p[4];\n#elif KERNEL_SIZE == 5\nfloat p[25];\nS( 0,-2,-2);\nS( 1,-1,-2);\nS( 2, 0,-2);\nS( 3, 1,-2);\nS( 4, 2,-2);\nS( 5,-2,-1);\nS( 6,-1,-1);\nS( 7, 0,-1);\nS( 8, 1,-1);\nS( 9, 2,-1);\nS(10,-2, 0);\nS(11,-1, 0);\nS(12, 0, 0);\nS(13, 1, 0);\nS(14, 2, 0);\nS(15,-2, 1);\nS(16,-1, 1);\nS(17, 0, 1);\nS(18, 1, 1);\nS(19, 2, 1);\nS(20,-2, 2);\nS(21,-1, 2);\nS(22, 0, 2);\nS(23, 1, 2);\nS(24, 2, 2);\nX(0,1);X(3,4);X(2,4);X(2,3);X(6,7);X(5,7);X(5,6);X(9,10);X(8,10);X(8,9);X(12,13);X(11,13);X(11,12);X(15,16);X(14,16);X(14,15);X(18,19);X(17,19);X(17,18);X(21,22);X(20,22);X(20,21);X(23,24);X(2,5);X(3,6);X(0,6);X(0,3);X(4,7);X(1,7);X(1,4);X(11,14);X(8,14);X(8,11);X(12,15);X(9,15);X(9,12);X(13,16);X(10,16);X(10,13);X(20,23);X(17,23);X(17,20);X(21,24);X(18,24);X(18,21);X(19,22);X(8,17);X(9,18);X(0,18);X(0,9);X(10,19);X(1,19);X(1,10);X(11,20);X(2,20);X(2,11);X(12,21);X(3,21);X(3,12);X(13,22);X(4,22);X(4,13);X(14,23);X(5,23);X(5,14);X(15,24);X(6,24);X(6,15);X(7,16);X(7,19);X(13,21);X(15,23);X(7,13);X(7,15);X(1,9);X(3,11);X(5,17);X(11,17);X(9,17);X(4,10);X(6,12);X(7,14);X(4,6);X(4,7);X(12,14);X(10,14);X(6,7);X(10,12);X(6,10);X(6,17);X(12,17);X(7,17);X(7,10);X(12,18);X(7,12);X(10,18);X(12,20);X(10,20);X(10,12);\nmedian = p[12];\n#elif KERNEL_SIZE == 7\nfloat p[49];\nS( 0,-3,-3);\nS( 1,-2,-3);\nS( 2,-1,-3);\nS( 3, 0,-3);\nS( 4, 1,-3);\nS( 5, 2,-3);\nS( 6, 3,-3);\nS( 7,-3,-2);\nS( 8,-2,-2);\nS( 9,-1,-2);\nS(10, 0,-2);\nS(11, 1,-2);\nS(12, 2,-2);\nS(13, 3,-2);\nS(14,-3,-1);\nS(15,-2,-1);\nS(16,-1,-1);\nS(17, 0,-1);\nS(18, 1,-1);\nS(19, 2,-1);\nS(20, 3,-1);\nS(21,-3, 0);\nS(22,-2, 0);\nS(23,-1, 0);\nS(24, 0, 0);\nS(25, 1, 0);\nS(26, 2, 0);\nS(27, 3, 0);\nS(28,-3, 1);\nS(29,-2, 1);\nS(30,-1, 1);\nS(31, 0, 1);\nS(32, 1, 1);\nS(33, 2, 1);\nS(34, 3, 1);\nS(35,-3, 2);\nS(36,-2, 2);\nS(37,-1, 2);\nS(38, 0, 2);\nS(39, 1, 2);\nS(40, 2, 2);\nS(41, 3, 2);\nS(42,-3, 3);\nS(43,-2, 3);\nS(44,-1, 3);\nS(45, 0, 3);\nS(46, 1, 3);\nS(47, 2, 3);\nS(48, 3, 3);\nX(0,1);X(2,3);X(0,2);X(1,3);X(1,2);X(4,5);X(6,7);X(4,6);X(5,7);X(5,6);X(0,4);X(2,6);X(2,4);X(1,5);X(3,7);X(3,5);X(1,2);X(3,4);X(5,6);X(8,9);X(10,11);X(8,10);X(9,11);X(9,10);X(12,13);X(14,15);X(12,14);X(13,15);X(13,14);X(8,12);X(10,14);X(10,12);X(9,13);X(11,15);X(11,13);X(9,10);X(11,12);X(13,14);X(0,8);X(4,12);X(4,8);X(2,10);X(6,14);X(6,10);X(2,4);X(6,8);X(10,12);X(1,9);X(5,13);X(5,9);X(3,11);X(7,15);X(7,11);X(3,5);X(7,9);X(11,13);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(16,17);X(18,19);X(16,18);X(17,19);X(17,18);X(20,21);X(22,23);X(20,22);X(21,23);X(21,22);X(16,20);X(18,22);X(18,20);X(17,21);X(19,23);X(19,21);X(17,18);X(19,20);X(21,22);X(24,25);X(26,27);X(24,26);X(25,27);X(25,26);X(28,29);X(30,31);X(28,30);X(29,31);X(29,30);X(24,28);X(26,30);X(26,28);X(25,29);X(27,31);X(27,29);X(25,26);X(27,28);X(29,30);X(16,24);X(20,28);X(20,24);X(18,26);X(22,30);X(22,26);X(18,20);X(22,24);X(26,28);X(17,25);X(21,29);X(21,25);X(19,27);X(23,31);X(23,27);X(19,21);X(23,25);X(27,29);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(0,16);X(8,24);X(8,16);X(4,20);X(12,28);X(12,20);X(4,8);X(12,16);X(20,24);X(2,18);X(10,26);X(10,18);X(6,22);X(14,30);X(14,22);X(6,10);X(14,18);X(22,26);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(1,17);X(9,25);X(9,17);X(5,21);X(13,29);X(13,21);X(5,9);X(13,17);X(21,25);X(3,19);X(11,27);X(11,19);X(7,23);X(15,31);X(15,23);X(7,11);X(15,19);X(23,27);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(32,33);X(34,35);X(32,34);X(33,35);X(33,34);X(36,37);X(38,39);X(36,38);X(37,39);X(37,38);X(32,36);X(34,38);X(34,36);X(33,37);X(35,39);X(35,37);X(33,34);X(35,36);X(37,38);X(40,41);X(42,43);X(40,42);X(41,43);X(41,42);X(44,45);X(46,47);X(44,46);X(45,47);X(45,46);X(40,44);X(42,46);X(42,44);X(41,45);X(43,47);X(43,45);X(41,42);X(43,44);X(45,46);X(32,40);X(36,44);X(36,40);X(34,42);X(38,46);X(38,42);X(34,36);X(38,40);X(42,44);X(33,41);X(37,45);X(37,41);X(35,43);X(39,47);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(32,48);X(40,48);X(36,40);X(44,48);X(38,42);X(34,36);X(38,40);X(42,44);X(46,48);X(37,41);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(47,48);X(0,32);X(16,48);X(16,32);X(8,40);X(24,40);X(8,16);X(24,32);X(40,48);X(4,36);X(20,36);X(12,44);X(28,44);X(12,20);X(28,36);X(4,8);X(12,16);X(20,24);X(28,32);X(36,40);X(44,48);X(2,34);X(18,34);X(10,42);X(26,42);X(10,18);X(26,34);X(6,38);X(22,38);X(14,46);X(30,46);X(14,22);X(30,38);X(6,10);X(14,18);X(22,26);X(30,34);X(38,42);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(30,32);X(34,36);X(38,40);X(42,44);X(46,48);X(1,33);X(17,33);X(9,41);X(25,41);X(9,17);X(25,33);X(5,37);X(21,37);X(13,45);X(29,45);X(13,21);X(29,37);X(5,9);X(13,17);X(21,25);X(29,33);X(37,41);X(3,35);X(19,35);X(11,43);X(27,43);X(11,19);X(27,35);X(7,39);X(23,39);X(15,47);X(31,47);X(15,23);X(31,39);X(7,11);X(15,19);X(23,27);X(31,35);X(39,43);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(31,33);X(35,37);X(39,41);X(43,45);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);\nmedian = p[24];\n#else\n#error Unsupported kernel size\n#endif\ncolor = vec4(median, median, median, 1.0f);\n}"
 
 /***/ }),
 
-/***/ 8961:
+/***/ 4438:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\nuniform sampler2D illuminationMap;\nuniform float gain;\nuniform float offset;\nuniform float decay;\n#ifndef GREYSCALE\n#error Must define GREYSCALE\n#endif\n#if GREYSCALE == 0\nconst mat3 rgb2yuv = mat3(\n0.299f, -0.14713f, 0.615f,\n0.587f, -0.28886f, -0.51499f,\n0.114f, 0.436f, -0.10001f\n);\nconst mat3 yuv2rgb = mat3(\n1.0f, 1.0f, 1.0f,\n0.0f, -0.39465f, 2.03211f,\n1.13983f, -0.58060f, 0.0f\n);\n#endif\nconst float eps = 0.0001f;\nconst float sqrt2 = 1.4142135623730951f;\nconst float magic = 20.0f;\nconst vec2 center = vec2(0.5f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nvec4 imapPixel = threadPixel(illuminationMap);\nfloat lambda = -sqrt2 * log(max(1.0f - decay, eps));\nfloat dist = length(texCoord - center);\nfloat vgain = gain * exp(-lambda * dist);\nfloat normalizedGain = 2.0f * vgain;\nfloat normalizedOffset = 2.0f * offset - 1.0f;\n#if GREYSCALE != 0\nfloat luma = 1.0 / (1.0 + exp(-normalizedGain * magic * (pixel.g - imapPixel.g)));\nluma = clamp(luma + normalizedOffset, 0.0f, 1.0f);\ncolor = vec4(luma, luma, luma, 1.0f);\n#else\nvec3 yuvPixel = rgb2yuv * pixel.rgb;\nvec3 yuvImapPixel = rgb2yuv * imapPixel.rgb;\nfloat luma = 1.0 / (1.0 + exp(-normalizedGain * magic * (yuvPixel.r - yuvImapPixel.r)));\nluma += normalizedOffset;\nvec3 rgbCorrectedPixel = yuv2rgb * vec3(luma, yuvPixel.gb);\nrgbCorrectedPixel = clamp(rgbCorrectedPixel, 0.0f, 1.0f);\ncolor = vec4(rgbCorrectedPixel, 1.0f);\n#endif\n}"
 
 /***/ }),
 
-/***/ 9571:
+/***/ 5867:
 /***/ ((module) => {
 
 module.exports = "#ifndef GREYSCALE\n#error Must define GREYSCALE\n#endif\n#if GREYSCALE != 0\nuniform sampler2D minmax2d;\n#else\nuniform sampler2D minmax2dRGB[3];\n#endif\nuniform float minValue;\nuniform float maxValue;\nconst float eps = 1.0f / 255.0f;\nvoid main()\n{\nvec2 minmax = clamp(vec2(minValue, maxValue), 0.0f, 255.0f) / 255.0f;\nvec4 newMin = vec4(minmax.x);\nvec4 newRange = vec4(minmax.y - minmax.x);\nvec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f);\n#if GREYSCALE != 0\nvec4 pixel = threadPixel(minmax2d);\nmat4 channel = mat4(pixel, pixel, pixel, alpha);\n#else\nmat4 channel = mat4(\nthreadPixel(minmax2dRGB[0]),\nthreadPixel(minmax2dRGB[1]),\nthreadPixel(minmax2dRGB[2]),\nalpha\n);\n#endif\nvec4 oldMin = vec4(channel[0].g, channel[1].g, channel[2].g, channel[3].g);\nvec4 oldRange = max(vec4(channel[0].b, channel[1].b, channel[2].b, channel[3].b), eps);\nvec4 oldIntensity = vec4(channel[0].a, channel[1].a, channel[2].a, channel[3].a);\nvec4 newIntensity = (oldIntensity - oldMin) * newRange / oldRange + newMin;\ncolor = newIntensity;\n}"
 
 /***/ }),
 
-/***/ 8466:
+/***/ 9252:
 /***/ ((module) => {
 
 module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat g = dot(pixel, grey);\ncolor = vec4(g, g, g, 1.0f);\n}"
 
 /***/ }),
 
-/***/ 2545:
+/***/ 8609:
 /***/ ((module) => {
 
 module.exports = "#ifndef _COLORS_GLSL\n#define _COLORS_GLSL\n#define PIXELCOMPONENT_RED   @PIXELCOMPONENT_RED@\n#define PIXELCOMPONENT_GREEN @PIXELCOMPONENT_GREEN@\n#define PIXELCOMPONENT_BLUE  @PIXELCOMPONENT_BLUE@\n#define PIXELCOMPONENT_ALPHA @PIXELCOMPONENT_ALPHA@\n#endif"
 
 /***/ }),
 
-/***/ 7373:
+/***/ 4672:
 /***/ ((module) => {
 
 module.exports = "#ifndef _FILTERS_GLSL\n#define _FILTERS_GLSL\nfloat laplacian(sampler2D pyramid, vec2 position, float lod)\n{\nfloat pot = exp2(lod);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nconst vec3 ones = vec3(1.0f);\nconst mat3 kernel = mat3(\n0,-1, 0,\n-1, 4,-1,\n0,-1, 0\n);\n#define LPC(x,y) pyrSubpixelAtExOffset(pyramid, position, lod, pot, ivec2((x),(y)), pyrBaseSize).g\nmat3 neighborhood = mat3(\n0.0f, LPC(0,-1), 0.0f,\nLPC(-1,0), LPC(0,0), LPC(1,0),\n0.0f, LPC(0,1), 0.0f\n);\nmat3 m = matrixCompMult(neighborhood, kernel);\nreturn dot(ones, vec3(\ndot(m[0], ones),\ndot(m[1], ones),\ndot(m[2], ones)\n)) * (1.0f + lod);\n}\n#endif"
 
 /***/ }),
 
-/***/ 2229:
+/***/ 9778:
 /***/ ((module) => {
 
 module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fixed_t int\n#define fixed2_t ivec2\nconst int FIX_BITS = int(@FIX_BITS@);\nconst float FIX_RESOLUTION = float(@FIX_RESOLUTION@);\n#define itofix(x) fixed_t((x) << FIX_BITS)\n#define fixtoi(f) int((x) >> FIX_BITS)\n#define ftofix(x) fixed_t((x) * FIX_RESOLUTION + 0.5f)\n#define fixtof(f) (float(f) / FIX_RESOLUTION)\n#define ivec2tofix(x) fixed2_t((x) << FIX_BITS)\n#define fixtoivec2(f) ivec2((f) >> FIX_BITS)\n#define vec2tofix(v) fixed2_t((v) * FIX_RESOLUTION + vec2(0.5f))\n#define fixtovec2(f) (vec2(f) / FIX_RESOLUTION)\n#endif"
 
 /***/ }),
 
-/***/ 919:
+/***/ 8710:
 /***/ ((module) => {
 
 module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\n#define encodePairOfFloat16(f) vec4(encodeFloat16((f).x), encodeFloat16((f).y))\n#define decodePairOfFloat16(v) vec2(decodeFloat16((v).rg), decodeFloat16((v).ba))\n#define encodeNullPairOfFloat16() vec4(1.0f)\n#define isNullPairOfFloat16(v) all(equal((v), encodeNullPairOfFloat16()))\n#define encodeDiscardedPairOfFloat16() vec4(0.0f, 1.0f, 0.0f, 1.0f)\n#define isDiscardedPairOfFloat16(v) all(equal((v), encodeDiscardedPairOfFloat16()))\n#define encodeFloat16NaN() vec2(0.5f, 1.0f)\n#define isEncodedFloat16NaN(v) all(equal((v), encodeFloat16NaN()))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8u) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8u)).x;\n}\nbool isEncodedFloat16Zero(vec2 v)\n{\nuvec2 w = uvec2(v * 255.0f);\nreturn 0u == w.x + w.y * (0x80u - w.y);\n}\n#endif"
 
 /***/ }),
 
-/***/ 3815:
+/***/ 2434:
 /***/ ((module) => {
 
 module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)\n#endif"
 
 /***/ }),
 
-/***/ 1830:
+/***/ 439:
 /***/ ((module) => {
 
-module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(vec4 rgba)\n{\nuvec4 v = uvec4(rgba * 255.0f) & 255u;\nreturn v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);\n}\n#if 1\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value / 256u, value / 65536u, value / 16777216u) % 256u;\nreturn vec4(v) / 255.0f;\n}\n#else\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;\nreturn vec4(v) / 255.0f;\n}\n#endif\n#endif"
+module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\n@include \"platform.glsl\"\nuint decodeUint32(vec4 rgba)\n{\nuvec4 v = uvec4(rgba * 255.0f) & 255u;\nreturn v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);\n}\nvec4 encodeUint32(uint value)\n{\n#if defined(APPLE_GPU) || (defined(APPLE) && defined(INTEL_GRAPHICS))\nuvec4 v = uvec4(value, value / 256u, value / 65536u, value / 16777216u) % 256u;\nreturn vec4(v) / 255.0f;\n#else\nuvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;\nreturn vec4(v) / 255.0f;\n#endif\n}\n#endif"
 
 /***/ }),
 
-/***/ 1364:
+/***/ 8545:
 /***/ ((module) => {
 
 module.exports = "#ifndef _KEYPOINT_DESCRIPTORS_GLSL\n#define _KEYPOINT_DESCRIPTORS_GLSL\n#if !defined(DESCRIPTOR_SIZE)\n#error Must define DESCRIPTOR_SIZE\n#elif !defined(_KEYPOINTS_GLSL)\n#error Must include keypoints.glsl\n#endif\nuint[DESCRIPTOR_SIZE] readKeypointDescriptor(sampler2D encodedKeypoints, int descriptorSize, int extraSize, int encoderLength, KeypointAddress address)\n{\nint descriptorOffset = sizeofEncodedKeypoint(0, extraSize) / 4;\nKeypointAddress descriptorAddress = KeypointAddress(address.base, descriptorOffset);\nuint[DESCRIPTOR_SIZE] descriptor;\nvec4 pixel; uvec4 bytes;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\npixel = readKeypointData(encodedKeypoints, encoderLength, descriptorAddress);\nbytes = uvec4(pixel * 255.0f);\ndescriptor[i]   = bytes.r;\ndescriptor[i+1] = bytes.g;\ndescriptor[i+2] = bytes.b;\ndescriptor[i+3] = bytes.a;\ndescriptorAddress.offset++;\n}\nreturn descriptor;\n}\nuint[DESCRIPTOR_SIZE] readKeypointDescriptorFromDB(sampler2D descriptorDB, int descriptorDBStride, int index)\n{\nuint[DESCRIPTOR_SIZE] descriptor;\nint rasterIndex = index * (DESCRIPTOR_SIZE / 4) * int(index >= 0);\nvec4 pixel; uvec4 bytes; ivec2 pos;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\npos = ivec2(rasterIndex % descriptorDBStride, rasterIndex / descriptorDBStride);\npixel = (index >= 0) ? texelFetch(descriptorDB, pos, 0) : vec4(0.0f);\nbytes = uvec4(pixel * 255.0f);\ndescriptor[i]   = bytes.r;\ndescriptor[i+1] = bytes.g;\ndescriptor[i+2] = bytes.b;\ndescriptor[i+3] = bytes.a;\nrasterIndex++;\n}\nreturn descriptor;\n}\nint distanceBetweenKeypointDescriptors(uint[DESCRIPTOR_SIZE] a, uint[DESCRIPTOR_SIZE] b)\n{\nconst int[256] POPCNT = int[256](0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8);\nuvec4 xor, u, v;\nint dist = 0;\nivec4 bits;\n@unroll\nfor(int i = 0; i < DESCRIPTOR_SIZE; i += 4) {\nu = uvec4(a[i], a[i+1], a[i+2], a[i+3]);\nv = uvec4(b[i], b[i+1], b[i+2], b[i+3]);\nxor = (u ^ v) & 255u;\nbits = ivec4(POPCNT[xor.x], POPCNT[xor.y], POPCNT[xor.z], POPCNT[xor.w]);\ndist += bits.x + bits.y + bits.z + bits.w;\n}\nreturn dist;\n}\n#endif"
 
 /***/ }),
 
-/***/ 4004:
+/***/ 6762:
 /***/ ((module) => {
 
 module.exports = "#ifndef _KEYPOINT_MATCHES_GLSL\n#define _KEYPOINT_MATCHES_GLSL\n@include \"int32.glsl\"\nconst int MATCH_INDEX_BITS = int(@MATCH_INDEX_BITS@);\nconst int MATCH_INDEX_MASK = int(@MATCH_INDEX_MASK@);\nconst int MATCH_MAX_INDEX = int(@MATCH_MAX_INDEX@);\nconst int MATCH_MAX_DISTANCE = int(@MATCH_MAX_DISTANCE@);\nstruct KeypointMatch\n{\nint index;\nint dist;\n};\nvec4 encodeKeypointMatch(KeypointMatch candidate)\n{\nuint index = uint(candidate.index) & uint(MATCH_INDEX_MASK);\nuint dist = uint(clamp(candidate.dist, 0, MATCH_MAX_DISTANCE));\nuint u32 = index | (dist << MATCH_INDEX_BITS);\nreturn encodeUint32(u32);\n}\nKeypointMatch decodeKeypointMatch(vec4 rgba)\n{\nuint u32 = decodeUint32(rgba);\nint dist = int(u32 >> MATCH_INDEX_BITS);\nint index = int(u32 & uint(MATCH_INDEX_MASK));\nreturn KeypointMatch(index, dist);\n}\nconst KeypointMatch MATCH_NOT_FOUND = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif"
 
 /***/ }),
 
-/***/ 8714:
+/***/ 7639:
 /***/ ((module) => {
 
 module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_DISCARDED = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isDiscardedKeypoint(keypoint) ((((keypoint).flags) & KPF_DISCARDED) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define sizeofEncodedKeypointHeader() sizeofEncodedKeypoint(0,0)\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 rawEncodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(rawEncodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(rawEncodedProperties.g);\nkeypoint.score = decodeKeypointScore(rawEncodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + rawEncodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_DISCARDED * uint(isDiscarded);\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
 
 /***/ }),
 
-/***/ 9010:
+/***/ 431:
 /***/ ((module) => {
 
 module.exports = "#ifndef _MATH_GLSL\n#define _MATH_GLSL\n#define TWO_PI          6.28318530718f\n#define PI              3.14159265359f\n#define PI_OVER_2       1.57079632679f\n#define PI_OVER_4       0.78539816339f\n#define INV_PI          0.3183098861837907f\n#define INV_PI_OVER_2   0.15915494309189535f\nconst highp float INFINITY = 1.0f / 0.0f;\nfloat fastAtan(float x)\n{\nfloat w = 1.0f - abs(x);\nreturn (w >= 0.0f) ? ((PI_OVER_4 + 0.273f * w) * x) :\n(sign(x) * PI_OVER_2 - (PI_OVER_4 + 0.273f * (1.0f - abs(1.0f / x))) / x);\n}\nfloat fastAtan2(float y, float x)\n{\nreturn (x == 0.0f) ? PI_OVER_2 * sign(y) : fastAtan(y / x) + float(x < 0.0f) * PI * sign(y);\n}\n#endif"
 
 /***/ }),
 
-/***/ 6433:
+/***/ 6822:
+/***/ ((module) => {
+
+module.exports = "#ifndef _PLATFORM_GLSL\n#define _PLATFORM_GLSL\n#if @APPLE@\n#define APPLE 1\n#endif\n#if @APPLE_GPU@\n#define APPLE_GPU 1\n#endif\n#if @INTEL_GRAPHICS@\n#define INTEL_GRAPHICS 1\n#endif\n#endif"
+
+/***/ }),
+
+/***/ 2728:
 /***/ ((module) => {
 
 module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\nconst int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);\nconst float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);\nconst float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);\n#define encodeLod(lod) ((LOG2_PYRAMID_MAX_SCALE + (lod)) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS))\nfloat decodeLod(float encodedLod)\n{\nfloat lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;\nreturn lod - lod * step(1.0f, encodedLod);\n}\n#define LOD_EPS 0.0625f\nconst float ENCODED_LOD_EPS = (LOD_EPS / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS));\n#define isSameLod(lod1, lod2) (abs((lod1) - (lod2)) < LOD_EPS)\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < ENCODED_LOD_EPS)\n#endif"
 
 /***/ }),
 
-/***/ 4697:
+/***/ 6823:
 /***/ ((module) => {
 
 module.exports = "#ifndef _SUBPIXEL_GLSL\n#define _SUBPIXEL_GLSL\n#define subpixelAt(image, pos) textureLod((image), ((pos) + vec2(0.5f)) / texSize, 0.0f)\nvec4 subpixelAtBI(sampler2D image, vec2 pos)\n{\nvec2 frc = fract(pos);\nvec2 ifrc = vec2(1.0f) - frc;\nvec2 p = (floor(pos) + vec2(0.5f)) / vec2(textureSize(image, 0));\nvec4 pix00 = textureLod(image, p, 0.0f);\nvec4 pix10 = textureLodOffset(image, p, 0.0f, ivec2(1,0));\nvec4 pix01 = textureLodOffset(image, p, 0.0f, ivec2(0,1));\nvec4 pix11 = textureLodOffset(image, p, 0.0f, ivec2(1,1));\nmat4 pix = mat4(pix00, pix10, pix01, pix11);\nvec4 mul = vec4(ifrc.x * ifrc.y, frc.x * ifrc.y, ifrc.x * frc.y, frc.x * frc.y);\nreturn pix * mul;\n}\n#endif"
 
 /***/ }),
 
-/***/ 2289:
+/***/ 1341:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nconst vec4 EMPTY_DESCRIPTOR = vec4(0.0f);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nint addressOffset = myAddress.offset;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isDescriptor ? EMPTY_DESCRIPTOR : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
 
 /***/ }),
 
-/***/ 5725:
+/***/ 7833:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nbool isHead = (myAddress.offset < headerSize / 4);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nbool isExtra = (!isHead && !isDescriptor);\nint numberOfExtraPixels = outputExtraSize / 4;\nint addressOffset = myAddress.offset - int(isDescriptor) * numberOfExtraPixels;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isExtra ? vec4(0.0f) : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
 
 /***/ }),
 
-/***/ 3801:
+/***/ 2352:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nvec3 pos3 = homography * vec3(keypoint.position, 1.0f);\ncolor = encodeKeypointPosition(pos3.xy / pos3.z);\n}"
 
 /***/ }),
 
-/***/ 2346:
+/***/ 7541:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\n@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedFilters;\nuniform int matcherLength;\nuniform sampler2D dbEncodedKeypoints;\nuniform int dbDescriptorSize;\nuniform int dbExtraSize;\nuniform int dbEncoderLength;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int passId;\n#ifndef NUMBER_OF_KEYPOINTS_PER_PASS\n#error Undefined NUMBER_OF_KEYPOINTS_PER_PASS\n#endif\nconst int INFINITE_DISTANCE = MATCH_MAX_DISTANCE + 1;\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch bestMatch = decodeKeypointMatch(threadPixel(encodedMatches));\nKeypointMatch filterMatch = decodeKeypointMatch(threadPixel(encodedFilters));\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nuint[DESCRIPTOR_SIZE] dbDescriptor;\nint dbPixelsPerKeypoint = sizeofEncodedKeypoint(dbDescriptorSize, dbExtraSize) / 4;\nfor(int i = 0; i < NUMBER_OF_KEYPOINTS_PER_PASS; i++) {\nint dbKeypointIndex = passId * NUMBER_OF_KEYPOINTS_PER_PASS + i;\nKeypointAddress dbAddress = KeypointAddress(dbKeypointIndex * dbPixelsPerKeypoint, 0);\nKeypoint dbKeypoint = decodeKeypoint(dbEncodedKeypoints, dbEncoderLength, dbAddress);\ndbDescriptor = readKeypointDescriptor(dbEncodedKeypoints, dbDescriptorSize, dbExtraSize, dbEncoderLength, dbAddress);\nint dist = !isBadKeypoint(dbKeypoint) ? distanceBetweenKeypointDescriptors(descriptor, dbDescriptor) : INFINITE_DISTANCE;\nbestMatch.index = all(bvec2(\ndist < bestMatch.dist || (dist == bestMatch.dist && dbKeypointIndex > bestMatch.index),\ndist > filterMatch.dist || (dist == filterMatch.dist && dbKeypointIndex < filterMatch.index)\n)) ? dbKeypointIndex : bestMatch.index;\nbestMatch.dist = dbKeypointIndex == bestMatch.index ? dist : bestMatch.dist;\n}\ncolor = encodeKeypointMatch(bestMatch);\n}"
 
 /***/ }),
 
-/***/ 4180:
+/***/ 4868:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform int imageWidth;\nuniform int imageHeight;\nuniform int borderTop;\nuniform int borderRight;\nuniform int borderBottom;\nuniform int borderLeft;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nvec2 p = keypoint.position;\nbool withinBorder = any(lessThan(\nvec4(p.x, p.y, -p.x, -p.y),\nvec4(borderLeft, borderTop, borderRight - (imageWidth - 1), borderBottom - (imageHeight - 1))\n));\nvec4 pixel = threadPixel(encodedKeypoints);\nvec4 nullPixel = encodeNullKeypoint();\ncolor = withinBorder ? nullPixel : pixel;\n}"
 
 /***/ }),
 
-/***/ 7771:
+/***/ 5591:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\nvoid main()\n{\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress address = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nvec4 pixel = readKeypointData(encodedKeypoints, encoderLength, address);\ncolor = index < maxKeypoints ? pixel : encodeNullKeypoint();\n}"
 
 /***/ }),
 
-/***/ 8938:
+/***/ 191:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nvec2 delta = keypointA.position - keypointB.position;\nbool shouldKeep = (dot(delta, delta) <= threshold * threshold);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
-/***/ 4802:
+/***/ 5467:
 /***/ ((module) => {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Undefined MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\n#define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f)\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nvec2 encodedScore = pixel.rb;\nivec2 pos = thread; int allow = 1;\n@unroll\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\ntotalOffset = min(totalOffset, 65535);\ncolor.rb = encodedScore;\ncolor.ga = encodeSkipOffset(totalOffset);\n}"
 
 /***/ }),
 
-/***/ 6253:
+/***/ 336:
 /***/ ((module) => {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform ivec2 imageSize;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nivec2 pos = threadLocation();\nvec2 encodedScore = pixel.rb;\nint offset = 0, allow = 1, jumped = 0;\n#define READ(j) ; \\\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb)); \\\noffset += allow; \\\npos.x = (pos.x + 1) % imageSize.x; \\\npos.y += int(pos.x == 0); \\\npixel = (0 != (jumped |= int(pos.x == 0))) ? pixelAtShortOffset(corners, ivec2((j),1)) : pixelAtShortOffset(corners, ivec2((j),0))\nREAD(1); READ(2); READ(3); READ(4); READ(5); READ(6); READ(7);\ncolor.rb = encodedScore;\ncolor.ga = vec2(offset, 0) / 255.0f;\n}"
 
 /***/ }),
 
-/***/ 384:
+/***/ 8968:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int keypointLimit;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(!isEncodedFloat16Zero(pixel.rb));\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset != 0)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = passId > 0 ? ivec2(lastKeypointFromPrevPass.position) : ivec2(0);\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= min(maxKeypoints, keypointLimit) || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = encodeKeypointPosition(vec2(position));\n}"
 
 /***/ }),
 
-/***/ 500:
+/***/ 1733:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nvec4 kpix = pixelAt(corners, ivec2(keypoint.position));\nkeypoint.score = decodeFloat16(kpix.rb);\ncolor.r = kpix.a;\ncolor.g = encodeKeypointOrientation(0.0f);\ncolor.ba = encodeKeypointScore(keypoint.score);\n}"
 
 /***/ }),
 
-/***/ 3673:
+/***/ 9674:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform mediump usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint rasterIndex = address.base + address.offset;\nint numberOfPixels = encoderLength * encoderLength;\nint numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);\nint maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= min(encoderCapacity, maxEncoderCapacity))\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
 
 /***/ }),
 
-/***/ 1703:
+/***/ 2090:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nvoid main()\n{\ncolor = encodeNullKeypoint();\n}"
 
 /***/ }),
 
-/***/ 2633:
+/***/ 1855:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lod;\nuniform int threshold;\n#define USE_VARYINGS 1\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nin vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\n#define XIP(v) textureLod(pyramid, (v), lod).g\nvoid main()\n{\nfloat pixel = threadPixel(pyramid).g;\nvec4 prev = threadPixel(corners);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat pot = exp2(lod);\nfloat t = float(clamp(threshold, 0, 255)) / 255.0f;\nfloat ct = pixel + t, c_t = pixel - t;\ncolor = vec4(prev.r, pixel, prev.ba);\n#if FAST_TYPE == 916\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\n#if USE_VARYINGS\nfloat p0 = XIP(v_pix0), p4 = XIP(v_pix4), p8 = XIP(v_pix8), p12 = XIP(v_pix12);\n#else\nfloat p0 = PIX(0,3), p4 = PIX(3,0), p8 = PIX(0,-3), p12 = PIX(-3,0);\n#endif\nbvec4 brighter = bvec4(p0 > ct, p4 > ct, p8 > ct, p12 > ct);\nbvec4 darker = bvec4(p0 < c_t, p4 < c_t, p8 < c_t, p12 < c_t);\nbvec4 bpairs = bvec4(all(brighter.xy), all(brighter.yz), all(brighter.zw), all(brighter.wx));\nbvec4 dpairs = bvec4(all(darker.xy), all(darker.yz), all(darker.zw), all(darker.wx));\nif(!(any(bpairs) || any(dpairs)))\nreturn;\n#if USE_VARYINGS\nfloat p1 = XIP(v_pix1), p2 = XIP(v_pix2), p3 = XIP(v_pix3),\np5 = XIP(v_pix5), p6 = XIP(v_pix6), p7 = XIP(v_pix7),\np9 = XIP(v_pix9), p10 = XIP(v_pix10), p11 = XIP(v_pix11),\np13 = XIP(v_pix13), p14 = XIP(v_pix14), p15 = XIP(v_pix15);\n#else\nfloat p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1),\np5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3),\np9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1),\np13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);\n#endif\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nif(!isCorner)\nreturn;\nmat4 mp = mat4(p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15);\nmat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);\nmat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;\nconst vec4 zeros = vec4(0.0f), ones = vec4(1.0f);\nvec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);\nbs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);\nbs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);\nbs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);\nfloat thisScore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nfloat prevScore = decodeFloat16(prev.rb);\nvec3 thisResult = vec3(encodeFloat16(thisScore), encodeLod(lod));\ncolor.rba = thisScore > prevScore ? thisResult : color.rba;\n#endif\n}"
 
 /***/ }),
 
-/***/ 535:
+/***/ 4824:
 /***/ ((module) => {
 
 module.exports = "uniform mediump float lod;\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nout vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid vsmain()\n{\nfloat pot = exp2(lod);\n#if FAST_TYPE == 916\nv_pix0 = PIX(0,3); v_pix1 = PIX(1,3), v_pix2 = PIX(2,2), v_pix3 = PIX(3,1);\nv_pix4 = PIX(3,0); v_pix5 = PIX(3,-1), v_pix6 = PIX(2,-2), v_pix7 = PIX(1,-3);\nv_pix8 = PIX(0,-3); v_pix9 = PIX(-1,-3), v_pix10 = PIX(-2,-2), v_pix11 = PIX(-3,-1);\nv_pix12 = PIX(-3,0); v_pix13 = PIX(-3,1), v_pix14 = PIX(-2,2), v_pix15 = PIX(-1,3);\n#endif\n}"
 
 /***/ }),
 
-/***/ 3232:
+/***/ 2381:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-descriptors.glsl\"\nuniform sampler2D encodedKeypointsA;\nuniform int encoderLengthA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nvec4 data = readKeypointData(encodedKeypointsA, encoderLengthA, address);\ncolor = data;\nif(address.offset >= sizeofEncodedKeypointHeader() / 4)\nreturn;\nKeypoint keypointA = decodeKeypoint(encodedKeypointsA, encoderLengthA, address);\nKeypoint keypointB = decodeKeypoint(encodedKeypointsB, encoderLengthB, address);\ncolor = encodeNullKeypoint();\nif(isNullKeypoint(keypointA) && isNullKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isDiscardedKeypoint(keypointA) || isDiscardedKeypoint(keypointB))\nreturn;\ncolor = encodeDiscardedKeypoint();\nif(isNullKeypoint(keypointA) || isNullKeypoint(keypointB))\nreturn;\nuint[DESCRIPTOR_SIZE] descriptorA, descriptorB;\ndescriptorA = readKeypointDescriptor(encodedKeypointsA, descriptorSize, extraSize, encoderLengthA, address);\ndescriptorB = readKeypointDescriptor(encodedKeypointsB, descriptorSize, extraSize, encoderLengthB, address);\nint dist = distanceBetweenKeypointDescriptors(descriptorA, descriptorB);\nbool shouldKeep = (dist <= threshold);\ncolor = shouldKeep ? data : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
-/***/ 8356:
+/***/ 6060:
 /***/ ((module) => {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\nfloat maxval = decodeFloat16(threadPixel(maxScore).rb);\nfloat threshold = maxval * clamp(quality, 0.0f, 1.0f);\ncolor = pixel;\ncolor.rb = score >= threshold ? color.rb : encodeFloat16(0.0f);\n}"
 
 /***/ }),
 
-/***/ 7339:
+/***/ 9974:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@include \"filters.glsl\"\n#if !defined(WINDOW_SIZE)\n#error Undefined WINDOW_SIZE\n#endif\n#define WINDOW_RADIUS ((WINDOW_SIZE - 1) / 2)\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform sampler2D derivatives;\nuniform float lod;\nuniform float lodStep;\nuniform float gaussian[@WINDOW_SIZE@];\n#define G(x) gaussian[(x) + WINDOW_RADIUS]\n#define W(x,y) (G(x) * G(y))\n#define H(ox,oy) dpix = pixelAtShortOffset(derivatives, ivec2((ox),(oy))); \\\ndf = (1.0f + lod) * decodePairOfFloat16(dpix); \\\nh += vec3(df.x * df.x, df.x * df.y, df.y * df.y) * W((ox),(oy))\nvoid main()\n{\nfloat intensity = 0.0f;\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nvec4 dpix = vec4(0.0f);\nvec2 df = vec2(0.0f);\nvec3 h = vec3(0.0f);\ncolor = pixel;\n#if WINDOW_SIZE == 1\nH(0,0);\n#elif WINDOW_SIZE == 3\nH(-1,-1); H(0,-1); H(1,-1);\nH(-1,0); H(0,0); H(1,0);\nH(-1,1); H(0,1); H(1,1);\n#elif WINDOW_SIZE == 5\nH(-2,-2); H(-1,-2); H(0,-2); H(1,-2); H(2,-2);\nH(-2,-1); H(-1,-1); H(0,-1); H(1,-1); H(2,-1);\nH(-2,0); H(-1,0); H(0,0); H(1,0); H(2,0);\nH(-2,1); H(-1,1); H(0,1); H(1,1); H(2,1);\nH(-2,2); H(-1,2); H(0,2); H(1,2); H(2,2);\n#elif WINDOW_SIZE == 7\nH(-3,-3); H(-2,-3); H(-1,-3); H(0,-3); H(1,-3); H(2,-3); H(3,-3);\nH(-3,-2); H(-2,-2); H(-1,-2); H(0,-2); H(1,-2); H(2,-2); H(3,-2);\nH(-3,-1); H(-2,-1); H(-1,-1); H(0,-1); H(1,-1); H(2,-1); H(3,-1);\nH(-3,0); H(-2,0); H(-1,0); H(0,0); H(1,0); H(2,0); H(3,0);\nH(-3,1); H(-2,1); H(-1,1); H(0,1); H(1,1); H(2,1); H(3,1);\nH(-3,2); H(-2,2); H(-1,2); H(0,2); H(1,2); H(2,2); H(3,2);\nH(-3,3); H(-2,3); H(-1,3); H(0,3); H(1,3); H(2,3); H(3,3);\n#else\n#error Invalid WINDOW_SIZE\n#endif\nfloat response = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));\nresponse /= float(WINDOW_SIZE * WINDOW_SIZE);\nfloat lodPlus = min(float(PYRAMID_MAX_LEVELS - 1), lod + lodStep);\nfloat currentScaleStrength = abs(laplacian(pyramid, vec2(thread), lod));\nfloat previousScaleStrength = abs(laplacian(pyramid, vec2(thread), lodPlus));\nfloat previousResponse = decodeFloat16(pixel.rb);\nvec4 result = vec4(encodeFloat16(response), encodeLod(lod), intensity);\ncolor.rbag = (currentScaleStrength >= previousScaleStrength || previousResponse == 0.0f) ? result : pixel.rbag;\n}"
 
 /***/ }),
 
-/***/ 3177:
+/***/ 3047:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoint-matches.glsl\"\nvoid main()\n{\n#if ENCODE_FILTERS != 0\nKeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, 0);\n#else\nKeypointMatch initial = KeypointMatch(MATCH_MAX_INDEX, MATCH_MAX_DISTANCE);\n#endif\ncolor = encodeKeypointMatch(initial);\n}"
 
 /***/ }),
 
-/***/ 2769:
+/***/ 3266:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoint-matches.glsl\"\nuniform sampler2D encodedMatches;\nuniform sampler2D encodedKthMatches;\nuniform int numberOfMatchesPerKeypoint;\nuniform int kthMatch;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 matcherSize = textureSize(encodedMatches, 0);\nivec2 kthMatcherSize = textureSize(encodedKthMatches, 0);\nint rasterIndex = thread.y * matcherSize.x + thread.x;\nint matchIndex = rasterIndex / numberOfMatchesPerKeypoint;\nint matchCell = rasterIndex % numberOfMatchesPerKeypoint;\ncolor = threadPixel(encodedMatches);\nif(matchCell != kthMatch)\nreturn;\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(matchIndex >= kthMatcherSize.x * kthMatcherSize.y)\nreturn;\nivec2 pos = ivec2(matchIndex % kthMatcherSize.x, matchIndex / kthMatcherSize.x);\ncolor = texelFetch(encodedKthMatches, pos, 0);\n}"
 
 /***/ }),
 
-/***/ 2006:
+/***/ 8018:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@include \"filters.glsl\"\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lodStep;\nuniform float lodOffset;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat lod = decodeLod(pixel.a);\nfloat lodMinus = max(0.0f, lod - lodStep + lodOffset);\nfloat lodPlus = min(float(PYRAMID_MAX_LEVELS - 1), lod + lodStep + lodOffset);\nfloat lapMinus = laplacian(pyramid, vec2(thread), lodMinus);\nfloat lapPlus = abs(lodPlus - lodMinus) < 1e-5 ? lapMinus : laplacian(pyramid, vec2(thread), lodPlus);\ncolor = encodePairOfFloat16(vec2(lapMinus, lapPlus));\n}"
 
 /***/ }),
 
-/***/ 3329:
+/***/ 3168:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform int level;\nuniform int depth;\nuniform int numberOfIterations;\nuniform float discardThreshold;\nuniform float epsilon;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef WINDOW_SIZE\n#error Undefined WINDOW_SIZE\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int WINDOW_RADIUS = (WINDOW_SIZE - 1) / 2;\nconst int WINDOW_SIZE_SQUARED = (WINDOW_SIZE) * (WINDOW_SIZE);\nconst int WINDOW_SIZE_PLUS = (WINDOW_SIZE) + 2;\nconst int WINDOW_SIZE_PLUS_SQUARED = WINDOW_SIZE_PLUS * WINDOW_SIZE_PLUS;\nconst int DBL_WINDOW_SIZE_PLUS_SQUARED = 2 * WINDOW_SIZE_PLUS_SQUARED;\nconst int WINDOW_RADIUS_PLUS = (WINDOW_SIZE_PLUS - 1) / 2;\nconst highp float FLT_SCALE = 9.5367431640625e-7;\nconst highp float FLT_EPSILON = 0.00000011920929f;\nint pixelBuffer[DBL_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + WINDOW_RADIUS_PLUS) * WINDOW_SIZE_PLUS + ((i) + WINDOW_RADIUS_PLUS))\nivec2 derivBuffer[WINDOW_SIZE_SQUARED];\n#define derivativesAt(x, y) derivBuffer[((y) + WINDOW_RADIUS) * WINDOW_SIZE + ((x) + WINDOW_RADIUS)]\nvoid readWindow(vec2 center, float lod)\n{\nconst int r = WINDOW_RADIUS;\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \\\nidx = pixelIndex(offset.x, offset.y); \\\nnextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \\\nprevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)\nfor(int j = 0; j < WINDOW_SIZE; j++) {\nfor(int i = 0; i < WINDOW_SIZE; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < WINDOW_SIZE; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nivec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 dx = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 dy = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(dx, window);\nmat3 fy = matrixCompMult(dy, window);\nconst vec3 ones = vec3(1.0f);\nreturn ivec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nint readBufferedPixel(int imageCode, ivec2 offset)\n{\nconst int r = WINDOW_RADIUS;\noffset = clamp(offset, -r, r);\nint indexOffset = imageCode * WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nint readBufferedSubpixel(int imageCode, vec2 offset)\n{\nivec2 p = ivec2(floor(offset));\nvec2 frc = fract(offset);\nvec2 ifrc = vec2(1.0f) - frc;\nvec4 pix = vec4(\nreadBufferedPixel(imageCode, p),\nreadBufferedPixel(imageCode, p + ivec2(1,0)),\nreadBufferedPixel(imageCode, p + ivec2(0,1)),\nreadBufferedPixel(imageCode, p + ivec2(1,1))\n);\nvec4 sub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\nreturn int(0.5f + dot(sub*pix, vec4(1.0f)));\n}\nvec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)\n{\nconst int r = WINDOW_RADIUS;\nint timeDerivative;\nivec2 mismatch = ivec2(0);\nint x, y, _x, _y;\nvec2 d = pyrGuess + localGuess;\n#define innerLoop() \\\nfor(_x = 0; _x < WINDOW_SIZE; _x++) { \\\nx = _x - r; y = _y - r; \\\ntimeDerivative = ( \\\nreadBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) - \\\nreadBufferedPixel(PREV_IMAGE, ivec2(x, y)) \\\n); \\\nmismatch += derivativesAt(x, y) * timeDerivative; \\\n}\n@unroll\nfor(_y = 0; _y < WINDOW_SIZE; _y++) {\ninnerLoop();\n}\nreturn vec2(mismatch) * FLT_SCALE;\n}\nbool isInsideImage(vec2 position)\n{\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nvec2 border = vec2(WINDOW_SIZE);\nreturn all(bvec4(\ngreaterThanEqual(position, border),\nlessThan(position, imageSize - border)\n));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nfloat windowArea = float(WINDOW_SIZE * WINDOW_SIZE);\nconst int r = WINDOW_RADIUS;\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = (level < depth - 1) ? decodePairOfFloat16(pixel) : vec2(0.0f);\npyrGuess *= 2.0f;\nreadWindow(keypoint.position, float(level));\nivec2 derivatives;\nivec3 harris3i = ivec3(0);\nfor(int j = 0; j < WINDOW_SIZE; j++) {\nfor(int i = 0; i < WINDOW_SIZE; i++) {\nderivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\nharris3i += ivec3(\nderivatives.x * derivatives.x,\nderivatives.x * derivatives.y,\nderivatives.y * derivatives.y\n);\nderivativesAt(i-r, j-r) = derivatives;\n}\n}\nhighp vec3 harris = vec3(harris3i) * FLT_SCALE;\nhighp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x);\nhighp float det = harris.x * harris.z - harris.y * harris.y;\nhighp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;\nhighp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(\n(harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)\n));\nint niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);\nbool goodKeypoint = (level > 0) || (niceNumbers != 0);\nhighp float eps2 = epsilon * epsilon;\nhighp vec2 mismatch, delta, localGuess = vec2(0.0f);\nfor(int k = 0; k < numberOfIterations; k++) {\nmismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f);\ndelta = mismatch * invHarris * invDet;\nniceNumbers *= int(eps2 <= dot(delta, delta));\nlocalGuess += float(niceNumbers) * delta;\n}\nvec2 opticalFlow = pyrGuess + localGuess;\nbool mustDiscard = (level == 0) && any(bvec2(\n!goodKeypoint,\n!isInsideImage(keypoint.position + opticalFlow)\n));\ncolor = !mustDiscard ? encodePairOfFloat16(opticalFlow) : encodeDiscardedPairOfFloat16();\n}"
 
 /***/ }),
 
-/***/ 4251:
+/***/ 3890:
 /***/ ((module) => {
 
 module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#elif STAGE < 1\nuniform mediump usampler2D lookupTable;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\nin vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4];\nmask[0] = uvec4(1u, valid.x, valid.y, valid.x * valid.y);\nmask[1] = uvec4(1u, 1u, valid.y, valid.y);\nmask[2] = uvec4(1u, valid.x, 1u, valid.x);\nmask[3] = uvec4(1u);\n#if SKIP_TEXTURE_READS\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\n#else\n#define calcSb(pos) texture(lookupTable, (pos)).z\nuint center = calcSb(v_center);\nuint top = calcSb(v_top);\nuint topRight = calcSb(v_topRight);\nuint right = calcSb(v_right);\nuint bottomRight = calcSb(v_bottomRight);\nuint bottom = calcSb(v_bottom);\nuint bottomLeft = calcSb(v_bottomLeft);\nuint left = calcSb(v_left);\nuint topLeft = calcSb(v_topLeft);\n#endif\nuvec4 sums[4];\nsums[0] = uvec4(center, right, bottom, bottomRight);\nsums[1] = uvec4(left, center, bottomLeft, bottom);\nsums[2] = uvec4(top, topRight, center, right);\nsums[3] = uvec4(topLeft, top, left, center);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
 
 /***/ }),
 
-/***/ 4747:
+/***/ 8647:
 /***/ ((module) => {
 
 module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\nuniform mediump int blockSize;\nout vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\nvoid vsmain()\n{\nfloat b = float(blockSize);\n#define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)\nv_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);\nv_left = V(-1,0); v_center = V(0,0); v_right = V(1,0);\nv_bottomLeft = V(-1,1); v_bottom = V(0,1); v_bottomRight = V(1,1);\n}\n#endif"
 
 /***/ }),
 
-/***/ 7421:
+/***/ 4776:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"keypoint-matches.glsl\"\n@include \"keypoint-descriptors.glsl\"\nuniform sampler2D candidates;\nuniform sampler2D filters;\nuniform int matcherLength;\nuniform sampler2D tables;\nuniform sampler2D descriptorDB;\nuniform int tableIndex;\nuniform int bucketCapacity;\nuniform int bucketsPerTable;\nuniform int tablesStride;\nuniform int descriptorDBStride;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if HASH_SIZE > SEQUENCE_MAXLEN\n#error LSH: invalid HASH_SIZE\n#elif SEQUENCE_COUNT * SEQUENCE_MAXLEN * 4 > 16384\n#error LSH: sequences are too large!\n#elif (SEQUENCE_COUNT * SEQUENCE_MAXLEN) % 4 > 0\n#error LSH: sequences of invalid size!\n#endif\nlayout(std140) uniform LSHSequences\n{\nuvec4 sequences[(SEQUENCE_COUNT * SEQUENCE_MAXLEN) / 4];\n};\n#if HASH_SIZE == 10\nconst int SWAP_COUNT[3] = int[3](1, 11, 56);\nconst int[56] SWAP = int[56](0,1,2,4,8,16,32,64,128,256,512,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768);\n#elif HASH_SIZE == 11\nconst int SWAP_COUNT[3] = int[3](1, 12, 67);\nconst int[67] SWAP = int[67](0,1,2,4,8,16,32,64,128,256,512,1024,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536);\n#elif HASH_SIZE == 12\nconst int SWAP_COUNT[3] = int[3](1, 13, 79);\nconst int[79] SWAP = int[79](0,1,2,4,8,16,32,64,128,256,512,1024,2048,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072);\n#elif HASH_SIZE == 13\nconst int SWAP_COUNT[3] = int[3](1, 14, 92);\nconst int[92] SWAP = int[92](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144);\n#elif HASH_SIZE == 14\nconst int SWAP_COUNT[3] = int[3](1, 15, 106);\nconst int[106] SWAP = int[106](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288);\n#elif HASH_SIZE == 15\nconst int SWAP_COUNT[3] = int[3](1, 16, 121);\nconst int[121] SWAP = int[121](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576);\n#elif HASH_SIZE == 16\nconst int SWAP_COUNT[3] = int[3](1, 17, 137);\nconst int[137] SWAP = int[137](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152);\n#elif HASH_SIZE == 17\nconst int SWAP_COUNT[3] = int[3](1, 18, 154);\nconst int[154] SWAP = int[154](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304);\n#elif HASH_SIZE == 18\nconst int SWAP_COUNT[3] = int[3](1, 19, 172);\nconst int[172] SWAP = int[172](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608);\n#elif HASH_SIZE == 19\nconst int SWAP_COUNT[3] = int[3](1, 20, 191);\nconst int[191] SWAP = int[191](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608,262145,262146,262148,262152,262160,262176,262208,262272,262400,262656,263168,264192,266240,270336,278528,294912,327680,393216);\n#elif HASH_SIZE == 20\nconst int SWAP_COUNT[3] = int[3](1, 21, 211);\nconst int[211] SWAP = int[211](0,1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,3,5,6,9,10,12,17,18,20,24,33,34,36,40,48,65,66,68,72,80,96,129,130,132,136,144,160,192,257,258,260,264,272,288,320,384,513,514,516,520,528,544,576,640,768,1025,1026,1028,1032,1040,1056,1088,1152,1280,1536,2049,2050,2052,2056,2064,2080,2112,2176,2304,2560,3072,4097,4098,4100,4104,4112,4128,4160,4224,4352,4608,5120,6144,8193,8194,8196,8200,8208,8224,8256,8320,8448,8704,9216,10240,12288,16385,16386,16388,16392,16400,16416,16448,16512,16640,16896,17408,18432,20480,24576,32769,32770,32772,32776,32784,32800,32832,32896,33024,33280,33792,34816,36864,40960,49152,65537,65538,65540,65544,65552,65568,65600,65664,65792,66048,66560,67584,69632,73728,81920,98304,131073,131074,131076,131080,131088,131104,131136,131200,131328,131584,132096,133120,135168,139264,147456,163840,196608,262145,262146,262148,262152,262160,262176,262208,262272,262400,262656,263168,264192,266240,270336,278528,294912,327680,393216,524289,524290,524292,524296,524304,524320,524352,524416,524544,524800,525312,526336,528384,532480,540672,557056,589824,655360,786432);\n#else\n#error Invalid HASH_SIZE\n#endif\n#if LEVEL < 0 || LEVEL > 2\n#error Invalid LEVEL\n#endif\nconst uint END_OF_LIST = 0xFFFFFFFFu;\nconst int NUMBER_OF_HASHES = SWAP_COUNT[LEVEL];\nuint sequenceElement(int sequenceIndex, int elementIndex)\n{\nint offset = (SEQUENCE_MAXLEN) * sequenceIndex + elementIndex;\nuvec4 tuple = sequences[offset / 4];\nreturn tuple[offset & 3];\n}\nint descriptorHash(uint[DESCRIPTOR_SIZE] descriptor, int sequenceIndex)\n{\nuint bit, b, m;\nint hash = 0;\n@unroll\nfor(int i = 0; i < HASH_SIZE; i++) {\nbit = sequenceElement(sequenceIndex, i);\nb = bit >> 3u;\nm = 1u << (bit & 7u);\nhash = (hash << 1) | int((descriptor[b] & m) != 0u);\n}\nreturn hash;\n}\n#define readTableData(tables, tablesStride, rasterIndex) decodeUint32(texelFetch((tables), ivec2((rasterIndex) % (tablesStride), (rasterIndex) / (tablesStride)), 0))\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * matcherLength;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeKeypointMatch(MATCH_NOT_FOUND);\nif(isBadKeypoint(keypoint))\nreturn;\nKeypointMatch candidate = decodeKeypointMatch(threadPixel(candidates));\nKeypointMatch mfilter = decodeKeypointMatch(threadPixel(filters));\nuint[DESCRIPTOR_SIZE] candidateDescriptor;\nuint[DESCRIPTOR_SIZE] descriptor = readKeypointDescriptor(encodedKeypoints, descriptorSize, extraSize, encoderLength, address);\nint hash0 = descriptorHash(descriptor, tableIndex);\nfor(int h = 0; h < NUMBER_OF_HASHES; h++) {\nint hash = hash0 ^ SWAP[h];\nint tableAddress = tableIndex * bucketsPerTable * bucketCapacity;\nint bucketAddress = tableAddress + hash * bucketCapacity;\nbool validEntry = true;\nfor(int b = 0; b < bucketCapacity; b++) {\nint entryAddress = bucketAddress + b;\nuint entry = validEntry ? readTableData(tables, tablesStride, entryAddress) : END_OF_LIST;\nvalidEntry = (validEntry && entry != END_OF_LIST);\nint candidateIndex = int(entry);\ncandidateDescriptor = readKeypointDescriptorFromDB(descriptorDB, descriptorDBStride, validEntry ? candidateIndex : -1);\nint descriptorDistance = distanceBetweenKeypointDescriptors(descriptor, candidateDescriptor);\nKeypointMatch match = KeypointMatch(candidateIndex, descriptorDistance);\nbool betterThanCandidate = (match.dist < candidate.dist) || (match.dist == candidate.dist && match.index > candidate.index);\nbool worseThanFilter = (match.dist > mfilter.dist) || (match.dist == mfilter.dist && match.index < mfilter.index);\nbool nicerMatch = (validEntry && betterThanCandidate && worseThanFilter);\nivec2 v = nicerMatch ? ivec2(match.index, match.dist) : ivec2(candidate.index, candidate.dist);\ncandidate = KeypointMatch(v.x, v.y);\n}\n}\ncolor = encodeKeypointMatch(candidate);\n}"
 
 /***/ }),
 
-/***/ 4523:
+/***/ 2648:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"int32.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypointsA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthA;\nuniform int encoderLengthB;\nuniform int encoderCapacityA;\nuniform int encoderCapacityB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\n#elif STAGE == 3\nuniform sampler2D array;\nuniform int blockSize;\n#elif STAGE == 4\nuniform sampler2D array;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 5\nuniform sampler2D array;\n#else\n#error Invalid STAGE\n#endif\n#define NULL_KEYPOINT_INDEX 0xFFFF\nconst highp uint UNIT = 0x10000u;\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\nint newKeypointIndex = keypointIndex < encoderCapacityA ? keypointIndex : keypointIndex - encoderCapacityA;\ncolor = encodeNullKeypoint();\nif(newKeypointIndex >= max(encoderCapacityA, encoderCapacityB))\nreturn;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\naddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\nvec4 dataA = readKeypointData(encodedKeypointsA, encoderLengthA, addr);\nvec4 dataB = readKeypointData(encodedKeypointsB, encoderLengthB, addr);\ncolor = keypointIndex < encoderCapacityA ? dataA : dataB;\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint keypointIndex = thread.y * outputSize().x + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nbool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;\nkeypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;\ncolor = encodeUint32(uint(keypointIndex & 0xFFFF) | (isValid ? UNIT : 0u));\n#elif STAGE == 3\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nint arrayLength = size.x * size.y;\nint arrayIndex = thread.y * size.x + thread.x;\nint arrayIndexLeft = arrayIndex - blockSize;\nint arrayIndexRight = arrayIndex + blockSize;\nint mask = int(arrayIndexRight < arrayLength || arrayIndexRight / blockSize == (arrayLength - 1) / blockSize);\narrayIndexLeft = max(0, arrayIndexLeft);\narrayIndexRight = min(arrayLength - 1, arrayIndexRight);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nuvec3 entries32 = uvec3(\ndecodeUint32(threadPixel(array)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexLeft), 0)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))\n);\nivec3 sb = ivec3((entries32 >> 16u) & 0xFFFFu);\nsb.z *= mask;\nint dblBlockSize = 2 * blockSize;\nint offset = arrayIndex % dblBlockSize;\nint s2b = sb.x + (offset < blockSize ? sb.z : sb.y);\nint l2b = offset < blockSize ? sb.x : sb.y;\nuint keypointIndex = entries32.x & 0xFFFFu;\nuint shiftedS2b = uint(s2b) << 16u;\ncolor = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);\nif(offset >= s2b)\nreturn;\ncolor = encodeUint32(keypointIndex | shiftedS2b);\nif(offset < l2b)\nreturn;\nvec4 entry = texelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0);\nkeypointIndex = decodeUint32(entry) & 0xFFFFu;\ncolor = encodeUint32(keypointIndex | shiftedS2b);\n#elif STAGE == 4\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nivec2 size = textureSize(array, 0);\nuint sortedPair = decodeUint32(texelFetch(array, raster2pos(keypointIndex), 0));\nint newKeypointIndex = int(sortedPair & 0xFFFFu);\ncolor = encodeNullKeypoint();\nif(newKeypointIndex == NULL_KEYPOINT_INDEX || keypointIndex >= size.x * size.y)\nreturn;\nKeypointAddress newAddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, newAddr);\n#elif STAGE == 5\nuint val = decodeUint32(threadPixel(array));\ncolor = (val & 0xFFFFu) == uint(NULL_KEYPOINT_INDEX) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
 
 /***/ }),
 
-/***/ 2277:
+/***/ 8825:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\n@include \"filters.glsl\"\n#if !defined(USE_LAPLACIAN)\n#error Undefined USE_LAPLACIAN\n#endif\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lodStep;\n#if USE_LAPLACIAN\nuniform sampler2D pyrLaplacian;\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\nfloat myEncodedLod = pixel.a;\nfloat lod = decodeLod(myEncodedLod);\nfloat lodPlus = lod + lodStep;\nfloat lodMinus = lod - lodStep;\nfloat pot = exp2(lod);\nfloat potPlus = exp2(lodPlus);\nfloat potMinus = exp2(lodMinus);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#define P(p,u,v) textureLod(corners, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nvec4 pix[18];\n#define D(u,v) P(potMinus,(u),(v))\npix[0] = D(-1,-1); pix[1] = D(0,-1); pix[2] = D(1,-1);\npix[3] = D(-1,0); pix[4] = D(0,0); pix[5] = D(1,0);\npix[6] = D(-1,1); pix[7] = D(0,1); pix[8] = D(1,1);\n#define U(u,v) P(potPlus,(u),(v))\npix[9] = U(-1,-1); pix[10] = U(0,-1); pix[11] = U(1,-1);\npix[12] = U(-1,0); pix[13] = U(0,0); pix[14] = U(1,0);\npix[15] = U(-1,1); pix[16] = U(0,1); pix[17] = U(1,1);\nfloat scores[18];\n#define C(j) decodeFloat16(pix[j].rb)\nscores[0] = C(0); scores[1] = C(1); scores[2] = C(2);\nscores[3] = C(3); scores[4] = C(4); scores[5] = C(5);\nscores[6] = C(6); scores[7] = C(7); scores[8] = C(8);\nscores[9] = C(9); scores[10] = C(10); scores[11] = C(11);\nscores[12] = C(12); scores[13] = C(13); scores[14] = C(14);\nscores[15] = C(15); scores[16] = C(16); scores[17] = C(17);\nfloat lods[18];\n#define E(j) decodeLod(pix[j].a)\nlods[0] = E(0); lods[1] = E(1); lods[2] = E(2);\nlods[3] = E(3); lods[4] = E(4); lods[5] = E(5);\nlods[6] = E(6); lods[7] = E(7); lods[8] = E(8);\nlods[9] = E(9); lods[10] = E(10); lods[11] = E(11);\nlods[12] = E(12); lods[13] = E(13); lods[14] = E(14);\nlods[15] = E(15); lods[16] = E(16); lods[17] = E(17);\n#if USE_LAPLACIAN\n#define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)\nmat3 strengths[2];\nstrengths[0] = mat3(\n#define Lm(u,v) abs(decodeFloat16(L(potMinus,(u),(v)).xy))\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n);\nstrengths[1] = mat3(\n#define Lp(u,v) abs(decodeFloat16(L(potPlus,(u),(v)).zw))\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n);\nfloat myStrength = abs(laplacian(pyramid, vec2(thread), lod));\n#else\n#define L(u,v) (((v)+1)*3 + ((u)+1))\nmat3 strengths[2];\nstrengths[0] = mat3(\n#define Lm(u,v) scores[L((u),(v))]\nLm(-1,-1), Lm(0,-1), Lm(1,-1),\nLm(-1,0), Lm(0,0), Lm(1,0),\nLm(-1,1), Lm(0,1), Lm(1,1)\n);\nstrengths[1] = mat3(\n#define Lp(u,v) scores[9 + L((u),(v))]\nLp(-1,-1), Lp(0,-1), Lp(1,-1),\nLp(-1,0), Lp(0,0), Lp(1,0),\nLp(-1,1), Lp(0,1), Lp(1,1)\n);\nfloat myStrength = score;\n#endif\n#define B(j,lod) float(isSameLod(lods[j], (lod))) * float(scores[j] > 0.0f)\nmat3 nearLod[2];\nnearLod[0] = mat3(\n#define Bm(j) B((j), lodMinus)\nBm(0), Bm(1), Bm(2),\nBm(3), Bm(4), Bm(5),\nBm(6), Bm(7), Bm(8)\n);\nnearLod[1] = mat3(\n#define Bp(j) B((j), lodPlus)\nBp(9), Bp(10), Bp(11),\nBp(12), Bp(13), Bp(14),\nBp(15), Bp(16), Bp(17)\n);\nmat3 upStrengths = matrixCompMult(strengths[1], nearLod[1]);\nmat3 downStrengths = matrixCompMult(strengths[0], nearLod[0]);\nvec3 maxUpStrength3 = max(upStrengths[0], max(upStrengths[1], upStrengths[2]));\nvec3 maxDownStrength3 = max(downStrengths[0], max(downStrengths[1], downStrengths[2]));\nvec3 maxStrength3 = max(maxUpStrength3, maxDownStrength3);\nfloat maxStrength = max(maxStrength3.x, max(maxStrength3.y, maxStrength3.z));\ncolor.rb = encodeFloat16(score * step(maxStrength, myStrength));\n}"
 
 /***/ }),
 
-/***/ 8430:
+/***/ 5693:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(corners);\nfloat encodedLod = pixel.a;\nfloat score = decodeFloat16(pixel.rb);\nfloat lod = decodeLod(encodedLod);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#if 1\nvec2 gridSize = vec2(pot);\nvec2 gridLocation = floor(mod(texCoord * texSize, gridSize));\nvec2 gridDelta = gridLocation / gridSize - vec2(0.5f);\nfloat gridStep = 1.0f / pot;\nconst float adjustment = 1.25f;\ncolor.rb = encodeFloat16(0.0f);\nif(max(abs(gridDelta.x), abs(gridDelta.y)) > adjustment * gridStep)\nreturn;\n#endif\n#define P(x,y) textureLod(corners, texCoord + pot * vec2((x), (y)) / texSize, 0.0f)\nvec4 pix[9];\npix[0] = P(-1,-1); pix[1] = P(0,-1); pix[2] = P(1,-1);\npix[3] = P(-1, 0); pix[4] = pixel;   pix[5] = P(1, 0);\npix[6] = P(-1, 1); pix[7] = P(0, 1); pix[8] = P(1, 1);\n#define S(j) decodeFloat16(pix[j].rb)\nmat3 scores = mat3(\nS(0), S(1), S(2),\nS(3), S(4), S(5),\nS(6), S(7), S(8)\n);\n#define B(j) float(isSameLod(decodeLod(pix[j].a), lod))\nmat3 sameLod = mat3(\nB(0), B(1), B(2),\nB(3), B(4), B(5),\nB(6), B(7), B(8)\n);\nmat3 sameLodScores = matrixCompMult(scores, sameLod);\nvec3 maxScore3 = max(sameLodScores[0], max(sameLodScores[1], sameLodScores[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\ncolor.rb = encodeFloat16(score * step(maxScore, score));\n}"
 
 /***/ }),
 
-/***/ 9743:
+/***/ 9280:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if !defined(MULTISCALE)\n#error Must define MULTISCALE\n#elif MULTISCALE != 0\n#define LOD_STEP (lodStep)\n#define USE_MIDDLE_RING\n#else\n#define LOD_STEP (0.0f)\n#endif\n#define PIX(x,y) pixelAtShortOffset(image, ivec2((x),(y)))\n#define L2(v,i) bvec2(isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define L3(v,i) bvec3(isSameEncodedLod(v[i].a, alpha), isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define S3(v,i) decodeFloat16(v[i].rb) * float(any(L3(v,i)))\n#define S2(v,i) decodeFloat16(v[i].rb) * float(any(L2(v,i)))\n#define P(i) S3(p,i)\n#define Q(i) S2(q,i)\n#define R(i) S2(r,i)\nconst vec4 O = vec4(0.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\nvec4 p[8];\np[0] = PIX(0,1); p[1] = PIX(1,1); p[2] = PIX(1,0); p[3] = PIX(1,-1);\np[4] = PIX(0,-1); p[5] = PIX(-1,-1); p[6] = PIX(-1,0); p[7] = PIX(-1,1);\n#ifdef USE_MIDDLE_RING\nvec4 q[16];\nq[0] = PIX(0,2); q[1] = PIX(1,2); q[2] = PIX(2,2); q[3] = PIX(2,1);\nq[4] = PIX(2,0); q[5] = PIX(2,-1); q[6] = PIX(2,-2); q[7] = PIX(1,-2);\nq[8] = PIX(0,-2); q[9] = PIX(-1,-2); q[10] = PIX(-2,-2); q[11] = PIX(-2,-1);\nq[12] = PIX(-2,0); q[13] = PIX(-2,1); q[14] = PIX(-2,2); q[15] = PIX(-1,2);\n#else\nvec4 q[16];\nq[0] = O; q[1] = O; q[2] = O; q[3] = O;\nq[4] = O; q[5] = O; q[6] = O; q[7] = O;\nq[8] = O; q[9] = O; q[10] = O; q[11] = O;\nq[12] = O; q[13] = O; q[14] = O; q[15] = O;\n#endif\n#ifdef USE_OUTER_RING\nvec4 r[16];\nr[0] = PIX(0,3); r[1] = PIX(1,3); r[2] = PIX(3,1); r[3] = PIX(3,0);\nr[4] = PIX(3,-1); r[5] = PIX(1,-3); r[6] = PIX(0,-3); r[7] = PIX(-1,-3);\nr[8] = PIX(-3,-1); r[9] = PIX(-3,0); r[10] = PIX(-3,1); r[11] = PIX(-1,3);\nr[12] = PIX(0,4); r[13] = PIX(4,0); r[14] = PIX(0,-4); r[15] = PIX(-4,0);\n#else\nvec4 r[16];\nr[0] = O; r[1] = O; r[2] = O; r[3] = O;\nr[4] = O; r[5] = O; r[6] = O; r[7] = O;\nr[8] = O; r[9] = O; r[10] = O; r[11] = O;\nr[12] = O; r[13] = O; r[14] = O; r[15] = O;\n#endif\nfloat alphaPlus = encodeLod(lod + LOD_STEP);\nfloat alphaMinus = encodeLod(lod - LOD_STEP);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\nP(0), P(1), P(2), P(3),\nP(4), P(5), P(6), P(7),\n0.0f);\nmat4 middleScore = mat4(\nQ(0), Q(1), Q(2), Q(3),\nQ(4), Q(5), Q(6), Q(7),\nQ(8), Q(9), Q(10), Q(11),\nQ(12), Q(13), Q(14), Q(15)\n);\nmat4 outerScore = mat4(\nR(0), R(1), R(2), R(3),\nR(4), R(5), R(6), R(7),\nR(8), R(9), R(10), R(11),\nR(12), R(13), R(14), R(15)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
 
 /***/ }),
 
-/***/ 3464:
+/***/ 9108:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D image;\nuniform int extraSize;\nconst int descriptorSize = 32;\n#define P(a,b,c,d) ivec4((a),(b),(c),(d))\nconst ivec4 pat31[256] = ivec4[256](\nP(8,-3,9,5),\nP(4,2,7,-12),\nP(-11,9,-8,2),\nP(7,-12,12,-13),\nP(2,-13,2,12),\nP(1,-7,1,6),\nP(-2,-10,-2,-4),\nP(-13,-13,-11,-8),\nP(-13,-3,-12,-9),\nP(10,4,11,9),\nP(-13,-8,-8,-9),\nP(-11,7,-9,12),\nP(7,7,12,6),\nP(-4,-5,-3,0),\nP(-13,2,-12,-3),\nP(-9,0,-7,5),\nP(12,-6,12,-1),\nP(-3,6,-2,12),\nP(-6,-13,-4,-8),\nP(11,-13,12,-8),\nP(4,7,5,1),\nP(5,-3,10,-3),\nP(3,-7,6,12),\nP(-8,-7,-6,-2),\nP(-2,11,-1,-10),\nP(-13,12,-8,10),\nP(-7,3,-5,-3),\nP(-4,2,-3,7),\nP(-10,-12,-6,11),\nP(5,-12,6,-7),\nP(5,-6,7,-1),\nP(1,0,4,-5),\nP(9,11,11,-13),\nP(4,7,4,12),\nP(2,-1,4,4),\nP(-4,-12,-2,7),\nP(-8,-5,-7,-10),\nP(4,11,9,12),\nP(0,-8,1,-13),\nP(-13,-2,-8,2),\nP(-3,-2,-2,3),\nP(-6,9,-4,-9),\nP(8,12,10,7),\nP(0,9,1,3),\nP(7,-5,11,-10),\nP(-13,-6,-11,0),\nP(10,7,12,1),\nP(-6,-3,-6,12),\nP(10,-9,12,-4),\nP(-13,8,-8,-12),\nP(-13,0,-8,-4),\nP(3,3,7,8),\nP(5,7,10,-7),\nP(-1,7,1,-12),\nP(3,-10,5,6),\nP(2,-4,3,-10),\nP(-13,0,-13,5),\nP(-13,-7,-12,12),\nP(-13,3,-11,8),\nP(-7,12,-4,7),\nP(6,-10,12,8),\nP(-9,-1,-7,-6),\nP(-2,-5,0,12),\nP(-12,5,-7,5),\nP(3,-10,8,-13),\nP(-7,-7,-4,5),\nP(-3,-2,-1,-7),\nP(2,9,5,-11),\nP(-11,-13,-5,-13),\nP(-1,6,0,-1),\nP(5,-3,5,2),\nP(-4,-13,-4,12),\nP(-9,-6,-9,6),\nP(-12,-10,-8,-4),\nP(10,2,12,-3),\nP(7,12,12,12),\nP(-7,-13,-6,5),\nP(-4,9,-3,4),\nP(7,-1,12,2),\nP(-7,6,-5,1),\nP(-13,11,-12,5),\nP(-3,7,-2,-6),\nP(7,-8,12,-7),\nP(-13,-7,-11,-12),\nP(1,-3,12,12),\nP(2,-6,3,0),\nP(-4,3,-2,-13),\nP(-1,-13,1,9),\nP(7,1,8,-6),\nP(1,-1,3,12),\nP(9,1,12,6),\nP(-1,-9,-1,3),\nP(-13,-13,-10,5),\nP(7,7,10,12),\nP(12,-5,12,9),\nP(6,3,7,11),\nP(5,-13,6,10),\nP(2,-12,2,3),\nP(3,8,4,-6),\nP(2,6,12,-13),\nP(9,-12,10,3),\nP(-8,4,-7,9),\nP(-11,12,-4,-6),\nP(1,12,2,-8),\nP(6,-9,7,-4),\nP(2,3,3,-2),\nP(6,3,11,0),\nP(3,-3,8,-8),\nP(7,8,9,3),\nP(-11,-5,-6,-4),\nP(-10,11,-5,10),\nP(-5,-8,-3,12),\nP(-10,5,-9,0),\nP(8,-1,12,-6),\nP(4,-6,6,-11),\nP(-10,12,-8,7),\nP(4,-2,6,7),\nP(-2,0,-2,12),\nP(-5,-8,-5,2),\nP(7,-6,10,12),\nP(-9,-13,-8,-8),\nP(-5,-13,-5,-2),\nP(8,-8,9,-13),\nP(-9,-11,-9,0),\nP(1,-8,1,-2),\nP(7,-4,9,1),\nP(-2,1,-1,-4),\nP(11,-6,12,-11),\nP(-12,-9,-6,4),\nP(3,7,7,12),\nP(5,5,10,8),\nP(0,-4,2,8),\nP(-9,12,-5,-13),\nP(0,7,2,12),\nP(-1,2,1,7),\nP(5,11,7,-9),\nP(3,5,6,-8),\nP(-13,-4,-8,9),\nP(-5,9,-3,-3),\nP(-4,-7,-3,-12),\nP(6,5,8,0),\nP(-7,6,-6,12),\nP(-13,6,-5,-2),\nP(1,-10,3,10),\nP(4,1,8,-4),\nP(-2,-2,2,-13),\nP(2,-12,12,12),\nP(-2,-13,0,-6),\nP(4,1,9,3),\nP(-6,-10,-3,-5),\nP(-3,-13,-1,1),\nP(7,5,12,-11),\nP(4,-2,5,-7),\nP(-13,9,-9,-5),\nP(7,1,8,6),\nP(7,-8,7,6),\nP(-7,-4,-7,1),\nP(-8,11,-7,-8),\nP(-13,6,-12,-8),\nP(2,4,3,9),\nP(10,-5,12,3),\nP(-6,-5,-6,7),\nP(8,-3,9,-8),\nP(2,-12,2,8),\nP(-11,-2,-10,3),\nP(-12,-13,-7,-9),\nP(-11,0,-10,-5),\nP(5,-3,11,8),\nP(-2,-13,-1,12),\nP(-1,-8,0,9),\nP(-13,-11,-12,-5),\nP(-10,-2,-10,11),\nP(-3,9,-2,-13),\nP(2,-3,3,2),\nP(-9,-13,-4,0),\nP(-4,6,-3,-10),\nP(-4,12,-2,-7),\nP(-6,-11,-4,9),\nP(6,-3,6,11),\nP(-13,11,-5,5),\nP(11,11,12,6),\nP(7,-5,12,-2),\nP(-1,12,0,7),\nP(-4,-8,-3,-2),\nP(-7,1,-6,7),\nP(-13,-12,-8,-13),\nP(-7,-2,-6,-8),\nP(-8,5,-6,-9),\nP(-5,-1,-4,5),\nP(-13,7,-8,10),\nP(1,5,5,-13),\nP(1,0,10,-13),\nP(9,12,10,-1),\nP(5,-8,10,-9),\nP(-1,11,1,-13),\nP(-9,-3,-6,2),\nP(-1,-10,1,12),\nP(-13,1,-8,-10),\nP(8,-11,10,-6),\nP(2,-13,3,-6),\nP(7,-13,12,-9),\nP(-10,-10,-5,-7),\nP(-10,-8,-8,-13),\nP(4,-6,8,5),\nP(3,12,8,-13),\nP(-4,2,-3,-3),\nP(5,-13,10,-12),\nP(4,-13,5,-1),\nP(-9,9,-4,3),\nP(0,3,3,-9),\nP(-12,1,-6,1),\nP(3,2,4,-8),\nP(-10,-10,-10,9),\nP(8,-13,12,12),\nP(-8,-12,-6,-5),\nP(2,2,3,7),\nP(10,6,11,-8),\nP(6,8,8,-12),\nP(-7,10,-6,5),\nP(-3,-9,-3,9),\nP(-1,-13,-1,5),\nP(-3,-7,-3,4),\nP(-8,-2,-8,3),\nP(4,2,12,12),\nP(2,-5,3,11),\nP(6,-9,11,-13),\nP(3,-1,7,12),\nP(11,-1,12,4),\nP(-3,0,-3,6),\nP(4,-11,4,12),\nP(2,-4,2,1),\nP(-10,-6,-8,1),\nP(-13,7,-11,1),\nP(-13,12,-11,-13),\nP(6,0,11,-13),\nP(0,-1,1,4),\nP(-13,3,-9,-2),\nP(-9,8,-6,-3),\nP(-13,-6,-8,-2),\nP(5,-9,8,10),\nP(2,7,3,-9),\nP(-1,-6,-1,-1),\nP(9,5,11,-2),\nP(11,-3,12,-8),\nP(3,0,3,5),\nP(-1,4,0,10),\nP(3,-6,4,5),\nP(-13,0,-10,5),\nP(5,8,12,11),\nP(8,9,9,-6),\nP(7,-4,8,-12),\nP(-10,4,-10,9),\nP(7,3,12,4),\nP(9,-7,10,-2),\nP(7,0,12,-2),\nP(-1,-6,0,-11)\n);\nvoid getPair(int index, mat2 rot, out vec2 p, out vec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = rot * op;\nq = rot * oq;\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint descriptorCell = address.offset - sizeofEncodedKeypoint(0, extraSize) / 4;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nfloat degreesOrientation = round(360.0f + degrees(keypoint.orientation));\nfloat orientation = radians(degreesOrientation - mod(degreesOrientation, 12.0f));\nfloat kcos = cos(orientation);\nfloat ksin = sin(orientation);\nmat2 rot = mat2(kcos, ksin, -ksin, kcos);\nfloat pot = exp2(keypoint.lod);\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nvec2 p, q;\nvec4 a, b;\nint i = t * 8;\n@unroll\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, rot, p, q);\na = texelFetch(image, ivec2(round(keypoint.position + pot * p)), 0);\nb = texelFetch(image, ivec2(round(keypoint.position + pot * q)), 0);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(test[0], test[1], test[2], test[3]) / 255.0f;\n}"
 
 /***/ }),
 
-/***/ 7184:
+/***/ 7137:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D image;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define P(x,y) ivec2((x),(y))\nconst int diskPointCount[16] = int[16](0, 4, 12, 28, 48, 80, 112, 148, 196, 252, 316, 376, 440, 528, 612, 708);\nconst ivec2 diskPoint[708] = ivec2[708](\nP(0,-1),P(-1,0),P(1,0),P(0,1),\nP(-1,-1),P(1,-1),P(-1,1),P(1,1),P(0,-2),P(-2,0),P(2,0),P(0,2),\nP(-1,-2),P(1,-2),P(-2,-1),P(2,-1),P(-2,1),P(2,1),P(-1,2),P(1,2),P(-2,-2),P(2,-2),P(-2,2),P(2,2),P(0,-3),P(-3,0),P(3,0),P(0,3),\nP(-1,-3),P(1,-3),P(-3,-1),P(3,-1),P(-3,1),P(3,1),P(-1,3),P(1,3),P(-2,-3),P(2,-3),P(-3,-2),P(3,-2),P(-3,2),P(3,2),P(-2,3),P(2,3),P(0,-4),P(-4,0),P(4,0),P(0,4),\nP(-1,-4),P(1,-4),P(-4,-1),P(4,-1),P(-4,1),P(4,1),P(-1,4),P(1,4),P(-3,-3),P(3,-3),P(-3,3),P(3,3),P(-2,-4),P(2,-4),P(-4,-2),P(4,-2),P(-4,2),P(4,2),P(-2,4),P(2,4),P(0,-5),P(-3,-4),P(3,-4),P(-4,-3),P(4,-3),P(-5,0),P(5,0),P(-4,3),P(4,3),P(-3,4),P(3,4),P(0,5),\nP(-1,-5),P(1,-5),P(-5,-1),P(5,-1),P(-5,1),P(5,1),P(-1,5),P(1,5),P(-2,-5),P(2,-5),P(-5,-2),P(5,-2),P(-5,2),P(5,2),P(-2,5),P(2,5),P(-4,-4),P(4,-4),P(-4,4),P(4,4),P(-3,-5),P(3,-5),P(-5,-3),P(5,-3),P(-5,3),P(5,3),P(-3,5),P(3,5),P(0,-6),P(-6,0),P(6,0),P(0,6),\nP(-1,-6),P(1,-6),P(-6,-1),P(6,-1),P(-6,1),P(6,1),P(-1,6),P(1,6),P(-2,-6),P(2,-6),P(-6,-2),P(6,-2),P(-6,2),P(6,2),P(-2,6),P(2,6),P(-4,-5),P(4,-5),P(-5,-4),P(5,-4),P(-5,4),P(5,4),P(-4,5),P(4,5),P(-3,-6),P(3,-6),P(-6,-3),P(6,-3),P(-6,3),P(6,3),P(-3,6),P(3,6),P(0,-7),P(-7,0),P(7,0),P(0,7),\nP(-1,-7),P(1,-7),P(-5,-5),P(5,-5),P(-7,-1),P(7,-1),P(-7,1),P(7,1),P(-5,5),P(5,5),P(-1,7),P(1,7),P(-4,-6),P(4,-6),P(-6,-4),P(6,-4),P(-6,4),P(6,4),P(-4,6),P(4,6),P(-2,-7),P(2,-7),P(-7,-2),P(7,-2),P(-7,2),P(7,2),P(-2,7),P(2,7),P(-3,-7),P(3,-7),P(-7,-3),P(7,-3),P(-7,3),P(7,3),P(-3,7),P(3,7),P(-5,-6),P(5,-6),P(-6,-5),P(6,-5),P(-6,5),P(6,5),P(-5,6),P(5,6),P(0,-8),P(-8,0),P(8,0),P(0,8),\nP(-1,-8),P(1,-8),P(-4,-7),P(4,-7),P(-7,-4),P(7,-4),P(-8,-1),P(8,-1),P(-8,1),P(8,1),P(-7,4),P(7,4),P(-4,7),P(4,7),P(-1,8),P(1,8),P(-2,-8),P(2,-8),P(-8,-2),P(8,-2),P(-8,2),P(8,2),P(-2,8),P(2,8),P(-6,-6),P(6,-6),P(-6,6),P(6,6),P(-3,-8),P(3,-8),P(-8,-3),P(8,-3),P(-8,3),P(8,3),P(-3,8),P(3,8),P(-5,-7),P(5,-7),P(-7,-5),P(7,-5),P(-7,5),P(7,5),P(-5,7),P(5,7),P(-4,-8),P(4,-8),P(-8,-4),P(8,-4),P(-8,4),P(8,4),P(-4,8),P(4,8),P(0,-9),P(-9,0),P(9,0),P(0,9),\nP(-1,-9),P(1,-9),P(-9,-1),P(9,-1),P(-9,1),P(9,1),P(-1,9),P(1,9),P(-2,-9),P(2,-9),P(-6,-7),P(6,-7),P(-7,-6),P(7,-6),P(-9,-2),P(9,-2),P(-9,2),P(9,2),P(-7,6),P(7,6),P(-6,7),P(6,7),P(-2,9),P(2,9),P(-5,-8),P(5,-8),P(-8,-5),P(8,-5),P(-8,5),P(8,5),P(-5,8),P(5,8),P(-3,-9),P(3,-9),P(-9,-3),P(9,-3),P(-9,3),P(9,3),P(-3,9),P(3,9),P(-4,-9),P(4,-9),P(-9,-4),P(9,-4),P(-9,4),P(9,4),P(-4,9),P(4,9),P(-7,-7),P(7,-7),P(-7,7),P(7,7),P(0,-10),P(-6,-8),P(6,-8),P(-8,-6),P(8,-6),P(-10,0),P(10,0),P(-8,6),P(8,6),P(-6,8),P(6,8),P(0,10),\nP(-1,-10),P(1,-10),P(-10,-1),P(10,-1),P(-10,1),P(10,1),P(-1,10),P(1,10),P(-2,-10),P(2,-10),P(-10,-2),P(10,-2),P(-10,2),P(10,2),P(-2,10),P(2,10),P(-5,-9),P(5,-9),P(-9,-5),P(9,-5),P(-9,5),P(9,5),P(-5,9),P(5,9),P(-3,-10),P(3,-10),P(-10,-3),P(10,-3),P(-10,3),P(10,3),P(-3,10),P(3,10),P(-7,-8),P(7,-8),P(-8,-7),P(8,-7),P(-8,7),P(8,7),P(-7,8),P(7,8),P(-4,-10),P(4,-10),P(-10,-4),P(10,-4),P(-10,4),P(10,4),P(-4,10),P(4,10),P(-6,-9),P(6,-9),P(-9,-6),P(9,-6),P(-9,6),P(9,6),P(-6,9),P(6,9),P(0,-11),P(-11,0),P(11,0),P(0,11),\nP(-1,-11),P(1,-11),P(-11,-1),P(11,-1),P(-11,1),P(11,1),P(-1,11),P(1,11),P(-2,-11),P(2,-11),P(-5,-10),P(5,-10),P(-10,-5),P(10,-5),P(-11,-2),P(11,-2),P(-11,2),P(11,2),P(-10,5),P(10,5),P(-5,10),P(5,10),P(-2,11),P(2,11),P(-8,-8),P(8,-8),P(-8,8),P(8,8),P(-3,-11),P(3,-11),P(-7,-9),P(7,-9),P(-9,-7),P(9,-7),P(-11,-3),P(11,-3),P(-11,3),P(11,3),P(-9,7),P(9,7),P(-7,9),P(7,9),P(-3,11),P(3,11),P(-6,-10),P(6,-10),P(-10,-6),P(10,-6),P(-10,6),P(10,6),P(-6,10),P(6,10),P(-4,-11),P(4,-11),P(-11,-4),P(11,-4),P(-11,4),P(11,4),P(-4,11),P(4,11),P(0,-12),P(-12,0),P(12,0),P(0,12),\nP(-1,-12),P(1,-12),P(-8,-9),P(8,-9),P(-9,-8),P(9,-8),P(-12,-1),P(12,-1),P(-12,1),P(12,1),P(-9,8),P(9,8),P(-8,9),P(8,9),P(-1,12),P(1,12),P(-5,-11),P(5,-11),P(-11,-5),P(11,-5),P(-11,5),P(11,5),P(-5,11),P(5,11),P(-2,-12),P(2,-12),P(-12,-2),P(12,-2),P(-12,2),P(12,2),P(-2,12),P(2,12),P(-7,-10),P(7,-10),P(-10,-7),P(10,-7),P(-10,7),P(10,7),P(-7,10),P(7,10),P(-3,-12),P(3,-12),P(-12,-3),P(12,-3),P(-12,3),P(12,3),P(-3,12),P(3,12),P(-6,-11),P(6,-11),P(-11,-6),P(11,-6),P(-11,6),P(11,6),P(-6,11),P(6,11),P(-4,-12),P(4,-12),P(-12,-4),P(12,-4),P(-12,4),P(12,4),P(-4,12),P(4,12),P(-9,-9),P(9,-9),P(-9,9),P(9,9),P(-8,-10),P(8,-10),P(-10,-8),P(10,-8),P(-10,8),P(10,8),P(-8,10),P(8,10),P(0,-13),P(-5,-12),P(5,-12),P(-12,-5),P(12,-5),P(-13,0),P(13,0),P(-12,5),P(12,5),P(-5,12),P(5,12),P(0,13),\nP(-1,-13),P(1,-13),P(-7,-11),P(7,-11),P(-11,-7),P(11,-7),P(-13,-1),P(13,-1),P(-13,1),P(13,1),P(-11,7),P(11,7),P(-7,11),P(7,11),P(-1,13),P(1,13),P(-2,-13),P(2,-13),P(-13,-2),P(13,-2),P(-13,2),P(13,2),P(-2,13),P(2,13),P(-3,-13),P(3,-13),P(-13,-3),P(13,-3),P(-13,3),P(13,3),P(-3,13),P(3,13),P(-6,-12),P(6,-12),P(-12,-6),P(12,-6),P(-12,6),P(12,6),P(-6,12),P(6,12),P(-9,-10),P(9,-10),P(-10,-9),P(10,-9),P(-10,9),P(10,9),P(-9,10),P(9,10),P(-4,-13),P(4,-13),P(-8,-11),P(8,-11),P(-11,-8),P(11,-8),P(-13,-4),P(13,-4),P(-13,4),P(13,4),P(-11,8),P(11,8),P(-8,11),P(8,11),P(-4,13),P(4,13),P(-7,-12),P(7,-12),P(-12,-7),P(12,-7),P(-12,7),P(12,7),P(-7,12),P(7,12),P(-5,-13),P(5,-13),P(-13,-5),P(13,-5),P(-13,5),P(13,5),P(-5,13),P(5,13),P(0,-14),P(-14,0),P(14,0),P(0,14),\nP(-1,-14),P(1,-14),P(-14,-1),P(14,-1),P(-14,1),P(14,1),P(-1,14),P(1,14),P(-2,-14),P(2,-14),P(-10,-10),P(10,-10),P(-14,-2),P(14,-2),P(-14,2),P(14,2),P(-10,10),P(10,10),P(-2,14),P(2,14),P(-9,-11),P(9,-11),P(-11,-9),P(11,-9),P(-11,9),P(11,9),P(-9,11),P(9,11),P(-3,-14),P(3,-14),P(-6,-13),P(6,-13),P(-13,-6),P(13,-6),P(-14,-3),P(14,-3),P(-14,3),P(14,3),P(-13,6),P(13,6),P(-6,13),P(6,13),P(-3,14),P(3,14),P(-8,-12),P(8,-12),P(-12,-8),P(12,-8),P(-12,8),P(12,8),P(-8,12),P(8,12),P(-4,-14),P(4,-14),P(-14,-4),P(14,-4),P(-14,4),P(14,4),P(-4,14),P(4,14),P(-7,-13),P(7,-13),P(-13,-7),P(13,-7),P(-13,7),P(13,7),P(-7,13),P(7,13),P(-5,-14),P(5,-14),P(-10,-11),P(10,-11),P(-11,-10),P(11,-10),P(-14,-5),P(14,-5),P(-14,5),P(14,5),P(-11,10),P(11,10),P(-10,11),P(10,11),P(-5,14),P(5,14),P(0,-15),P(-9,-12),P(9,-12),P(-12,-9),P(12,-9),P(-15,0),P(15,0),P(-12,9),P(12,9),P(-9,12),P(9,12),P(0,15)\n);\nconst int DEFAULT_PATCH_RADIUS = 15;\nconst int MIN_PATCH_RADIUS = 2;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nvec2 m = vec2(0.0f);\nfloat pot = exp2(keypoint.lod);\nvec2 imageSize = vec2(textureSize(image, 0));\nint scaledRadius = int(ceil(float(DEFAULT_PATCH_RADIUS) / pot));\nint radius = max(scaledRadius, MIN_PATCH_RADIUS);\nint count = diskPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(diskPoint[j]);\nvec2 position = keypoint.position + round(pot * offset);\nvec4 patchPixel = texture(image, (position + vec2(0.5f)) / imageSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\nfloat encodedOrientation = encodeKeypointOrientation(angle);\ncolor = vec4(0.0f, encodedOrientation, 0.0f, 0.0f);\n}"
 
 /***/ }),
 
-/***/ 7220:
+/***/ 9739:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"filters.glsl\"\n#if !defined(METHOD)\n#error Undefined METHOD\n#endif\nuniform sampler2D pyramid;\nuniform float lodStep;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if METHOD == 1\nuniform int threshold;\n#endif\nconst float eps = 1e-6;\nfloat cornerStrength(vec2 position, float lod)\n{\n#if METHOD == 0\nreturn laplacian(pyramid, position, lod);\n#elif METHOD == 1\nfloat pot = exp2(lod);\nfloat t = float(clamp(threshold, 0, 255)) / 255.0f;\n#define P(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\nmat4 mp = mat4(\nP(0,3),P(3,0),P(0,-3),P(-3,0),\nP(1,3),P(2,2),P(3,1),P(3,-1),\nP(2,-2),P(1,-3),P(-1,-3),P(-2,-2),\nP(-3,-1),P(-3,1),P(-2,2),P(-1,3)\n);\nfloat c = P(0,0);\nfloat ct = c + t, c_t = c - t;\nmat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);\nmat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;\nconst vec4 zeros = vec4(0.0f), ones = vec4(1.0f);\nvec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);\nbs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);\nbs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);\nbs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);\nreturn max(dot(bs, ones), dot(ds, ones)) / 16.0f;\n#else\n#error Invalid method\n#endif\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nvec3 strength = vec3(\ncornerStrength(keypoint.position, max(0.0f, keypoint.lod - lodStep)),\ncornerStrength(keypoint.position, keypoint.lod),\ncornerStrength(keypoint.position, keypoint.lod + lodStep)\n);\nvec3 p = mat3(\n2, -3, 1,\n-4, 4, 0,\n2, -1, 0\n) * strength;\nfloat maxStrength = max(strength.x, max(strength.y, strength.z));\nvec3 diffStrength = abs(strength - vec3(maxStrength));\nvec3 strengthIndicators = vec3(lessThan(diffStrength, vec3(eps)));\nfloat maxPoint = min(1.0f, dot(vec3(0.0f, 0.5f, 1.0f), strengthIndicators));\nbool hasMax = p.x < -eps;\nfloat pmax = hasMax ? -0.5f * p.y / p.x : maxPoint;\nfloat alpha = abs(pmax - 0.5f) <= 0.5f ? pmax : maxPoint;\nfloat lodOffset = mix(-lodStep, lodStep, alpha);\nfloat lod = keypoint.lod + lodOffset;\ncolor.r = encodeLod(lod);\n}"
 
 /***/ }),
 
-/***/ 805:
+/***/ 8231:
 /***/ ((module) => {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 bounds = outputSize();\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = threadPixel(corners);\nvec4 p1 = texelFetch(corners, next1 % bounds, 0);\nvec4 p2 = texelFetch(corners, next2 % bounds, 0);\nvec4 p3 = texelFetch(corners, next3 % bounds, 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
 
 /***/ }),
 
-/***/ 8736:
+/***/ 2518:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if PERMUTATION_MAXLEN % 4 > 0 || PERMUTATION_MAXLEN * 4 > 16384\n#error Invalid PERMUTATION_MAXLEN\n#endif\nlayout(std140) uniform Permutation\n{\nivec4 permutation[PERMUTATION_MAXLEN / 4];\n};\nint permutationElement(int index)\n{\nint base = index - (index % PERMUTATION_MAXLEN);\nint offset = index - base;\nivec4 tuple = permutation[offset / 4];\nint newOffset = tuple[offset & 3];\nreturn base + newOffset;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint otherIndex = permutationElement(myIndex);\nKeypointAddress otherAddress = KeypointAddress(otherIndex * pixelsPerKeypoint, myAddress.offset);\nKeypoint myKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nKeypoint otherKeypoint = decodeKeypoint(encodedKeypoints, encoderLength, otherAddress);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
 
 /***/ }),
 
-/***/ 9311:
+/***/ 8096:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D permutation;\nuniform int blockSize;\nuniform int dblLog2BlockSize;\n#elif STAGE == 3\nuniform sampler2D permutation;\nuniform int maxKeypoints;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\n#else\n#error Invalid STAGE\n#endif\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nconst vec2 ONES = vec2(1.0f);\nvec2 encodedScore = element.valid ? encodeFloat16(element.score) : ONES;\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, encodedScore);\n}\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nconst vec2 ONES = vec2(1.0f);\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = !all(equal(pixel.ba, ONES));\nelement.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f;\nreturn element;\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(1.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\n#if STAGE == 2\nPermutationElement selectKth(sampler2D permutation, int k, int la, int ra, int lb, int rb)\n{\nfloat scoreA, scoreB;\nint ha, hb, ma, mb;\nbool discard1stHalf, altb;\nbool locked = false;\nint tmp, result = 0;\nint stride = outputSize().x;\nint height = outputSize().y;\nfor(int i = 0; i < dblLog2BlockSize; i++) {\ntmp = (lb > rb && !locked) ? (la+k) : result;\nresult = (la > ra && !locked) ? (lb+k) : tmp;\nlocked = locked || (la > ra) || (lb > rb);\nha = (ra - la + 1) / 2;\nhb = (rb - lb + 1) / 2;\nma = la + ha;\nmb = lb + hb;\nscoreA = readPermutationElement(permutation, ma, stride, height).score;\nscoreB = readPermutationElement(permutation, mb, stride, height).score;\ndiscard1stHalf = (k > ha + hb);\naltb = (-scoreA < -scoreB);\nk -= int(discard1stHalf && altb) * (ha + 1);\nk -= int(discard1stHalf && !altb) * (hb + 1);\nla += int(discard1stHalf && altb) * (ma + 1 - la);\nlb += int(discard1stHalf && !altb) * (mb + 1 - lb);\nra += int(!discard1stHalf && !altb) * (ma - 1 - ra);\nrb += int(!discard1stHalf && altb) * (mb - 1 - rb);\n}\nreturn readPermutationElement(permutation, result, stride, height);\n}\n#endif\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.keypointIndex = keypointIndex;\nelement.score = keypoint.score;\nelement.valid = !isBadKeypoint(keypoint);\ncolor = encodePermutationElement(element);\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint elementIndex = thread.y * stride + thread.x;\nint blockIndex = elementIndex / blockSize;\nint blockOffset = elementIndex % blockSize;\nint la = blockIndex * blockSize;\nint lb = la + blockSize / 2;\nint ra = lb - 1;\nint rb = (blockIndex + 1) * blockSize - 1;\nint k = blockOffset;\nPermutationElement element = selectKth(permutation, k, la, ra, lb, rb);\ncolor = encodePermutationElement(element);\n#elif STAGE == 3\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint myKeypointIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nivec2 psize = textureSize(permutation, 0);\nPermutationElement element = readPermutationElement(permutation, myKeypointIndex, psize.x, psize.y);\nint oldEncoderLength = textureSize(encodedKeypoints, 0).x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(element.keypointIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 keypointData = readKeypointData(encodedKeypoints, oldEncoderLength, address);\ncolor = myKeypointIndex < maxKeypoints && element.valid ? keypointData : encodeNullKeypoint();\n#endif\n}"
 
 /***/ }),
 
-/***/ 9423:
+/***/ 5795:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\n#if !defined(METHOD)\n#error Must define METHOD\n#endif\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxIterations;\nuniform float epsilon;\nconst int PATCH_RADIUS = 1;\nconst int PATCH_SIZE = 2 * PATCH_RADIUS + 1;\nconst int PATCH_SIZE_SQUARED = PATCH_SIZE * PATCH_SIZE;\nconst int LARGE_PATCH_RADIUS = PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE = 2 * LARGE_PATCH_RADIUS + 1;\nconst int LARGE_PATCH_SIZE_SQUARED = LARGE_PATCH_SIZE * LARGE_PATCH_SIZE;\nconst int LARGER_PATCH_RADIUS = LARGE_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE = 2 * LARGER_PATCH_RADIUS + 1;\nconst int LARGER_PATCH_SIZE_SQUARED = LARGER_PATCH_SIZE * LARGER_PATCH_SIZE;\nconst float EPS = 1e-5;\nfloat smoothPixelBuffer[LARGER_PATCH_SIZE_SQUARED];\nvec2 derivativesBuffer[LARGE_PATCH_SIZE_SQUARED];\nfloat responseBuffer[PATCH_SIZE_SQUARED];\n#define patchPixelAt(u,v) smoothPixelBuffer[((v) + LARGER_PATCH_RADIUS) * LARGER_PATCH_SIZE + ((u) + LARGER_PATCH_RADIUS)]\n#define derivativesAt(u,v) derivativesBuffer[((v) + LARGE_PATCH_RADIUS) * LARGE_PATCH_SIZE + ((u) + LARGE_PATCH_RADIUS)]\n#define responseAt(u,v) responseBuffer[((v) + PATCH_RADIUS) * PATCH_SIZE + ((u) + PATCH_RADIUS)]\nvoid readPixels(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint u, v;\nfor(int j = 0; j < LARGER_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGER_PATCH_SIZE; i++) {\nu = i - LARGER_PATCH_RADIUS;\nv = j - LARGER_PATCH_RADIUS;\npatchPixelAt(u,v) = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2(u,v), pyrBaseSize).g;\n}\n}\n}\nvoid computeDerivatives()\n{\nconst mat3 dx = mat3(\n-1, 0, 1,\n-2, 0, 2,\n-1, 0, 1\n);\nconst mat3 dy = mat3(\n1, 2, 1,\n0, 0, 0,\n-1,-2,-1\n);\nint u, v;\nmat3 pix, convX, convY;\nconst vec3 ones = vec3(1.0f);\nfor(int j = 0; j < LARGE_PATCH_SIZE; j++) {\nfor(int i = 0; i < LARGE_PATCH_SIZE; i++) {\nu = i - LARGE_PATCH_RADIUS;\nv = j - LARGE_PATCH_RADIUS;\npix = mat3(\npatchPixelAt(u+1,v+1), patchPixelAt(u+0,v+1), patchPixelAt(u-1,v+1),\npatchPixelAt(u+1,v+0), patchPixelAt(u+0,v+0), patchPixelAt(u-1,v+0),\npatchPixelAt(u+1,v-1), patchPixelAt(u+0,v-1), patchPixelAt(u-1,v-1)\n);\nconvX = matrixCompMult(dx, pix);\nconvY = matrixCompMult(dy, pix);\nderivativesAt(u,v) = vec2(\ndot(ones, vec3(\ndot(convX[0], ones),\ndot(convX[1], ones),\ndot(convX[2], ones)\n)),\ndot(ones, vec3(\ndot(convY[0], ones),\ndot(convY[1], ones),\ndot(convY[2], ones)\n))\n);\n}\n}\n}\nvec2 computeResponseMap()\n{\nfloat patchArea = float(PATCH_SIZE * PATCH_SIZE);\nvec3 h; vec2 d, c = vec2(0.0f);\nconst vec3 ones = vec3(1.0f);\nfloat response, sum = 0.0f;\nint u, v;\n#define H(r,s) d = derivativesAt((r),(s)); h += vec3(d.x * d.x, d.x * d.y, d.y * d.y)\nfor(int j = 0; j < PATCH_SIZE; j++) {\nfor(int i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nh = vec3(0.0f);\nH(u-1,v-1); H(u+0,v-1); H(u+1,v-1);\nH(u-1,v+0); H(u+0,v+0); H(u+1,v+0);\nH(u-1,v+1); H(u+0,v+1); H(u+1,v+1);\nresponse = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));\nresponse /= patchArea;\nresponseAt(u,v) = response;\nc += vec2(u,v) * response;\nsum += response;\n}\n}\nreturn abs(sum) > EPS ? c / sum : vec2(0.0f);\n}\n#if METHOD == 0\nvec2 quadratic1d()\n{\nfloat a = 0.5f * (responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0));\nfloat b = 0.5f * (responseAt(1,0) - responseAt(-1,0));\nfloat c = responseAt(0,0);\nfloat d = 0.5f * (responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1));\nfloat e = 0.5f * (responseAt(0,1) - responseAt(0,-1));\nfloat f = responseAt(0,0);\nbool hasMax = a < -EPS && d < -EPS;\nreturn hasMax ? -0.5f * vec2(b / a, e / d) : vec2(0.0f);\n}\n#endif\n#if METHOD == 1\nvec2 taylor2d()\n{\nfloat dx = (-responseAt(-1,0) + responseAt(1,0)) * 0.5f;\nfloat dy = (-responseAt(0,-1) + responseAt(0,1)) * 0.5f;\nfloat dxx = responseAt(-1,0) - 2.0f * responseAt(0,0) + responseAt(1,0);\nfloat dyy = responseAt(0,-1) - 2.0f * responseAt(0,0) + responseAt(0,1);\nfloat dxy = (responseAt(-1,-1) + responseAt(1,1) - responseAt(1,-1) - responseAt(-1,1)) * 0.25f;\nfloat det = dxx * dyy - dxy * dxy;\nmat2 inv = mat2(dyy, -dxy, -dxy, dxx);\nbool hasMax = det > EPS && dxx < 0.0f;\nreturn hasMax ? inv * vec2(dx, dy) / (-det) : vec2(0.0f);\n}\n#endif\n#if METHOD == 2\nvoid bilinearUpsample(ivec2 patchOffset, vec4 pixelsOfPatch)\n{\nint u, v, i, j;\nvec2 frc, ifrc; vec4 sub;\nconst vec4 ones = vec4(1.0f);\nfloat s = 1.0f / float(PATCH_SIZE - 1);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nfrc = vec2(i, j) * s;\nifrc = vec2(1.0f) - frc;\nsub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\npatchPixelAt(u+xoff,v+yoff) = dot(sub*pixelsOfPatch, ones);\n}\n}\n}\n#endif\n#if METHOD == 3\nvoid bicubicUpsample(ivec2 patchOffset, vec4 pixelsOfPatch, vec4 dx, vec4 dy, vec4 dxy)\n{\nfloat x, y, s = 1.0f / float(PATCH_SIZE - 1);\nint u, v, i, j;\nfloat f00 = pixelsOfPatch.x;\nfloat f10 = pixelsOfPatch.y;\nfloat f01 = pixelsOfPatch.z;\nfloat f11 = pixelsOfPatch.w;\nfloat fx00 = dx.x;\nfloat fx10 = dx.y;\nfloat fx01 = dx.z;\nfloat fx11 = dx.w;\nfloat fy00 = dy.x;\nfloat fy10 = dy.y;\nfloat fy01 = dy.z;\nfloat fy11 = dy.w;\nfloat fxy00 = dxy.x;\nfloat fxy10 = dxy.y;\nfloat fxy01 = dxy.z;\nfloat fxy11 = dxy.w;\nmat4 bicubic = mat4(\n1, 0, -3, 2,\n0, 0, 3, -2,\n0, 1, -2, 1,\n0, 0, -1, 1\n) * mat4(\nf00, f10, fx00, fx10,\nf01, f11, fx01, fx11,\nfy00, fy10, fxy00, fxy10,\nfy01, fy11, fxy01, fxy11\n) * mat4(\n1, 0, 0, 0,\n0, 0, 1, 0,\n-3, 3, -2, -1,\n2, -2, 1, 1\n);\nint xoff = 2 * patchOffset.x;\nint yoff = 2 * patchOffset.y;\nfor(j = 0; j < PATCH_SIZE; j++) {\nfor(i = 0; i < PATCH_SIZE; i++) {\nu = i - PATCH_RADIUS;\nv = j - PATCH_RADIUS;\nx = float(i) * s;\ny = float(j) * s;\npatchPixelAt(u+xoff,v+yoff) = dot(\nvec4(1, x, x*x, x*x*x),\nbicubic * vec4(1, y, y*y, y*y*y)\n);\n}\n}\n}\n#endif\n#if METHOD == 2 || METHOD == 3\nvoid upsamplePatch(int left, int top, int right, int bottom)\n{\nint x, y, k;\nvec4 ptch[9];\nvec2 d00, d10, d01, d11;\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\nptch[k] = vec4(\npatchPixelAt(left+x, top+y),\npatchPixelAt(right+x, top+y),\npatchPixelAt(left+x, bottom+y),\npatchPixelAt(right+x, bottom+y)\n);\n}\nfor(k = 0; k < 9; k++) {\nx = -1 + (k % 3);\ny = -1 + (k / 3);\n#if METHOD == 2\nbilinearUpsample(ivec2(x, y), ptch[k]);\n#elif METHOD == 3\nd00 = derivativesAt(left+x, top+y);\nd10 = derivativesAt(right+x, top+y);\nd01 = derivativesAt(left+x, bottom+y);\nd11 = derivativesAt(right+x, bottom+y);\nbicubicUpsample(ivec2(x, y), ptch[k],\nvec4(d00.x, d10.x, d01.x, d11.x),\nvec4(d00.y, d10.y, d01.y, d11.y),\n0.25f * vec4(\n(patchPixelAt(left+x + 1,top+y + 1) + patchPixelAt(left+x - 1, top+y - 1)) - (patchPixelAt(left+x + 1, top+y - 1) + patchPixelAt(left+x - 1, top+y + 1)),\n(patchPixelAt(right+x + 1,top+y + 1) + patchPixelAt(right+x - 1, top+y - 1)) - (patchPixelAt(right+x + 1, top+y - 1) + patchPixelAt(right+x - 1, top+y + 1)),\n(patchPixelAt(left+x + 1,bottom+y + 1) + patchPixelAt(left+x - 1, bottom+y - 1)) - (patchPixelAt(left+x + 1, bottom+y - 1) + patchPixelAt(left+x - 1, bottom+y + 1)),\n(patchPixelAt(right+x + 1,bottom+y + 1) + patchPixelAt(right+x - 1, bottom+y - 1)) - (patchPixelAt(right+x + 1, bottom+y - 1) + patchPixelAt(right+x - 1, bottom+y + 1))\n)\n);\n#endif\n}\n}\nvec2 upsampleResponseMap(int left, int top, int right, int bottom)\n{\nupsamplePatch(left, top, right, bottom);\ncomputeDerivatives();\nreturn computeResponseMap();\n}\nvec2 iterativeUpsample(vec2 initialGuess)\n{\nint refine = 1;\nfloat scale = 0.5f;\nfloat eps2 = epsilon * epsilon;\nvec2 guess = initialGuess, localGuess = initialGuess;\nfor(int k = 0; k < maxIterations; k++) {\nivec4 quad = ivec4(floor(localGuess.x), floor(localGuess.y), ceil(localGuess.x), ceil(localGuess.y));\nvec2 response = (refine != 0) ? upsampleResponseMap(quad.x, quad.y, quad.z, quad.w) : vec2(0.0f);\nlocalGuess = response * scale;\nguess += localGuess;\nscale *= 0.5f;\nrefine *= int(dot(localGuess, localGuess) >= eps2);\n}\nreturn guess;\n}\n#endif\nvoid main()\n{\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nreadPixels(keypoint.position, keypoint.lod);\ncomputeDerivatives();\nvec2 offset = computeResponseMap();\n#if METHOD == 0\noffset = quadratic1d();\n#elif METHOD == 1\noffset = taylor2d();\n#elif METHOD == 2 || METHOD == 3\noffset = iterativeUpsample(offset);\n#else\n#error Unknown METHOD\n#endif\nfloat pot = exp2(keypoint.lod);\ncolor = encodePairOfFloat16(offset * pot);\n}"
 
 /***/ }),
 
-/***/ 2060:
+/***/ 3169:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint len = textureSize(encodedFlow, 0).x;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isBadKeypoint(keypoint))\nreturn;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = myIndex < len * len ? pixelAt(encodedFlow, location) : encodeDiscardedKeypoint();\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
-/***/ 5463:
+/***/ 1337:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedOrientations;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint orientationEncoderLength = textureSize(encodedOrientations, 0).x;\nivec2 location = ivec2(myIndex % orientationEncoderLength, myIndex / orientationEncoderLength);\nvec4 targetPixel = pixelAt(encodedOrientations, location);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nbool isValid = !isBadKeypoint(keypoint);\nfloat encodedOrientation = targetPixel.g;\ncolor = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.ba) : pixel;\n}"
 
 /***/ }),
 
-/***/ 6986:
+/***/ 6187:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedData;\nuniform int strideOfEncodedData;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec4 readEncodedData(sampler2D encodedData, int strideOfEncodedData, int elementId, int pixelsPerElement, int pixelOffset)\n{\nint rasterIndex = elementId * pixelsPerElement + pixelOffset;\nivec2 pos = ivec2(rasterIndex % strideOfEncodedData, rasterIndex / strideOfEncodedData);\nreturn texelFetch(encodedData, pos, 0);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint headerSize = sizeofEncodedKeypointHeader();\nint extraCell = myAddress.offset - headerSize / 4;\nint numberOfExtraCells = extraSize / 4;\ncolor = threadPixel(encodedKeypoints);\nif(extraCell < 0 || extraCell >= numberOfExtraCells)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nif(isBadKeypoint(keypoint))\nreturn;\ncolor = readEncodedData(encodedData, strideOfEncodedData, myIndex, numberOfExtraCells, extraCell);\n}"
 
 /***/ }),
 
-/***/ 3179:
+/***/ 477:
 /***/ ((module) => {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int startIndex;\nuniform int endIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef BUFFER_SIZE\n#error Undefined BUFFER_SIZE\n#endif\nlayout(std140) uniform KeypointBuffer\n{\nvec4 keypointBuffer[BUFFER_SIZE];\n};\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = pixel;\nif(index < startIndex)\nreturn;\ncolor = encodeNullKeypoint();\nif(index >= endIndex)\nreturn;\nvec4 data = keypointBuffer[index - startIndex];\nswitch(address.offset) {\ncase 0: {\ncolor = encodeKeypointPosition(data.xy);\nbreak;\n}\ncase 1: {\nvec2 score = encodeKeypointScore(max(data.w, 0.0f));\nfloat scale = encodeLod(data.z);\nfloat rotation = encodeKeypointOrientation(0.0f);\ncolor = vec4(scale, rotation, score);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}"
 
 /***/ }),
 
-/***/ 8680:
+/***/ 4050:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\n#if 1\ncolor = texture(image, texCoord);\n#else\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 2, textureSize(image, 0) - ivec2(1));\ncolor = pixelAt(image, pos);\n#endif\n}"
 
 /***/ }),
 
-/***/ 3384:
+/***/ 5545:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\ncolor = (((thread.x + thread.y) & 1) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);\n}"
 
 /***/ }),
 
-/***/ 1976:
+/***/ 7113:
 /***/ ((module) => {
 
 module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image0;\nuniform sampler2D image1;\nuniform float alpha;\nuniform float beta;\nuniform float gamma;\nconst vec4 BACKGROUND = vec4(0.0f);\nvoid main()\n{\nivec2 location = threadLocation();\nivec2 size0 = textureSize(image0, 0);\nivec2 size1 = textureSize(image1, 0);\nvec4 pix0 = all(lessThan(location, size0)) ? pixelAt(image0, location) : BACKGROUND;\nvec4 pix1 = all(lessThan(location, size1)) ? pixelAt(image1, location) : BACKGROUND;\nvec4 pix = clamp(alpha * pix0 + beta * pix1 + vec4(gamma), 0.0f, 1.0f);\ncolor = vec4(pix.rgb, 1.0f);\n}"
 
 /***/ }),
 
-/***/ 4543:
+/***/ 1202:
 /***/ ((module) => {
 
 module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec2 imageSize = vec2(textureSize(image, 0));\n#if !defined(INTERPOLATION_METHOD)\n#error Must define INTERPOLATION_METHOD\n#elif INTERPOLATION_METHOD == 0\nvec2 pos = texCoord * imageSize;\ncolor = textureLod(image, (round(pos) + vec2(0.5f)) / imageSize, 0.0f);\n#elif INTERPOLATION_METHOD == 1\ncolor = subpixelAtBI(image, texCoord * imageSize);\n#else\n#error Invalid INTERPOLATION_METHOD\n#endif\n}"
 
 /***/ }),
 
-/***/ 6296:
+/***/ 7971:
 /***/ ((module) => {
 
 module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image;\nuniform mat3 inverseHomography;\nconst vec4 emptyColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\nvec2 perspectiveWarp(mat3 homography, vec2 p)\n{\nvec3 q = homography * vec3(p, 1.0f);\nreturn q.xy / q.z;\n}\nvoid main()\n{\nivec2 location = threadLocation();\nivec2 size = outputSize();\nconst vec2 zero = vec2(0.0f);\nvec2 target = perspectiveWarp(inverseHomography, vec2(location));\nbool withinBounds = all(bvec4(greaterThanEqual(target, zero), lessThan(target, vec2(size))));\ncolor = withinBounds ? subpixelAtBI(image, target) : emptyColor;\n}"
 
 /***/ }),
 
-/***/ 747:
+/***/ 6122:
 /***/ ((module) => {
 
 module.exports = "@include \"colors.glsl\"\nuniform sampler2D dest, src;\nuniform int destComponents;\nuniform int srcComponentId;\nvoid main()\n{\nvec4 destPixel = threadPixel(dest);\nvec4 srcPixel = threadPixel(src);\nbvec4 flags = bvec4(\n(destComponents & PIXELCOMPONENT_RED) != 0,\n(destComponents & PIXELCOMPONENT_GREEN) != 0,\n(destComponents & PIXELCOMPONENT_BLUE) != 0,\n(destComponents & PIXELCOMPONENT_ALPHA) != 0\n);\ncolor = mix(destPixel, vec4(srcPixel[srcComponentId]), flags);\n}"
 
 /***/ }),
 
-/***/ 9176:
+/***/ 371:
 /***/ ((module) => {
 
 module.exports = "#if !defined(TYPE)\n#error Undefined TYPE\n#elif TYPE == 1\n@include \"keypoints.glsl\"\n#define nullPixel() encodeNullKeypoint()\n#elif TYPE == 2\n@include \"float16.glsl\"\n#define nullPixel() encodeNullPairOfFloat16()\n#else\n#error Invalid TYPE\n#endif\nuniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 imageSize = textureSize(image, 0);\nint rasterIndex = thread.y * outputSize().x + thread.x;\nbool isValidPixel = rasterIndex < imageSize.x * imageSize.y;\nivec2 pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\nvec4 nullpix = nullPixel();\ncolor = isValidPixel ? texelFetch(image, pos, 0) : nullpix;\n}"
 
 /***/ }),
 
-/***/ 8960:
+/***/ 7307:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
 
 /***/ }),
 
-/***/ 3294:
+/***/ 8614:
 /***/ ((module) => {
 
 module.exports = "@include \"colors.glsl\"\nuniform sampler2D image;\nuniform int pixelComponents;\nuniform float value;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nbvec4 flags = bvec4(\n(pixelComponents & PIXELCOMPONENT_RED) != 0,\n(pixelComponents & PIXELCOMPONENT_GREEN) != 0,\n(pixelComponents & PIXELCOMPONENT_BLUE) != 0,\n(pixelComponents & PIXELCOMPONENT_ALPHA) != 0\n);\ncolor = mix(pixel, vec4(value), flags);\n}"
 
 /***/ }),
 
-/***/ 1959:
+/***/ 6271:
 /***/ ((module) => {
 
 module.exports = "uniform float value;\nvoid main()\n{\ncolor = vec4(value);\n}"
 
 /***/ }),
 
-/***/ 7290:
+/***/ 3016:
 /***/ ((module) => {
 
 module.exports = "void vsmain()\n{\ngl_Position *= vec4(1,-1,1,1);\n}"
 
 /***/ }),
 
-/***/ 7270:
+/***/ 3630:
 /***/ ((module) => {
 
 module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(image, thread, 0);\nvec4 p1 = texelFetch(image, min(next1, last), 0);\nvec4 p2 = texelFetch(image, min(next2, last), 0);\nvec4 p3 = texelFetch(image, min(next3, last), 0);\nvec4 pmax = max(max(p0, p1), max(p2, p3));\nvec4 pmin = min(min(p0, p1), min(p2, p3));\ncolor = vec4(pmax.r, pmin.g, pmax.r - pmin.g, p0.a);\n}"
 
 /***/ }),
 
-/***/ 48:
+/***/ 8508:
 /***/ ((module) => {
 
 module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\n#define USE_VARYINGS 1\nin vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\nconst mat3 hkern = mat3(\n1.0f, 0.0f,-1.0f,\n2.0f, 0.0f,-2.0f,\n1.0f, 0.0f,-1.0f\n), vkern = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\n#define XIP(v) textureLod(pyramid, (v), lod).g\nvoid main()\n{\nconst vec3 ones = vec3(1.0f);\nfloat pot = exp2(lod);\nmat3 win = mat3(\n#if USE_VARYINGS\nXIP(v_pix0), XIP(v_pix1), XIP(v_pix2),\nXIP(v_pix3), XIP(v_pix4), XIP(v_pix5),\nXIP(v_pix6), XIP(v_pix7), XIP(v_pix8)\n#else\nPIX(-1,-1), PIX(0,-1), PIX(1,-1),\nPIX(-1,0), PIX(0,0), PIX(1,0),\nPIX(-1,1), PIX(0,1), PIX(1,1)\n#endif\n);\nmat3 dx = matrixCompMult(hkern, win);\nmat3 dy = matrixCompMult(vkern, win);\nvec2 df = vec2(\ndot(dx[0] + dx[1] + dx[2], ones),\ndot(dy[0] + dy[1] + dy[2], ones)\n);\ncolor = encodePairOfFloat16(df);\n}"
 
 /***/ }),
 
-/***/ 3713:
+/***/ 8073:
 /***/ ((module) => {
 
 module.exports = "uniform mediump float lod;\nout vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid vsmain()\n{\nfloat pot = exp2(lod);\nv_pix0 = PIX(-1,-1); v_pix1 = PIX(0,-1); v_pix2 = PIX(1,-1);\nv_pix3 = PIX(-1,0); v_pix4 = PIX(0,0); v_pix5 = PIX(1,0);\nv_pix6 = PIX(-1,1); v_pix7 = PIX(0,1); v_pix8 = PIX(1,1);\n}"
 
 /***/ }),
 
-/***/ 4209:
+/***/ 3575:
 /***/ ((module) => {
 
 module.exports = `AGFzbQEAAAABiwETYAABfmADf39/AX9gAX8AYAN/f38AYAF9AX9gAX8Bf2ACf38Bf2AFf39/f38B
@@ -5451,18 +5723,18 @@ __webpack_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: ./src/gpu/speedy-gl.js
-var speedy_gl = __webpack_require__(7905);
+var speedy_gl = __webpack_require__(1567);
 // EXTERNAL MODULE: ./src/utils/utils.js
-var utils = __webpack_require__(5484);
+var utils = __webpack_require__(2191);
 // EXTERNAL MODULE: ./src/core/settings.js
-var settings = __webpack_require__(3135);
+var settings = __webpack_require__(5637);
 // EXTERNAL MODULE: ./src/core/speedy-promise.js
-var speedy_promise = __webpack_require__(4500);
+var speedy_promise = __webpack_require__(8902);
 ;// CONCATENATED MODULE: ./src/utils/asap.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5515,12 +5787,12 @@ function asap(fn, ...params)
     window.postMessage(ASAP_KEY, '*');
 }
 // EXTERNAL MODULE: ./src/utils/errors.js
-var utils_errors = __webpack_require__(3841);
+var utils_errors = __webpack_require__(5619);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-texture-reader.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5565,7 +5837,7 @@ class SpeedyTextureReader
      */
     constructor(numberOfBuffers = DEFAULT_NUMBER_OF_BUFFERS)
     {
-        utils/* Utils.assert */.c.assert(numberOfBuffers > 0);
+        utils/* Utils */.A.assert(numberOfBuffers > 0);
 
         /** @type {boolean} is this object initialized? */
         this._initialized = false;
@@ -5583,7 +5855,7 @@ class SpeedyTextureReader
         this._producerIndex = numberOfBuffers - 1;
 
         /** @type {SpeedyPromise<void>[]} producer-consumer promises */
-        this._promise = Array.from({ length: numberOfBuffers }, () => speedy_promise/* SpeedyPromise.resolve */.s.resolve());
+        this._promise = Array.from({ length: numberOfBuffers }, () => speedy_promise/* SpeedyPromise */.i.resolve());
 
         /** @type {boolean[]} are the contents of the ith buffer being produced? */
         this._busy = (new Array(numberOfBuffers)).fill(false);
@@ -5630,7 +5902,7 @@ class SpeedyTextureReader
      */
     readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
     {
-        utils/* Utils.assert */.c.assert(this._initialized);
+        utils/* Utils */.A.assert(this._initialized);
 
         const gl = texture.gl;
         const fbo = texture.glFbo;
@@ -5671,7 +5943,7 @@ class SpeedyTextureReader
      */
     readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
     {
-        utils/* Utils.assert */.c.assert(this._initialized);
+        utils/* Utils */.A.assert(this._initialized);
 
         const gl = texture.gl;
         const fbo = texture.glFbo;
@@ -5688,7 +5960,7 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+            return speedy_promise/* SpeedyPromise */.i.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
@@ -5737,7 +6009,7 @@ class SpeedyTextureReader
 
         //console.log("NO WAIT "+consumerIndex);
         this._ready[consumerIndex] = false;
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._pixelBuffer[consumerIndex]);
+        return speedy_promise/* SpeedyPromise */.i.resolve(this._pixelBuffer[consumerIndex]);
     }
 
     /**
@@ -5823,7 +6095,7 @@ class SpeedyTextureReader
         const size = width * height * 4;
 
         // validate outputBuffer
-        utils/* Utils.assert */.c.assert(outputBuffer.byteLength >= size, `Invalid buffer size`);
+        utils/* Utils */.A.assert(outputBuffer.byteLength >= size, `Invalid buffer size`);
 
         // read pixels into the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -5838,13 +6110,13 @@ class SpeedyTextureReader
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
+        return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => {
 
             // according to the WebGL2 spec sec 3.7.14 Sync objects,
             // "sync objects may only transition to the signaled state
             // when the user agent's event loop is not executing a task"
             // in other words, it won't be signaled in the same frame
-            if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
+            if(settings/* Settings */.w.gpuPollingMode != 'asap')
                 runOnNextFrame(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
             else
                 asap(SpeedyTextureReader._clientWaitAsync, gl, sync, 0, resolve, reject);
@@ -5854,7 +6126,7 @@ class SpeedyTextureReader
             gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
             gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }).catch(err => {
-            throw new utils_errors/* IllegalOperationError */.js(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
@@ -5876,14 +6148,14 @@ class SpeedyTextureReader
             const status = gl.clientWaitSync(sync, flags, 0);
 
             if(remainingAttempts-- <= 0) {
-                reject(new utils_errors/* TimeoutError */.W5(`GPU polling timeout`, utils_errors/* GLError.from */.Ql.from(gl)));
+                reject(new utils_errors/* TimeoutError */.MU(`GPU polling timeout`, utils_errors/* GLError */.wB.from(gl)));
             }
             else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
                 resolve();
             }
             else {
                 //setTimeout(poll, pollInterval);
-                if(settings/* Settings.gpuPollingMode */.Z.gpuPollingMode != 'asap')
+                if(settings/* Settings */.w.gpuPollingMode != 'asap')
                     requestAnimationFrame(poll); // RAF is a rather unusual way to do polling at ~60 fps. Does it reduce CPU usage?
                 else
                     asap(poll);
@@ -5892,12 +6164,12 @@ class SpeedyTextureReader
     }
 }
 // EXTERNAL MODULE: ./src/utils/globals.js
-var globals = __webpack_require__(3020);
+var globals = __webpack_require__(1814);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-texture.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5998,7 +6270,7 @@ class SpeedyTexture
 
         // already released?
         if(this._glTexture == null)
-            throw new utils_errors/* IllegalOperationError */.js(`The SpeedyTexture has already been released`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The SpeedyTexture has already been released`);
 
         // release resources
         this.discardMipmaps();
@@ -6012,15 +6284,27 @@ class SpeedyTexture
 
     /**
      * Upload pixel data to the texture. The texture will be resized if needed.
-     * @param {TexImageSource} pixels
+     * @param {TexImageSource} data
      * @param {number} [width] in pixels
      * @param {number} [height] in pixels
      * @return {SpeedyTexture} this
      */
-    upload(pixels, width = this._width, height = this._height)
+    upload(data, width = this._width, height = this._height)
     {
         const gl = this._gl;
-        utils/* Utils.assert */.c.assert(width > 0 && height > 0);
+
+        // bugfix: if the media is a video, we can't really
+        // upload it to the GPU unless it's ready
+        if(data instanceof HTMLVideoElement) {
+            if(data.readyState < 2) {
+                // this may happen when the video loops (Firefox)
+                // keep the previously uploaded texture
+                //Utils.warning(`Trying to process a video that isn't ready yet`);
+                return this;
+            }
+        }
+
+        utils/* Utils */.A.assert(width > 0 && height > 0);
 
         this.discardMipmaps();
         this._width = width;
@@ -6029,7 +6313,7 @@ class SpeedyTexture
         this._format = gl.RGBA;
         this._dataType = gl.UNSIGNED_BYTE;
 
-        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._dataType);
+        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, data, 0, this._format, this._internalFormat, this._dataType);
         return this;
     }
 
@@ -6074,9 +6358,9 @@ class SpeedyTexture
         // validate size
         width |= 0; height |= 0;
         if(width > globals.MAX_TEXTURE_LENGTH || height > globals.MAX_TEXTURE_LENGTH)
-            throw new utils_errors/* NotSupportedError */.B8(`Maximum texture size exceeded. Using ${width} x ${height}, expected up to ${globals.MAX_TEXTURE_LENGTH} x ${globals.MAX_TEXTURE_LENGTH}.`);
+            throw new utils_errors/* NotSupportedError */.EM(`Maximum texture size exceeded. Using ${width} x ${height}, expected up to ${globals.MAX_TEXTURE_LENGTH} x ${globals.MAX_TEXTURE_LENGTH}.`);
         else if(width < 1 || height < 1)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid texture size: ${width} x ${height}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid texture size: ${width} x ${height}`);
 
         // context loss?
         if(gl.isContextLost())
@@ -6124,7 +6408,7 @@ class SpeedyTexture
             // expected number of mipmap levels according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const width = this.width, height = this.height;
             const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
-            utils/* Utils.assert */.c.assert(mipmap.length <= numMipmaps);
+            utils/* Utils */.A.assert(mipmap.length <= numMipmaps);
 
             // verify the dimensions of each level
             for(let level = 1; level < mipmap.length; level++) {
@@ -6134,7 +6418,7 @@ class SpeedyTexture
                 const h = Math.max(1, height >>> level);
 
                 // verify the dimensions of this level
-                utils/* Utils.assert */.c.assert(mipmap[level].width === w && mipmap[level].height === h);
+                utils/* Utils */.A.assert(mipmap[level].width === w && mipmap[level].height === h);
 
                 // copy to mipmap
                 mipmap[level].copyTo(this, level);
@@ -6234,7 +6518,7 @@ class SpeedyTexture
      */
     static _createTexture(gl, width, height, format, internalFormat, dataType, filter, wrap)
     {
-        utils/* Utils.assert */.c.assert(width > 0 && height > 0);
+        utils/* Utils */.A.assert(width > 0 && height > 0);
 
         // create & bind texture
         const texture = gl.createTexture();
@@ -6252,6 +6536,7 @@ class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
+
     /**
      * Upload pixel data to a WebGL texture
      * @param {WebGL2RenderingContext} gl
@@ -6334,7 +6619,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // already released?
         if(this._glFbo == null)
-            throw new utils_errors/* IllegalOperationError */.js(`The SpeedyDrawableTexture has already been released`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The SpeedyDrawableTexture has already been released`);
 
         // release the framebuffer
         gl.deleteFramebuffer(this._glFbo);
@@ -6375,7 +6660,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
         const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
 
         // validate
-        utils/* Utils.assert */.c.assert(this._width === expectedWidth && this._height === expectedHeight);
+        utils/* Utils */.A.assert(this._width === expectedWidth && this._height === expectedHeight);
 
         // copy to texture
         SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
@@ -6534,7 +6819,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
      */
     inspect32(gpu, textureReader)
     {
-        utils/* Utils.assert */.c.assert(globals.LITTLE_ENDIAN); // make sure we use little-endian
+        utils/* Utils */.A.assert(globals.LITTLE_ENDIAN); // make sure we use little-endian
         return new Uint32Array(this.inspect(gpu, textureReader).buffer);
     }
 
@@ -6566,7 +6851,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
                 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
                 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
             ].filter(err => gl[err] === status))[0] || 'unknown error'))();
-            throw new utils_errors/* GLError */.Ql(`Can't create framebuffer: ${error} (${status})`);
+            throw new utils_errors/* GLError */.wB(`Can't create framebuffer: ${error} (${status})`);
         }
 
         // unbind & return
@@ -6623,12 +6908,12 @@ class SpeedyDrawableTexture extends SpeedyTexture
     }
 }
 // EXTERNAL MODULE: ./src/gpu/shader-declaration.js + 1 modules
-var shader_declaration = __webpack_require__(9759);
+var shader_declaration = __webpack_require__(3112);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-program.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6687,8 +6972,7 @@ const UNIFORM_SETTERS = Object.freeze({
 /** @typedef {number|number[]|boolean|boolean[]|SpeedyTexture} SpeedyProgramUniformValue */
 
 /**
- * A SpeedyProgram is a Function that
- * runs GPU-accelerated GLSL code
+ * A SpeedyProgram is a Function that runs GLSL code
  */
 class SpeedyProgram extends Function
 {
@@ -6719,7 +7003,7 @@ class SpeedyProgram extends Function
     {
         // not a valid context?
         if(gl.isContextLost())
-            throw new utils_errors/* IllegalOperationError */.js(`Can't initialize SpeedyProgram: lost context`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't initialize SpeedyProgram: lost context`);
 
         // options object
         options = Object.assign({
@@ -6760,6 +7044,9 @@ class SpeedyProgram extends Function
         /** @type {number} height of the output */
         this._height = 1;
 
+        /** @type {[number,number]} cached object that stores the size of the output */
+        this._size = [ 1, 1 ];
+
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._texture = (new Array(options.pingpong ? 2 : 1)).fill(null);
 
@@ -6785,9 +7072,9 @@ class SpeedyProgram extends Function
         for(let j = 0; j < this._argnames.length; j++) {
             const argname = this._argnames[j];
             if(!this._uniform.has(argname)) {
-                this._argIsArray[j] = this._uniform.has(argname + '[0]');
+                this._argIsArray[j] = this._uniform.has(indexedVariable(argname, 0));
                 if(!this._argIsArray[j])
-                    throw new utils_errors/* IllegalOperationError */.js(`Expected uniform "${argname}", as declared in the argument list`);
+                    throw new utils_errors/* IllegalOperationError */.Er(`Expected uniform "${argname}", as declared in the argument list`);
             }
         }
     }
@@ -6801,21 +7088,31 @@ class SpeedyProgram extends Function
     {
         const gl = this._gl;
         const argnames = this._argnames;
+        const texture = this._texture[this._textureIndex];
 
         // matching arguments?
         if(args.length != argnames.length)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // can't use the output texture as an input
-        const flatArgs = utils/* Utils.flatten */.c.flatten(args);
+        /*
+        // slower method
+        const flatArgs = Utils.flatten(args);
         for(let j = flatArgs.length - 1; j >= 0; j--) {
             if(flatArgs[j] === this._texture[this._textureIndex])
-                throw new utils_errors/* NotSupportedError */.B8(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+                throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+        }
+        */
+        for(let j = args.length - 1; j >= 0; j--) {
+            if(args[j] === texture)
+                throw new utils_errors/* NotSupportedError */.EM(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+            // else if(Array.isArray(args[j])) ...
+            // we don't support passing arrays of textures at the time of this writing
         }
 
         // context loss?
         if(gl.isContextLost())
-            return this._texture[this._textureIndex];
+            return texture;
 
         // use program
         gl.useProgram(this._program);
@@ -6824,14 +7121,13 @@ class SpeedyProgram extends Function
         gl.bindVertexArray(this._geometry.vao);
 
         // select the render target
-        const texture = this._texture[this._textureIndex];
         const fbo = this._renderToTexture ? texture.glFbo : null;
 
         // update texSize uniform (available in all fragment shaders)
-        const width = this._width, height = this._height;
         const texSize = this._uniform.get('texSize');
-        texSize.setValue(gl, [ width, height ]);
-        //gl.uniform2f(texSize.location, width, height);
+        this._size[0] = this._width;
+        this._size[1] = this._height;
+        texSize.setValue(gl, this._size);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -6846,13 +7142,13 @@ class SpeedyProgram extends Function
                 // uniform array matches argument name
                 const array = args[i];
                 if(Array.isArray(array)) {
-                    if(this._uniform.has(`${argname}[${array.length}]`))
-                        throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: too few elements in the "${argname}" array`);
-                    for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
+                    if(this._uniform.has(indexedVariable(argname, array.length)))
+                        throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: too few elements in the "${argname}" array`);
+                    for(let j = 0, uniform = undefined; (uniform = this._uniform.get(indexedVariable(argname, j))) !== undefined; j++)
                         texNo = uniform.setValue(gl, array[j], texNo);
                 }
                 else
-                    throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: expected an array for "${argname}"`);
+                    throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: expected an array for "${argname}"`);
             }
         }
 
@@ -6864,7 +7160,7 @@ class SpeedyProgram extends Function
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
         // draw call
-        gl.viewport(0, 0, width, height);
+        gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
 
         // unbind the FBO
@@ -6906,7 +7202,7 @@ class SpeedyProgram extends Function
      */
     _setOutputSize(width, height)
     {
-        utils/* Utils.assert */.c.assert(width > 0 && height > 0);
+        utils/* Utils */.A.assert(width > 0 && height > 0);
 
         // update output size
         this._width = width | 0;
@@ -6929,7 +7225,7 @@ class SpeedyProgram extends Function
      */
     _setOutputTexture(...texture)
     {
-        utils/* Utils.assert */.c.assert(texture.length === this._texture.length, `Incorrect number of textures (expected ${this._texture.length})`);
+        utils/* Utils */.A.assert(texture.length === this._texture.length, `Incorrect number of textures (expected ${this._texture.length})`);
 
         // update output texture(s)
         for(let i = 0; i < this._texture.length; i++)
@@ -7075,7 +7371,7 @@ class SpeedyProgram extends Function
             .map((line, no) => col(1+no) + line)
             .join('\n');
 
-        throw new utils_errors/* GLError */.Ql(
+        throw new utils_errors/* GLError */.wB(
             `\n\n---------- ERROR ----------\n\n` +
             errors.filter(err => err).join('\n') +
             `\n\n---------- SOURCE CODE ----------\n\n` +
@@ -7207,7 +7503,7 @@ function UniformVariable(type, location)
     /** @type {string} GLSL data type */
     this.type = String(type);
     if(!Object.prototype.hasOwnProperty.call(UNIFORM_SETTERS, this.type))
-        throw new utils_errors/* NotSupportedError */.B8(`Unsupported uniform type: ${this.type}`);
+        throw new utils_errors/* NotSupportedError */.EM(`Unsupported uniform type: ${this.type}`);
 
     /** @type {WebGLUniformLocation} uniform location in a WebGL program */
     this.location = location;
@@ -7241,13 +7537,13 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
     if(typeof value === 'object' && this.type.endsWith('sampler2D')) {
         // set texture
         if(texNo >= gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new utils_errors/* NotSupportedError */.B8(`Can't activate texture unit ${texNo}: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+            throw new utils_errors/* NotSupportedError */.EM(`Can't activate texture unit ${texNo}: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
         else if(Array.isArray(value))
-            throw new utils_errors/* NotSupportedError */.B8(`Can't pass arrays of textures to shaders`);
+            throw new utils_errors/* NotSupportedError */.EM(`Can't pass arrays of textures to shaders`);
         else if(value == null)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: cannot use ${value} as an input texture`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: cannot use ${value} as an input texture`);
         else if(texNo < 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Missing texNo`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Missing texNo`);
 
         const tex = value;
         gl.activeTexture(gl.TEXTURE0 + texNo);
@@ -7256,8 +7552,9 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
 
         texNo++;
     }
-    else if(value === this._value) {
+    else if(value === this._value && typeof value !== 'object') {
         // do not update the uniform if it hasn't changed
+        // note that value may be an array whose entries may have been updated
         void(0);
     }
     else if(typeof value === 'number' || typeof value === 'boolean') {
@@ -7273,10 +7570,10 @@ UniformVariable.prototype.setValue = function(gl, value, texNo = -1)
                 setValue.call(gl, this.location, ...value); // vector
         }
         else
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
     }
     else
-        throw new utils_errors/* IllegalArgumentError */.mG(`Can't run shader: unrecognized argument "${value}"`);
+        throw new utils_errors/* IllegalArgumentError */.qw(`Can't run shader: unrecognized argument "${value}"`);
 
     // cache the value
     this._value = value;
@@ -7386,11 +7683,38 @@ UBOHelper.prototype.release = function()
     return null;
 }
 
+/**
+ * Generates an indexed variable name, as in variable[index]
+ * @param {string} variable
+ * @param {number} index
+ * @returns {string} variable[index]
+ */
+function indexedVariable(variable, index)
+{
+    //return `${variable}[${index}]`; // no caching
+
+    // is this cache lookup really faster than string concatenation?
+    // what about memory consumption?
+    const cache = indexedVariable.cache;
+    let nameList = cache.get(variable);
+
+    if(nameList === undefined)
+        cache.set(variable, nameList = []);
+
+    if(nameList[index] === undefined)
+        nameList[index] = `${variable}[${index}]`;
+
+    return nameList[index];
+}
+
+/** @type {Map<string,string[]>} cached argument names */
+indexedVariable.cache = new Map(); // Object.create(null)
+
 ;// CONCATENATED MODULE: ./src/gpu/speedy-program-group.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7475,11 +7799,11 @@ class SpeedyProgramGroup
      * Declare a program
      * @protected
      * @param {string} name Program name
-     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {ShaderDeclarationBuilder} builder Builder of a ShaderDeclaration
      * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {this}
      */
-    declare(name, shaderdecl, options = {})
+    declare(name, builder, options = {})
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
@@ -7487,7 +7811,7 @@ class SpeedyProgramGroup
                 // Why cast a symbol to symbol?
                 // Suppress error TS9005: Declaration emit for this file requires using private name 'key'.
                 const key = /** @type {symbol} */ ( Symbol(name) );
-                return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
+                return () => this[key] || (this[key] = this._createProgram(builder.build(), options));
             })()
         });
 
@@ -7532,7 +7856,7 @@ class SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7563,31 +7887,31 @@ class SpeedyProgramGroup
 //
 
 // Copy image
-const copy = (0,shader_declaration/* importShader */.Nt)('utils/copy.glsl').withArguments('image');
+const copy = (0,shader_declaration/* importShader */.bf)('utils/copy.glsl').withArguments('image');
 
 // Copy keypoints
-const copyKeypoints = (0,shader_declaration/* importShader */.Nt)('utils/copy-raster.glsl').withDefines({ 'TYPE': 1 }).withArguments('image');
+const copyKeypoints = (0,shader_declaration/* importShader */.bf)('utils/copy-raster.glsl').withDefines({ 'TYPE': 1 }).withArguments('image');
 
 // Copy 2D vectors
-const copy2DVectors = (0,shader_declaration/* importShader */.Nt)('utils/copy-raster.glsl').withDefines({ 'TYPE': 2 }).withArguments('image');
+const copy2DVectors = (0,shader_declaration/* importShader */.bf)('utils/copy-raster.glsl').withDefines({ 'TYPE': 2 }).withArguments('image');
 
 // Flip y-axis for output
-const flipY = (0,shader_declaration/* importShader */.Nt)('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
+const flipY = (0,shader_declaration/* importShader */.bf)('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
 
 // Fill image with a constant
-const fill = (0,shader_declaration/* importShader */.Nt)('utils/fill.glsl').withArguments('value');
+const fill = (0,shader_declaration/* importShader */.bf)('utils/fill.glsl').withArguments('value');
 
 // Fill zero or more color components of the input image with a constant value
-const fillComponents = (0,shader_declaration/* importShader */.Nt)('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
+const fillComponents = (0,shader_declaration/* importShader */.bf)('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
 
 // Copy the src component of src to zero or more color components of a copy of dest
-const copyComponents = (0,shader_declaration/* importShader */.Nt)('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
+const copyComponents = (0,shader_declaration/* importShader */.bf)('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
 
 // Scan the entire image and find the minimum & maximum pixel intensity
-const scanMinMax2D = (0,shader_declaration/* importShader */.Nt)('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
+const scanMinMax2D = (0,shader_declaration/* importShader */.bf)('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
 // Compute the partial derivatives of an image
-const sobelDerivatives = (0,shader_declaration/* importShader */.Nt)('utils/sobel-derivatives.glsl', 'utils/sobel-derivatives.vs.glsl').withArguments('pyramid', 'lod');
+const sobelDerivatives = (0,shader_declaration/* importShader */.bf)('utils/sobel-derivatives.glsl', 'utils/sobel-derivatives.vs.glsl').withArguments('pyramid', 'lod');
 
 
 
@@ -7640,12 +7964,12 @@ class SpeedyProgramGroupUtils extends SpeedyProgramGroup
     }
 }
 // EXTERNAL MODULE: ./src/gpu/shaders/filters/convolution.js
-var convolution = __webpack_require__(6776);
+var convolution = __webpack_require__(5282);
 ;// CONCATENATED MODULE: ./src/gpu/programs/filters.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7676,50 +8000,50 @@ var convolution = __webpack_require__(6776);
 //
 
 // Convert to greyscale
-const rgb2grey = (0,shader_declaration/* importShader */.Nt)('filters/rgb2grey.glsl')
+const rgb2grey = (0,shader_declaration/* importShader */.bf)('filters/rgb2grey.glsl')
                 .withArguments('image');
 
 // Convolution
 const filters_convolution = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
-                        (0,shader_declaration/* importShader */.Nt)('filters/convolution2d.glsl')
+                        (0,shader_declaration/* importShader */.bf)('filters/convolution2d.glsl')
                        .withDefines({ 'KERNEL_SIZE_SQUARED': ksize * ksize })
                        .withArguments('image', 'kernel')
                     ), obj), {});
 
 // Separable convolution
 const convolutionX = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
-                         (0,shader_declaration/* importShader */.Nt)('filters/convolution1d.glsl')
+                         (0,shader_declaration/* importShader */.bf)('filters/convolution1d.glsl')
                         .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 0 })
                         .withArguments('image', 'kernel')
                      ), obj), {});
 
 const convolutionY = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
-                         (0,shader_declaration/* importShader */.Nt)('filters/convolution1d.glsl')
+                         (0,shader_declaration/* importShader */.bf)('filters/convolution1d.glsl')
                         .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 1 })
                         .withArguments('image', 'kernel')
                      ), obj), {});
 // Median filter
 const median = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
-                   (0,shader_declaration/* importShader */.Nt)('filters/fast-median.glsl')
+                   (0,shader_declaration/* importShader */.bf)('filters/fast-median.glsl')
                   .withDefines({ 'KERNEL_SIZE': ksize })
                   .withArguments('image')
                ), obj), {});
 
 // Normalize image
-const normalizeGreyscale = (0,shader_declaration/* importShader */.Nt)('filters/normalize-image.glsl')
+const normalizeGreyscale = (0,shader_declaration/* importShader */.bf)('filters/normalize-image.glsl')
                           .withDefines({ 'GREYSCALE': 1 })
                           .withArguments('minmax2d', 'minValue', 'maxValue');
 
-const normalizeColored = (0,shader_declaration/* importShader */.Nt)('filters/normalize-image.glsl')
+const normalizeColored = (0,shader_declaration/* importShader */.bf)('filters/normalize-image.glsl')
                         .withDefines({ 'GREYSCALE': 0 })
                         .withArguments('minmax2dRGB', 'minValue', 'maxValue');
 
 // Nightvision
-const nightvision = (0,shader_declaration/* importShader */.Nt)('filters/nightvision.glsl')
+const nightvision = (0,shader_declaration/* importShader */.bf)('filters/nightvision.glsl')
                    .withDefines({ 'GREYSCALE': 0 })
                    .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay');
 
-const nightvisionGreyscale = (0,shader_declaration/* importShader */.Nt)('filters/nightvision.glsl')
+const nightvisionGreyscale = (0,shader_declaration/* importShader */.bf)('filters/nightvision.glsl')
                             .withDefines({ 'GREYSCALE': 1 })
                             .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay');
 
@@ -7734,7 +8058,7 @@ const nightvisionGreyscale = (0,shader_declaration/* importShader */.Nt)('filter
 const ksize2sigma = ksize => Math.max(1.0, ksize / 6.0);
 
 // Generate a 1D Gaussian kernel
-const gaussian = ksize => utils/* Utils.gaussianKernel */.c.gaussianKernel(ksize2sigma(ksize), ksize);
+const gaussian = ksize => utils/* Utils */.A.gaussianKernel(ksize2sigma(ksize), ksize);
 
 // Generate a 1D Box filter
 const box = ksize => (new Array(ksize)).fill(1.0 / ksize);
@@ -7791,12 +8115,12 @@ class SpeedyProgramGroupFilters extends SpeedyProgramGroup
             // nightvision
             .declare('nightvision', nightvision)
             .declare('nightvisionGreyscale', nightvisionGreyscale)
-            .declare('illuminationMapLoX', (0,convolution.convX)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 31)))
-            .declare('illuminationMapLoY', (0,convolution.convY)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 31)))
-            .declare('illuminationMapX', (0,convolution.convX)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 63)))
-            .declare('illuminationMapY', (0,convolution.convY)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 63)))
-            .declare('illuminationMapHiX', (0,convolution.convX)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 255)))
-            .declare('illuminationMapHiY', (0,convolution.convY)(utils/* Utils.gaussianKernel */.c.gaussianKernel(80, 255)))
+            .declare('illuminationMapLoX', (0,convolution.convX)(utils/* Utils */.A.gaussianKernel(80, 31)))
+            .declare('illuminationMapLoY', (0,convolution.convY)(utils/* Utils */.A.gaussianKernel(80, 31)))
+            .declare('illuminationMapX', (0,convolution.convX)(utils/* Utils */.A.gaussianKernel(80, 63)))
+            .declare('illuminationMapY', (0,convolution.convY)(utils/* Utils */.A.gaussianKernel(80, 63)))
+            .declare('illuminationMapHiX', (0,convolution.convX)(utils/* Utils */.A.gaussianKernel(80, 255)))
+            .declare('illuminationMapHiY', (0,convolution.convY)(utils/* Utils */.A.gaussianKernel(80, 255)))
 
             // gaussian: separable kernels
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
@@ -7827,12 +8151,12 @@ class SpeedyProgramGroupFilters extends SpeedyProgramGroup
 }
 
 // EXTERNAL MODULE: ./src/core/speedy-namespace.js
-var speedy_namespace = __webpack_require__(2411);
+var speedy_namespace = __webpack_require__(416);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-descriptordb.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7869,7 +8193,7 @@ const DESCRIPTORDB_MAXLOG2STRIDE = 11; // 2048x2048 RGBA8 textures are guarantee
 /**
  * Utility for generating a database of binary descriptors in video memory
  */
-class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Create a database of binary descriptors
@@ -7880,7 +8204,7 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
      */
     static create(texture, descriptors, descriptorSize)
     {
-        utils/* Utils.assert */.c.assert(descriptorSize % DESCRIPTORDB_BYTESPERPIXEL == 0, `Invalid descriptorSize: ${descriptorSize}`);
+        utils/* Utils */.A.assert(descriptorSize % DESCRIPTORDB_BYTESPERPIXEL == 0, `Invalid descriptorSize: ${descriptorSize}`);
 
         const numberOfDescriptors = descriptors.length;
         const pixelsPerDescriptor = descriptorSize / DESCRIPTORDB_BYTESPERPIXEL;
@@ -7896,7 +8220,7 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
         // are we within storage capacity?
         const capacity = (width * height) / pixelsPerDescriptor;
         if(numberOfDescriptors > capacity)
-            throw new utils_errors/* NotSupportedError */.B8(`The capacity of the descriptorDB (${capacity} for ${descriptorSize * 8}-bit descriptors) has been exceeded`);
+            throw new utils_errors/* NotSupportedError */.EM(`The capacity of the descriptorDB (${capacity} for ${descriptorSize * 8}-bit descriptors) has been exceeded`);
 
         // create texture data
         const data = new Uint8Array(width * height * DESCRIPTORDB_BYTESPERPIXEL);
@@ -7905,8 +8229,8 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
             const descriptor = descriptors[i];
 
             // validate input
-            utils/* Utils.assert */.c.assert(descriptor.byteLength === descriptorSize);
-            utils/* Utils.assert */.c.assert(byteOffset + descriptorSize <= data.byteLength);
+            utils/* Utils */.A.assert(descriptor.byteLength === descriptorSize);
+            utils/* Utils */.A.assert(byteOffset + descriptorSize <= data.byteLength);
 
             // write data
             data.set(descriptor, byteOffset);
@@ -7915,7 +8239,7 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
         // log data for further study
         const MEGABYTE = 1048576;
         const totalSize = numberOfDescriptors * descriptorSize;
-        utils/* Utils.log */.c.log(
+        utils/* Utils */.A.log(
             `Creating a ${width}x${height} database of ${numberOfDescriptors} ` +
             `${descriptorSize * 8}-bit descriptors ` +
             `(total size: ${(totalSize / MEGABYTE).toFixed(2)} MB)`
@@ -7931,7 +8255,7 @@ class SpeedyDescriptorDB extends speedy_namespace/* SpeedyNamespace */.R
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8106,12 +8430,12 @@ const LSH_SEQUENCE_MAXLEN = Math.max(...LSH_ACCEPTABLE_HASH_SIZES);
 const LSH_SEQUENCE_COUNT = Math.max(...LSH_ACCEPTABLE_NUMBER_OF_TABLES);
 
 /** @type {function(BitSequences): BitSequences} Sort subsequences of random bits in ascending order */
-const partitionedSort = seq => (utils/* Utils.range */.c.range(LSH_SEQUENCE_COUNT)
+const partitionedSort = seq => (utils/* Utils */.A.range(LSH_SEQUENCE_COUNT)
     .forEach(i => seq.subarray(i * LSH_SEQUENCE_MAXLEN, (i+1) * LSH_SEQUENCE_MAXLEN).sort()),
 seq);
 
 /** @type {function(number, BitSequences): BitSequences} Set the last p entries of the input subsequences to an invalid value */
-const padSequences = (p, seq) => (utils/* Utils.range */.c.range(LSH_SEQUENCE_COUNT)
+const padSequences = (p, seq) => (utils/* Utils */.A.range(LSH_SEQUENCE_COUNT)
     .forEach(i => seq.subarray((i+1) * LSH_SEQUENCE_MAXLEN - p, (i+1) * LSH_SEQUENCE_MAXLEN).fill(0xBADCAFE)),
 seq);
 
@@ -8119,15 +8443,15 @@ seq);
 const LSH_SEQUENCES = (f => LSH_ACCEPTABLE_HASH_SIZES.reduce((p,o) => ((p[o]=f(o)), p), {}))(h => ({
     // for 256-bit descriptors
     32: partitionedSort(padSequences(LSH_SEQUENCE_MAXLEN - h, new Uint32Array([
-        ...(utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(256))),
-        ...(utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(256))),
-        ...(utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(256))),
+        ...(utils/* Utils */.A.shuffle(utils/* Utils */.A.range(256))),
+        ...(utils/* Utils */.A.shuffle(utils/* Utils */.A.range(256))),
+        ...(utils/* Utils */.A.shuffle(utils/* Utils */.A.range(256))),
     ].slice(0, LSH_SEQUENCE_COUNT * LSH_SEQUENCE_MAXLEN)))),
 
     // for 512-bit descriptors
     64: partitionedSort(padSequences(LSH_SEQUENCE_MAXLEN - h, new Uint32Array([
-        ...(utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(512))),
-        ...(utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(512))),
+        ...(utils/* Utils */.A.shuffle(utils/* Utils */.A.range(512))),
+        ...(utils/* Utils */.A.shuffle(utils/* Utils */.A.range(512))),
     ].slice(0, LSH_SEQUENCE_COUNT * LSH_SEQUENCE_MAXLEN)))),
 }));
 
@@ -8164,11 +8488,11 @@ class SpeedyLSH
         const lshProfiles = generateLSHProfiles(tableCount, hashSize, probability);
 
         // validate input
-        utils/* Utils.assert */.c.assert(descriptorCount > 0, `Can't build LSH tables without descriptors!`);
-        utils/* Utils.assert */.c.assert(LSH_ACCEPTABLE_DESCRIPTOR_SIZES.includes(descriptorSize), `Can't build LSH tables: unacceptable descriptor size of ${descriptorSize} bytes`);
-        utils/* Utils.assert */.c.assert(descriptors.findIndex(d => d.byteLength !== descriptorSize) < 0, `Can't build LSH tables: incorrectly sized descriptors. Expected ${descriptorSize} bytes for each`);
-        utils/* Utils.assert */.c.assert(descriptorCount < globals.MATCH_MAX_INDEX, `Can't build LSH tables: too many descriptors (${descriptors.length})`);
-        utils/* Utils.assert */.c.assert(lshProfiles != null, `Can't build LSH tables: unacceptable number of tables (${tableCount}) x hash size (${hashSize})`);
+        utils/* Utils */.A.assert(descriptorCount > 0, `Can't build LSH tables without descriptors!`);
+        utils/* Utils */.A.assert(LSH_ACCEPTABLE_DESCRIPTOR_SIZES.includes(descriptorSize), `Can't build LSH tables: unacceptable descriptor size of ${descriptorSize} bytes`);
+        utils/* Utils */.A.assert(descriptors.findIndex(d => d.byteLength !== descriptorSize) < 0, `Can't build LSH tables: incorrectly sized descriptors. Expected ${descriptorSize} bytes for each`);
+        utils/* Utils */.A.assert(descriptorCount < globals.MATCH_MAX_INDEX, `Can't build LSH tables: too many descriptors (${descriptors.length})`);
+        utils/* Utils */.A.assert(lshProfiles != null, `Can't build LSH tables: unacceptable number of tables (${tableCount}) x hash size (${hashSize})`);
 
         /** @type {LSHProfile} LSH profile */
         this._profile = lshProfiles.find(profile => descriptorCount <= profile.capacity) || lshProfiles[lshProfiles.length - 1];
@@ -8297,8 +8621,8 @@ class SpeedyLSH
      */
     _pickSequences(descriptorSize)
     {
-        utils/* Utils.assert */.c.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES, this.hashSize));
-        utils/* Utils.assert */.c.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES[this.hashSize], descriptorSize));
+        utils/* Utils */.A.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES, this.hashSize));
+        utils/* Utils */.A.assert(Object.prototype.hasOwnProperty.call(LSH_SEQUENCES[this.hashSize], descriptorSize));
 
         return LSH_SEQUENCES[this.hashSize][descriptorSize];
     }
@@ -8326,13 +8650,13 @@ class SpeedyLSH
         const numberOfDescriptors = descriptors.length;
 
         // validate input
-        utils/* Utils.assert */.c.assert(hashSize <= LSH_SEQUENCE_MAXLEN);
-        utils/* Utils.assert */.c.assert(tableCount <= LSH_SEQUENCE_COUNT);
-        utils/* Utils.assert */.c.assert(numberOfPixels <= textureWidth * textureHeight);
+        utils/* Utils */.A.assert(hashSize <= LSH_SEQUENCE_MAXLEN);
+        utils/* Utils */.A.assert(tableCount <= LSH_SEQUENCE_COUNT);
+        utils/* Utils */.A.assert(numberOfPixels <= textureWidth * textureHeight);
 
         // log
         const MEGABYTE = 1048576;
-        utils/* Utils.log */.c.log(
+        utils/* Utils */.A.log(
             `Building ${tableCount} ${profileName} LSH tables with ${numberOfDescriptors} ` +
             `${descriptorSize * 8}-bit descriptors each and hashSize = ${hashSize} bits ` +
             `(${textureWidth}x${textureHeight}, with ${(this.tableSize / MEGABYTE).toFixed(2)} ` +
@@ -8342,7 +8666,7 @@ class SpeedyLSH
         // warn the user if there are too many descriptors
         if(numberOfDescriptors > tableCapacity) {
             const exceedingPercentage = 100 * numberOfDescriptors / tableCapacity;
-            utils/* Utils.warning */.c.warning(`There are too many descriptors (${numberOfDescriptors}) for a ${profileName} LSH table. That's ${exceedingPercentage.toFixed(2)}% of its theoretical capacity. Consider increasing the hashSize (currently set to ${hashSize}) or reducing the number of descriptors to avoid degradation.`);
+            utils/* Utils */.A.warning(`There are too many descriptors (${numberOfDescriptors}) for a ${profileName} LSH table. That's ${exceedingPercentage.toFixed(2)}% of its theoretical capacity. Consider increasing the hashSize (currently set to ${hashSize}) or reducing the number of descriptors to avoid degradation.`);
         }
 
         // create empty LSH tables
@@ -8353,7 +8677,7 @@ class SpeedyLSH
         // shuffle the descriptors...
         // it seems like a good idea to handle collisions of similar descriptors,
         // which may be located next to each other in the array
-        const permutation = utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(numberOfDescriptors));
+        const permutation = utils/* Utils */.A.shuffle(utils/* Utils */.A.range(numberOfDescriptors));
 
         // for each descriptor
         // do everything in little-endian format!
@@ -8393,7 +8717,7 @@ class SpeedyLSH
         // log data for further study
         const numberOfDiscardedDescriptors = numberOfDiscardedDescriptorsPerTable.reduce((sum, val) => sum + val, 0);
         const profile = numberOfDiscardedDescriptorsPerTable.map(d => 100 * d / numberOfDescriptors);
-        utils/* Utils.log */.c.log(
+        utils/* Utils */.A.log(
             `When building ${tableCount} ${profileName} LSH tables with ${numberOfDescriptors} ` +
             `${descriptorSize * 8}-bit descriptors each and hashSize = ${hashSize} bits, ` +
             `I got the following discard profile: ` + profile.map(x => x.toFixed(2) + '%').join(', ') + `. ` +
@@ -8423,7 +8747,7 @@ class SpeedyLSH
         //const descriptorSize = descriptor.length;
 
         // just to be sure...
-        utils/* Utils.assert */.c.assert(
+        utils/* Utils */.A.assert(
             hashSize <= LSH_SEQUENCE_MAXLEN &&
             sequences.length >= LSH_SEQUENCE_MAXLEN * tableCount
         );
@@ -8444,7 +8768,7 @@ class SpeedyLSH
             }
 
             // validate & store
-            utils/* Utils.assert */.c.assert(hash >= 0 && hash < bucketsPerTable);
+            utils/* Utils */.A.assert(hash >= 0 && hash < bucketsPerTable);
             hashes[table] = hash;
         }
 
@@ -8505,7 +8829,7 @@ function findTableCapacity(hashSize, bucketCapacity, probability = 0.99)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8531,117 +8855,117 @@ function findTableCapacity(hashSize, bucketCapacity, probability = 0.99)
 
 
 // FAST corner detector
-const fast9_16 = (0,shader_declaration/* importShader */.Nt)('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
+const fast9_16 = (0,shader_declaration/* importShader */.bf)('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
 // Harris corner detector
 const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
-                   (0,shader_declaration/* importShader */.Nt)('keypoints/harris.glsl')
+                   (0,shader_declaration/* importShader */.bf)('keypoints/harris.glsl')
                   .withDefines({ 'WINDOW_SIZE': win })
                   .withArguments('corners', 'pyramid', 'derivatives', 'lod', 'lodStep', 'gaussian')
                ), obj), {});
 
-const harrisScoreFindMax = (0,shader_declaration/* importShader */.Nt)('keypoints/score-findmax.glsl')
+const harrisScoreFindMax = (0,shader_declaration/* importShader */.bf)('keypoints/score-findmax.glsl')
                           .withArguments('corners', 'iterationNumber');
 
-const harrisScoreCutoff = (0,shader_declaration/* importShader */.Nt)('keypoints/harris-cutoff.glsl')
+const harrisScoreCutoff = (0,shader_declaration/* importShader */.bf)('keypoints/harris-cutoff.glsl')
                          .withArguments('corners', 'maxScore', 'quality');
 
 // Subpixel refinement
-const subpixelQuadratic1d = (0,shader_declaration/* importShader */.Nt)('keypoints/subpixel-refinement.glsl')
+const subpixelQuadratic1d = (0,shader_declaration/* importShader */.bf)('keypoints/subpixel-refinement.glsl')
                            .withDefines({ 'METHOD': 0 })
                            .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelTaylor2d = (0,shader_declaration/* importShader */.Nt)('keypoints/subpixel-refinement.glsl')
+const subpixelTaylor2d = (0,shader_declaration/* importShader */.bf)('keypoints/subpixel-refinement.glsl')
                         .withDefines({ 'METHOD': 1 })
                         .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelBilinear = (0,shader_declaration/* importShader */.Nt)('keypoints/subpixel-refinement.glsl')
+const subpixelBilinear = (0,shader_declaration/* importShader */.bf)('keypoints/subpixel-refinement.glsl')
                         .withDefines({ 'METHOD': 2 })
                         .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
-const subpixelBicubic = (0,shader_declaration/* importShader */.Nt)('keypoints/subpixel-refinement.glsl')
+const subpixelBicubic = (0,shader_declaration/* importShader */.bf)('keypoints/subpixel-refinement.glsl')
                        .withDefines({ 'METHOD': 3 })
                        .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
 // Scale refinement
-const refineScaleLoG = (0,shader_declaration/* importShader */.Nt)('keypoints/refine-scale.glsl')
+const refineScaleLoG = (0,shader_declaration/* importShader */.bf)('keypoints/refine-scale.glsl')
                       .withDefines({ 'METHOD': 0 })
                       .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const refineScaleFAST916 = (0,shader_declaration/* importShader */.Nt)('keypoints/refine-scale.glsl')
+const refineScaleFAST916 = (0,shader_declaration/* importShader */.bf)('keypoints/refine-scale.glsl')
                           .withDefines({ 'METHOD': 1 })
                           .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
 // Pixel allocation
-const allocateDescriptors = (0,shader_declaration/* importShader */.Nt)('keypoints/allocate-descriptors.glsl')
+const allocateDescriptors = (0,shader_declaration/* importShader */.bf)('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
-const allocateExtra = (0,shader_declaration/* importShader */.Nt)('keypoints/allocate-extra.glsl')
+const allocateExtra = (0,shader_declaration/* importShader */.bf)('keypoints/allocate-extra.glsl')
                      .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
-const transferToExtra = (0,shader_declaration/* importShader */.Nt)('keypoints/transfer-to-extra.glsl')
+const transferToExtra = (0,shader_declaration/* importShader */.bf)('keypoints/transfer-to-extra.glsl')
                         .withArguments('encodedData', 'strideOfEncodedData', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // ORB descriptors
-const orbDescriptor = (0,shader_declaration/* importShader */.Nt)('keypoints/orb-descriptor.glsl')
+const orbDescriptor = (0,shader_declaration/* importShader */.bf)('keypoints/orb-descriptor.glsl')
                      .withArguments('image', 'encodedCorners', 'extraSize', 'encoderLength');
 
-const orbOrientation = (0,shader_declaration/* importShader */.Nt)('keypoints/orb-orientation.glsl')
+const orbOrientation = (0,shader_declaration/* importShader */.bf)('keypoints/orb-orientation.glsl')
                       .withArguments('image', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Non-maximum suppression
-const nonMaxSuppression = (0,shader_declaration/* importShader */.Nt)('keypoints/nonmax-suppression.glsl')
+const nonMaxSuppression = (0,shader_declaration/* importShader */.bf)('keypoints/nonmax-suppression.glsl')
                          .withDefines({ 'MULTISCALE': 0 })
                          .withArguments('image', 'lodStep');
 
-const multiscaleNonMaxSuppression = (0,shader_declaration/* importShader */.Nt)('keypoints/nonmax-suppression.glsl')
+const multiscaleNonMaxSuppression = (0,shader_declaration/* importShader */.bf)('keypoints/nonmax-suppression.glsl')
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
-const nonmaxSpace = (0,shader_declaration/* importShader */.Nt)('keypoints/nonmax-space.glsl')
+const nonmaxSpace = (0,shader_declaration/* importShader */.bf)('keypoints/nonmax-space.glsl')
                     .withArguments('corners');
 
-const nonmaxScale = (0,shader_declaration/* importShader */.Nt)('keypoints/nonmax-scale.glsl')
+const nonmaxScale = (0,shader_declaration/* importShader */.bf)('keypoints/nonmax-scale.glsl')
                     .withDefines({ 'USE_LAPLACIAN': 1 })
                     .withArguments('corners', 'pyramid', 'pyrLaplacian', 'lodStep');
 
-const nonmaxScaleSimple = (0,shader_declaration/* importShader */.Nt)('keypoints/nonmax-scale.glsl')
+const nonmaxScaleSimple = (0,shader_declaration/* importShader */.bf)('keypoints/nonmax-scale.glsl')
                          .withDefines({ 'USE_LAPLACIAN': 0 })
                          .withArguments('corners', 'pyramid', 'lodStep');
 
-const laplacian = (0,shader_declaration/* importShader */.Nt)('keypoints/laplacian.glsl')
+const laplacian = (0,shader_declaration/* importShader */.bf)('keypoints/laplacian.glsl')
                  .withArguments('corners', 'pyramid', 'lodStep', 'lodOffset');
 
 // Keypoint tracking & optical-flow
 const lk = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21].reduce((obj, win) => ((obj[win] =
-               (0,shader_declaration/* importShader */.Nt)('keypoints/lk.glsl')
+               (0,shader_declaration/* importShader */.bf)('keypoints/lk.glsl')
                .withDefines({ 'WINDOW_SIZE': win })
                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            ), obj), {});
 
-const transferFlow = (0,shader_declaration/* importShader */.Nt)('keypoints/transfer-flow.glsl')
+const transferFlow = (0,shader_declaration/* importShader */.bf)('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Brute-force matching
-const bfMatcherInitCandidates = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-init.glsl')
+const bfMatcherInitCandidates = (0,shader_declaration/* importShader */.bf)('keypoints/knn-init.glsl')
                                .withDefines({ 'ENCODE_FILTERS': 0 });
 
-const bfMatcherInitFilters = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-init.glsl')
+const bfMatcherInitFilters = (0,shader_declaration/* importShader */.bf)('keypoints/knn-init.glsl')
                             .withDefines({ 'ENCODE_FILTERS': 1 });
 
-const bfMatcherTransfer = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-transfer.glsl')
+const bfMatcherTransfer = (0,shader_declaration/* importShader */.bf)('keypoints/knn-transfer.glsl')
                          .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
-const bfMatcher32 = (0,shader_declaration/* importShader */.Nt)('keypoints/bf-knn.glsl')
+const bfMatcher32 = (0,shader_declaration/* importShader */.bf)('keypoints/bf-knn.glsl')
                     .withDefines({
                         'DESCRIPTOR_SIZE': 32,
                         'NUMBER_OF_KEYPOINTS_PER_PASS': 16,
                     })
                     .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
-const bfMatcher64 = (0,shader_declaration/* importShader */.Nt)('keypoints/bf-knn.glsl')
+const bfMatcher64 = (0,shader_declaration/* importShader */.bf)('keypoints/bf-knn.glsl')
                     .withDefines({
                         'DESCRIPTOR_SIZE': 64,
                         'NUMBER_OF_KEYPOINTS_PER_PASS': 8,
@@ -8649,14 +8973,14 @@ const bfMatcher64 = (0,shader_declaration/* importShader */.Nt)('keypoints/bf-kn
                     .withArguments('encodedMatches', 'encodedFilters', 'matcherLength', 'dbEncodedKeypoints', 'dbDescriptorSize', 'dbExtraSize', 'dbEncoderLength', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'passId');
 
 // LSH-based KNN matching
-const lshKnnInitCandidates = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-init.glsl')
+const lshKnnInitCandidates = (0,shader_declaration/* importShader */.bf)('keypoints/knn-init.glsl')
                             .withDefines({ 'ENCODE_FILTERS': 0 });
 
-const lshKnnInitFilters = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-init.glsl')
+const lshKnnInitFilters = (0,shader_declaration/* importShader */.bf)('keypoints/knn-init.glsl')
                          .withDefines({ 'ENCODE_FILTERS': 1 });
 
 const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => ((obj[descriptorSize] = LSH_ACCEPTABLE_HASH_SIZES.reduce((obj, hashSize) => ((obj[hashSize] = [0, 1, 2].reduce((obj, level) => ((obj[level] =
-                  (0,shader_declaration/* importShader */.Nt)('keypoints/lsh-knn.glsl')
+                  (0,shader_declaration/* importShader */.bf)('keypoints/lsh-knn.glsl')
                   .withDefines({
                       'DESCRIPTOR_SIZE': descriptorSize,
                       'HASH_SIZE': hashSize,
@@ -8667,79 +8991,79 @@ const lshKnn = LSH_ACCEPTABLE_DESCRIPTOR_SIZES.reduce((obj, descriptorSize) => (
                   .withArguments('candidates', 'filters', 'matcherLength', 'tables', 'descriptorDB', 'tableIndex', 'bucketCapacity', 'bucketsPerTable', 'tablesStride', 'descriptorDBStride', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength')
               ), obj), {})), obj), {})), obj), {});
 
-const lshKnnTransfer = (0,shader_declaration/* importShader */.Nt)('keypoints/knn-transfer.glsl')
+const lshKnnTransfer = (0,shader_declaration/* importShader */.bf)('keypoints/knn-transfer.glsl')
                        .withArguments('encodedMatches', 'encodedKthMatches', 'numberOfMatchesPerKeypoint', 'kthMatch');
 
 // Keypoint sorting
-const sortCreatePermutation = (0,shader_declaration/* importShader */.Nt)('keypoints/sort-keypoints.glsl')
+const sortCreatePermutation = (0,shader_declaration/* importShader */.bf)('keypoints/sort-keypoints.glsl')
                              .withDefines({ 'STAGE': 1 })
                              .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const sortMergePermutation = (0,shader_declaration/* importShader */.Nt)('keypoints/sort-keypoints.glsl')
+const sortMergePermutation = (0,shader_declaration/* importShader */.bf)('keypoints/sort-keypoints.glsl')
                             .withDefines({ 'STAGE': 2 })
                             .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
-const sortApplyPermutation = (0,shader_declaration/* importShader */.Nt)('keypoints/sort-keypoints.glsl')
+const sortApplyPermutation = (0,shader_declaration/* importShader */.bf)('keypoints/sort-keypoints.glsl')
                             .withDefines({ 'STAGE': 3 })
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint mixing
-const mixKeypointsPreInit = (0,shader_declaration/* importShader */.Nt)('keypoints/mix-keypoints.glsl')
+const mixKeypointsPreInit = (0,shader_declaration/* importShader */.bf)('keypoints/mix-keypoints.glsl')
                            .withDefines({ 'STAGE': 1 })
                            .withArguments('encodedKeypointsA', 'encodedKeypointsB', 'encoderLengthA', 'encoderLengthB', 'encoderCapacityA', 'encoderCapacityB', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const mixKeypointsInit = (0,shader_declaration/* importShader */.Nt)('keypoints/mix-keypoints.glsl')
+const mixKeypointsInit = (0,shader_declaration/* importShader */.bf)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 2 })
                         .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
 
-const mixKeypointsSort = (0,shader_declaration/* importShader */.Nt)('keypoints/mix-keypoints.glsl')
+const mixKeypointsSort = (0,shader_declaration/* importShader */.bf)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 3 })
                         .withArguments('array', 'blockSize');
 
-const mixKeypointsView = (0,shader_declaration/* importShader */.Nt)('keypoints/mix-keypoints.glsl')
+const mixKeypointsView = (0,shader_declaration/* importShader */.bf)('keypoints/mix-keypoints.glsl')
                         .withDefines({ 'STAGE': 5 })
                         .withArguments('array');
 
-const mixKeypointsApply = (0,shader_declaration/* importShader */.Nt)('keypoints/mix-keypoints.glsl')
+const mixKeypointsApply = (0,shader_declaration/* importShader */.bf)('keypoints/mix-keypoints.glsl')
                          .withDefines({ 'STAGE': 4 })
                          .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint encoding
-const initLookupTable = (0,shader_declaration/* importShader */.Nt)('keypoints/lookup-of-locations.glsl')
+const initLookupTable = (0,shader_declaration/* importShader */.bf)('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
                        .withArguments('corners');
 
-const sortLookupTable = (0,shader_declaration/* importShader */.Nt)('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
+const sortLookupTable = (0,shader_declaration/* importShader */.bf)('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
                        .withArguments('lookupTable', 'blockSize', 'width', 'height');
 
-const viewLookupTable = (0,shader_declaration/* importShader */.Nt)('keypoints/lookup-of-locations.glsl')
+const viewLookupTable = (0,shader_declaration/* importShader */.bf)('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'STAGE': -1 })
                        .withArguments('lookupTable');
 
-const encodeKeypoints = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-keypoints.glsl')
+const encodeKeypoints = (0,shader_declaration/* importShader */.bf)('keypoints/encode-keypoints.glsl')
                        .withArguments('corners', 'lookupTable', 'stride', 'descriptorSize', 'extraSize', 'encoderLength', 'encoderCapacity');
 
-const encodeKeypointSkipOffsets = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-keypoint-offsets.glsl')
+const encodeKeypointSkipOffsets = (0,shader_declaration/* importShader */.bf)('keypoints/encode-keypoint-offsets.glsl')
                                  .withArguments('corners', 'imageSize');
 
-const encodeKeypointLongSkipOffsets = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-keypoint-long-offsets.glsl')
+const encodeKeypointLongSkipOffsets = (0,shader_declaration/* importShader */.bf)('keypoints/encode-keypoint-long-offsets.glsl')
                                      .withDefines({ 'MAX_ITERATIONS': 6 }) // dependent texture reads :(
                                      .withArguments('offsetsImage', 'imageSize');
 
-const encodeKeypointPositions = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-keypoint-positions.glsl')
+const encodeKeypointPositions = (0,shader_declaration/* importShader */.bf)('keypoints/encode-keypoint-positions.glsl')
                                .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const encodeKeypointProperties = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-keypoint-properties.glsl')
+const encodeKeypointProperties = (0,shader_declaration/* importShader */.bf)('keypoints/encode-keypoint-properties.glsl')
                                 .withArguments('corners', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const encodeNullKeypoints = (0,shader_declaration/* importShader */.Nt)('keypoints/encode-null-keypoints.glsl')
+const encodeNullKeypoints = (0,shader_declaration/* importShader */.bf)('keypoints/encode-null-keypoints.glsl')
                            .withArguments();
 
-const transferOrientation = (0,shader_declaration/* importShader */.Nt)('keypoints/transfer-orientation.glsl')
+const transferOrientation = (0,shader_declaration/* importShader */.bf)('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const uploadKeypoints = (0,shader_declaration/* importShader */.Nt)('keypoints/upload-keypoints.glsl')
+const uploadKeypoints = (0,shader_declaration/* importShader */.bf)('keypoints/upload-keypoints.glsl')
                        .withDefines({
                             // UBOs can hold at least 16KB of data;
                             // gl.MAX_UNIFORM_BLOCK_SIZE >= 16384
@@ -8750,30 +9074,30 @@ const uploadKeypoints = (0,shader_declaration/* importShader */.Nt)('keypoints/u
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Geometric transformations
-const applyHomography = (0,shader_declaration/* importShader */.Nt)('keypoints/apply-homography.glsl')
+const applyHomography = (0,shader_declaration/* importShader */.bf)('keypoints/apply-homography.glsl')
                         .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint filters
-const clipBorder = (0,shader_declaration/* importShader */.Nt)('keypoints/clip-border.glsl')
+const clipBorder = (0,shader_declaration/* importShader */.bf)('keypoints/clip-border.glsl')
                   .withArguments('imageWidth', 'imageHeight', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const distanceFilter = (0,shader_declaration/* importShader */.Nt)('keypoints/distance-filter.glsl')
+const distanceFilter = (0,shader_declaration/* importShader */.bf)('keypoints/distance-filter.glsl')
                       .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
-const hammingDistanceFilter32 = (0,shader_declaration/* importShader */.Nt)('keypoints/hamming-distance-filter.glsl')
+const hammingDistanceFilter32 = (0,shader_declaration/* importShader */.bf)('keypoints/hamming-distance-filter.glsl')
                                .withDefines({ 'DESCRIPTOR_SIZE': 32 })
                                .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
-const hammingDistanceFilter64 = (0,shader_declaration/* importShader */.Nt)('keypoints/hamming-distance-filter.glsl')
+const hammingDistanceFilter64 = (0,shader_declaration/* importShader */.bf)('keypoints/hamming-distance-filter.glsl')
                                .withDefines({ 'DESCRIPTOR_SIZE': 64 })
                                .withArguments('encodedKeypointsA', 'encoderLengthA', 'encodedKeypointsB', 'encoderLengthB', 'descriptorSize', 'extraSize', 'encoderLength', 'threshold');
 
 // Other utilities
-const shuffle = (0,shader_declaration/* importShader */.Nt)('keypoints/shuffle.glsl')
+const shuffle = (0,shader_declaration/* importShader */.bf)('keypoints/shuffle.glsl')
                .withDefines({ 'PERMUTATION_MAXLEN': 2048 })
                .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const clip = (0,shader_declaration/* importShader */.Nt)('keypoints/clip.glsl')
+const clip = (0,shader_declaration/* importShader */.bf)('keypoints/clip.glsl')
             .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
 
 /**
@@ -9000,7 +9324,7 @@ class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9030,8 +9354,8 @@ class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
 // Shaders
 //
 
-const upsample2 = (0,shader_declaration/* importShader */.Nt)('pyramids/upsample2.glsl').withArguments('image');
-const downsample2 = (0,shader_declaration/* importShader */.Nt)('pyramids/downsample2.glsl').withArguments('image');
+const upsample2 = (0,shader_declaration/* importShader */.bf)('pyramids/upsample2.glsl').withArguments('image');
+const downsample2 = (0,shader_declaration/* importShader */.bf)('pyramids/downsample2.glsl').withArguments('image');
 
 
 /**
@@ -9088,7 +9412,7 @@ class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9118,24 +9442,24 @@ class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
 //
 
 // Perspective warp
-const warpPerspective = (0,shader_declaration/* importShader */.Nt)('transforms/warp-perspective.glsl')
+const warpPerspective = (0,shader_declaration/* importShader */.bf)('transforms/warp-perspective.glsl')
                         .withArguments('image', 'inverseHomography');
 
 // Resize image
-const resizeNearest = (0,shader_declaration/* importShader */.Nt)('transforms/resize.glsl')
+const resizeNearest = (0,shader_declaration/* importShader */.bf)('transforms/resize.glsl')
                      .withDefines({
                          'INTERPOLATION_METHOD': 0 // Nearest neighbors
                      })
                      .withArguments('image');
 
-const resizeBilinear = (0,shader_declaration/* importShader */.Nt)('transforms/resize.glsl')
+const resizeBilinear = (0,shader_declaration/* importShader */.bf)('transforms/resize.glsl')
                       .withDefines({
                           'INTERPOLATION_METHOD': 1 // Bilinear interpolation
                       })
                       .withArguments('image');
 
 // Additive mix (TODO create a new program group?)
-const additiveMix = (0,shader_declaration/* importShader */.Nt)('transforms/additive-mix.glsl')
+const additiveMix = (0,shader_declaration/* importShader */.bf)('transforms/additive-mix.glsl')
                     .withArguments('image0', 'image1', 'alpha', 'beta', 'gamma');
 
 /**
@@ -9163,7 +9487,7 @@ class SpeedyProgramGroupTransforms extends SpeedyProgramGroup
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9289,7 +9613,7 @@ class SpeedyProgramCenter
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9386,7 +9710,7 @@ class SpeedyTexturePool
      */
     constructor(gpu, capacity = DEFAULT_CAPACITY)
     {
-        utils/* Utils.assert */.c.assert(capacity > 0);
+        utils/* Utils */.A.assert(capacity > 0);
 
         /** @type {TextureBucket[]} buckets */
         this._bucket = Array.from({ length: capacity }, (_, i) => new TextureBucket(null, i, i - 1));
@@ -9405,7 +9729,7 @@ class SpeedyTexturePool
     allocate()
     {
         if(this._head < 0)
-            throw new utils_errors/* OutOfMemoryError */.Cx(`Exhausted pool (capacity: ${this._bucket.length})`);
+            throw new utils_errors/* OutOfMemoryError */.l(`Exhausted pool (capacity: ${this._bucket.length})`);
 
         const bucket = this._bucket[this._head];
         bucket.free = false;
@@ -9425,7 +9749,7 @@ class SpeedyTexturePool
     free(texture)
     {
         const bucket = texture[BUCKET];
-        utils/* Utils.assert */.c.assert(bucket !== undefined && !bucket.free, `Unmanaged texture or double free`);
+        utils/* Utils */.A.assert(bucket !== undefined && !bucket.free, `Unmanaged texture or double free`);
 
         bucket.next = this._head;
         bucket.free = true;
@@ -9466,12 +9790,12 @@ class SpeedyTexturePool
     }
 }
 // EXTERNAL MODULE: ./src/utils/types.js
-var types = __webpack_require__(6731);
+var types = __webpack_require__(6467);
 ;// CONCATENATED MODULE: ./src/core/speedy-media-source.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9494,7 +9818,7 @@ var types = __webpack_require__(6731);
 
 
 
-/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} SpeedyMediaSourceNativeElement */
+/** @typedef {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap|ImageData} SpeedyMediaSourceNativeElement */
 
 /** Internal token for protected constructors */
 const PRIVATE_TOKEN = Symbol();
@@ -9515,7 +9839,7 @@ class SpeedyMediaSource
     {
         // the constructor is not public
         if(token !== PRIVATE_TOKEN)
-            throw new utils_errors/* IllegalOperationError */.js();
+            throw new utils_errors/* IllegalOperationError */.Er();
 
         /** @type {SpeedyMediaSourceNativeElement} underlying media object */
         this._data = null;
@@ -9538,8 +9862,10 @@ class SpeedyMediaSource
             return SpeedyOffscreenCanvasMediaSource.load(wrappedObject);
         else if(wrappedObject instanceof ImageBitmap)
             return SpeedyBitmapMediaSource.load(wrappedObject);
+        else if(wrappedObject instanceof ImageData)
+            return SpeedyDataMediaSource.load(wrappedObject);
         else
-            throw new utils_errors/* IllegalArgumentError */.mG(`Unsupported media type: ${wrappedObject}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Unsupported media type: ${wrappedObject}`);
     }
 
     /**
@@ -9567,7 +9893,7 @@ class SpeedyMediaSource
      */
     get type()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -9577,7 +9903,7 @@ class SpeedyMediaSource
      */
     get width()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -9587,7 +9913,7 @@ class SpeedyMediaSource
      */
     get height()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -9597,7 +9923,7 @@ class SpeedyMediaSource
      */
     clone()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -9617,7 +9943,7 @@ class SpeedyMediaSource
      */
     _load(element)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -9629,12 +9955,12 @@ class SpeedyMediaSource
      */
     static _waitUntil(element, eventName, timeout = 30000)
     {
-        return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
-            utils/* Utils.log */.c.log(`Waiting for ${eventName} to be triggered in ${element}...`);
+        return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => {
+            utils/* Utils */.A.log(`Waiting for ${eventName} to be triggered in ${element}...`);
 
             const timer = setTimeout(() => {
                 clear();
-                reject(new utils_errors/* TimeoutError */.W5(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
+                reject(new utils_errors/* TimeoutError */.MU(`${eventName} has not been triggered in ${element}: timeout (${timeout}ms)`));
             }, timeout);
 
             function clear()
@@ -9651,7 +9977,7 @@ class SpeedyMediaSource
                 const info = `${error.message} (error code ${error.code})`;
 
                 clear();
-                reject(new utils_errors/* ResourceNotLoadedError */.tg(`Can't load ${element}. ${info}`));
+                reject(new utils_errors/* ResourceNotLoadedError */.FJ(`Can't load ${element}. ${info}`));
             }
 
             function handleSuccess()
@@ -9699,7 +10025,7 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return types/* MediaType.Image */.DD.Image;
+        return types/* MediaType */.zu.Image;
     }
 
     /**
@@ -9727,7 +10053,7 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
     clone()
     {
         if(this._data == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
 
         const newNode = /** @type {HTMLImageElement} */ ( this._data.cloneNode(true) );
         return SpeedyImageMediaSource.load(newNode);
@@ -9744,7 +10070,7 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
             this.release();
 
         if(image.complete && image.naturalWidth !== 0) { // already loaded?
-            return new speedy_promise/* SpeedyPromise */.s(resolve => {
+            return new speedy_promise/* SpeedyPromise */.i(resolve => {
                 this._data = image;
                 resolve(this);
             });
@@ -9801,7 +10127,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return types/* MediaType.Video */.DD.Video;
+        return types/* MediaType */.zu.Video;
     }
 
     /**
@@ -9831,7 +10157,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
     clone()
     {
         if(this._data == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
 
         const newNode = /** @type {HTMLVideoElement} */ ( this._data.cloneNode(true) );
         return SpeedyVideoMediaSource.load(newNode);
@@ -9848,7 +10174,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
             this.release();
 
         if(video.readyState >= 4) { // already loaded?
-            return new speedy_promise/* SpeedyPromise */.s(resolve => {
+            return new speedy_promise/* SpeedyPromise */.i(resolve => {
                 this._data = video;
                 resolve(this);
             });
@@ -9907,7 +10233,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return types/* MediaType.Canvas */.DD.Canvas;
+        return types/* MediaType */.zu.Canvas;
     }
 
     /**
@@ -9935,9 +10261,9 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
     clone()
     {
         if(this._data == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
 
-        const newCanvas = utils/* Utils.createCanvas */.c.createCanvas(this.width, this.height);
+        const newCanvas = utils/* Utils */.A.createCanvas(this.width, this.height);
         const newContext = newCanvas.getContext('2d');
         newContext.drawImage(this._data, 0, 0);
 
@@ -9954,7 +10280,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return new speedy_promise/* SpeedyPromise */.s(resolve => {
+        return new speedy_promise/* SpeedyPromise */.i(resolve => {
             this._data = canvas;
             resolve(this);
         });
@@ -10004,7 +10330,7 @@ class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return types/* MediaType.Canvas */.DD.Canvas; // or a new MediaType for OffscreenCanvas if necessary
+        return types/* MediaType */.zu.OffscreenCanvas;
     }
 
     /**
@@ -10032,7 +10358,7 @@ class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
     clone()
     {
         if(this._data == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
 
         const newCanvas = new OffscreenCanvas(this.width, this.height);
         const newContext = newCanvas.getContext('2d');
@@ -10051,7 +10377,7 @@ class SpeedyOffscreenCanvasMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return new speedy_promise/* SpeedyPromise */.s(resolve => {
+        return new speedy_promise/* SpeedyPromise */.i(resolve => {
             this._data = offscreenCanvas;
             resolve(this);
         });
@@ -10101,7 +10427,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
      */
     get type()
     {
-        return types/* MediaType.Bitmap */.DD.Bitmap;
+        return types/* MediaType */.zu.Bitmap;
     }
 
     /**
@@ -10129,9 +10455,9 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
     clone()
     {
         if(this._data == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Media not loaded`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
 
-        return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
+        return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => {
             createImageBitmap(this._data).then(
                 newBitmap => {
                     const newSource = new SpeedyBitmapMediaSource(PRIVATE_TOKEN);
@@ -10164,7 +10490,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        return new speedy_promise/* SpeedyPromise */.s(resolve => {
+        return new speedy_promise/* SpeedyPromise */.i(resolve => {
             this._data = bitmap;
             resolve(this);
         });
@@ -10181,89 +10507,112 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
     }
 }
 
-;// CONCATENATED MODULE: ./src/gpu/speedy-texture-uploader.js
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-texture-uploader.js
- * A utility that helps uploading data to textures
- */
-
-
-
-
-
 /**
- * A utility that helps uploading data to textures
+ * Data media source:
+ * a wrapper around ImageData
  */
-class SpeedyTextureUploader
+class SpeedyDataMediaSource extends SpeedyMediaSource
 {
     /**
-     * Constructor
-     * @param {SpeedyGPU} gpu
+     * @private Constructor
+     * @param {symbol} token
      */
-    constructor(gpu)
+    constructor(token)
     {
-        /** @type {SpeedyGPU} GPU instance */
-        this._gpu = gpu;
+        super(token);
+
+        /** @type {ImageData} image data */
+        this._data = null;
     }
 
     /**
-     * Upload an image to the GPU
-     * @param {SpeedyMediaSource} source
-     * @param {SpeedyTexture} outputTexture
-     * @returns {SpeedyTexture} output texture
+     * The underlying wrapped object
+     * @returns {ImageData}
      */
-    upload(source, outputTexture)
+    get data()
     {
-        const data = source.data;
-
-        // bugfix: if the media is a video, we can't really
-        // upload it to the GPU unless it's ready
-        //if(data.constructor.name == 'HTMLVideoElement') {
-        if(data instanceof HTMLVideoElement) {
-            if(data.readyState < 2) {
-                // this may happen when the video loops (Firefox)
-                // return the previously uploaded texture
-                //Utils.warning(`Trying to process a video that isn't ready yet`);
-                return outputTexture;
-            }
-        }
-
-        // upload to the output texture
-        return outputTexture.upload(data, source.width, source.height);
+        return this._data;
     }
 
     /**
-     * Release the texture uploader
-     * @returns {null}
+     * The type of the underlying media source
+     * @returns {MediaType}
      */
-    release()
+    get type()
     {
-        return null;
+        return types/* MediaType */.zu.Data;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
+     * Clone this media source
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    clone()
+    {
+        if(this._data == null)
+            throw new utils_errors/* IllegalOperationError */.Er(`Media not loaded`);
+
+        const imageDataCopy = new ImageData(
+            new Uint8ClampedArray(this._data.data),
+            this._data.width,
+            this._data.height
+        )
+
+        return SpeedyDataMediaSource.load(imageDataCopy);
+    }
+
+    /**
+     * Load the underlying media
+     * @param {ImageData} imageData
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    _load(imageData)
+    {
+        if(this.isLoaded())
+            this.release();
+
+        return new speedy_promise/* SpeedyPromise */.i(resolve => {
+            this._data = imageData;
+            resolve(this);
+        });
+    }
+
+    /**
+     * Load the underlying media
+     * @param {ImageData} imageData
+     * @returns {SpeedyPromise<SpeedyMediaSource>}
+     */
+    static load(imageData)
+    {
+        return new SpeedyDataMediaSource(PRIVATE_TOKEN)._load(imageData);
     }
 }
+
 // EXTERNAL MODULE: ./src/utils/observable.js
-var observable = __webpack_require__(9845);
+var observable = __webpack_require__(4109);
 ;// CONCATENATED MODULE: ./src/gpu/speedy-gpu.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10291,11 +10640,10 @@ var observable = __webpack_require__(9845);
 
 
 
-
 /**
  * GPU-accelerated routines for Computer Vision
  */
-class SpeedyGPU extends observable/* Observable */.y
+class SpeedyGPU extends observable/* Observable */.c
 {
     /**
      * Constructor
@@ -10305,16 +10653,13 @@ class SpeedyGPU extends observable/* Observable */.y
         super();
 
         /** @type {SpeedyGL} cached reference */
-        this._speedyGL = speedy_gl/* SpeedyGL.instance */.$.instance;
+        this._speedyGL = speedy_gl/* SpeedyGL */.c.instance;
 
         /** @type {SpeedyProgramCenter} GPU-based programs */
         this._programs = new SpeedyProgramCenter(this);
 
         /** @type {SpeedyTexturePool} texture pool */
         this._texturePool = new SpeedyTexturePool(this);
-
-        /** @type {SpeedyTextureUploader} texture uploader */
-        this._textureUploader = new SpeedyTextureUploader(this);
 
 
 
@@ -10372,7 +10717,7 @@ class SpeedyGPU extends observable/* Observable */.y
 
         // do we need to resize the canvas?
         if(width > canvas.width || height > canvas.height) {
-            utils/* Utils.warning */.c.warning(`Resizing the canvas to ${width} x ${height}`);
+            utils/* Utils */.A.warning(`Resizing the canvas to ${width} x ${height}`);
             canvas.width = width;
             canvas.height = height;
         }
@@ -10393,7 +10738,7 @@ class SpeedyGPU extends observable/* Observable */.y
      */
     upload(source, outputTexture)
     {
-        return this._textureUploader.upload(source, outputTexture);
+        return outputTexture.upload(source.data, source.width, source.height);
     }
 
     /**
@@ -10402,12 +10747,11 @@ class SpeedyGPU extends observable/* Observable */.y
      */
     release()
     {
-        utils/* Utils.assert */.c.assert(!this.isReleased());
+        utils/* Utils */.A.assert(!this.isReleased());
 
         // release internal components
         this._programs = this._programs.release();
         this._texturePool = this._texturePool.release();
-        this._textureUploader = this._textureUploader.release();
 
         // unsubscribe
         this._speedyGL.unsubscribe(this._reset);
@@ -10443,7 +10787,6 @@ class SpeedyGPU extends observable/* Observable */.y
 
         this._programs = new SpeedyProgramCenter(this);
         this._texturePool = new SpeedyTexturePool(this);
-        this._textureUploader = new SpeedyTextureUploader(this);
 
         this._notify();
     }
@@ -10452,7 +10795,7 @@ class SpeedyGPU extends observable/* Observable */.y
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10563,7 +10906,7 @@ class SpeedySize
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10616,7 +10959,7 @@ class SpeedyMedia
     {
         // private constructor
         if(token !== speedy_media_PRIVATE_TOKEN)
-            throw new utils_errors/* IllegalOperationError */.js();
+            throw new utils_errors/* IllegalOperationError */.Er();
 
 
 
@@ -10624,7 +10967,7 @@ class SpeedyMedia
         this._source = source;
 
         /** @type {ImageFormat} format */
-        this._format = options.format !== undefined ? options.format : types/* ImageFormat.RGBA */.D3.RGBA;
+        this._format = options.format !== undefined ? options.format : types/* ImageFormat */.f5.RGBA;
 
         /** @type {SpeedyMediaOptions} options */
         this._options = Object.freeze({ ...options, format: this._format });
@@ -10633,9 +10976,9 @@ class SpeedyMedia
 
         // validate
         if(!source.isLoaded())
-            throw new utils_errors/* IllegalOperationError */.js(`Source not loaded: ${source}`);
-        else if(this._format !== types/* ImageFormat.RGBA */.D3.RGBA && this._format !== types/* ImageFormat.GREY */.D3.GREY)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid format: ${this._format}`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Source not loaded: ${source}`);
+        else if(this._format !== types/* ImageFormat */.f5.RGBA && this._format !== types/* ImageFormat */.f5.GREY)
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid format: ${this._format}`);
     }
 
     /**
@@ -10649,14 +10992,14 @@ class SpeedyMedia
     static load(mediaSource, options = {}, log = true)
     {
         return SpeedyMediaSource.load(mediaSource).then(source => {
-            utils/* Utils.assert */.c.assert(source.width !== 0 && source.height !== 0);
+            utils/* Utils */.A.assert(source.width !== 0 && source.height !== 0);
 
             // FIXME user could pass an invalid format in options if ImageFormat is made public
             const media = new SpeedyMedia(speedy_media_PRIVATE_TOKEN, source, options);
 
             // show log message
             if(log)
-                utils/* Utils.log */.c.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+                utils/* Utils */.A.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
             // done!
             return media;
@@ -10674,7 +11017,7 @@ class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {"image" | "video" | "canvas" | "bitmap" | "unknown"}
+     * @returns {"image" | "video" | "canvas" | "offscreen-canvas" | "bitmap" | "data" | "unknown"}
      */
     get type()
     {
@@ -10682,17 +11025,23 @@ class SpeedyMedia
             return 'unknown';
 
         switch(this._source.type) {
-            case types/* MediaType.Image */.DD.Image:
+            case types/* MediaType */.zu.Image:
                 return 'image';
 
-            case types/* MediaType.Video */.DD.Video:
+            case types/* MediaType */.zu.Video:
                 return 'video';
 
-            case types/* MediaType.Canvas */.DD.Canvas:
+            case types/* MediaType */.zu.Canvas:
                 return 'canvas';
 
-            case types/* MediaType.Bitmap */.DD.Bitmap:
+            case types/* MediaType */.zu.OffscreenCanvas:
+                return 'offscreen-canvas';
+
+            case types/* MediaType */.zu.Bitmap:
                 return 'bitmap';
+            
+            case types/* MediaType */.zu.Data:
+                return 'data';  
 
             default: // this shouldn't happen
                 return 'unknown';
@@ -10743,7 +11092,7 @@ class SpeedyMedia
     release()
     {
         if(!this.isReleased()) {
-            utils/* Utils.log */.c.log('Releasing SpeedyMedia object...');
+            utils/* Utils */.A.log('Releasing SpeedyMedia object...');
             this._source = this._source.release();
         }
 
@@ -10767,13 +11116,13 @@ class SpeedyMedia
     {
         // has the media been released?
         if(this.isReleased())
-            throw new utils_errors/* IllegalOperationError */.js(`Can't clone a SpeedyMedia that has been released`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
         const clone = new SpeedyMedia(speedy_media_PRIVATE_TOKEN, this._source, this._options);
 
         // done!
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(clone);
+        return speedy_promise/* SpeedyPromise */.i.resolve(clone);
     }
 
     /**
@@ -10783,13 +11132,13 @@ class SpeedyMedia
     toBitmap()
     {
         if(this.isReleased())
-            throw new utils_errors/* IllegalOperationError */.js('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
+            throw new utils_errors/* IllegalOperationError */.Er('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
         else if(!this._source.isLoaded())
-            throw new utils_errors/* IllegalOperationError */.js('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
-        else if(this._source.type == types/* MediaType.Bitmap */.DD.Bitmap)
-            return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._source.data);
+            throw new utils_errors/* IllegalOperationError */.Er('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
+        else if(this._source.type == types/* MediaType */.zu.Bitmap)
+            return speedy_promise/* SpeedyPromise */.i.resolve(this._source.data);
         else
-            return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
+            return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 }
 
@@ -10797,7 +11146,7 @@ class SpeedyMedia
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10853,7 +11202,7 @@ class FPSCounter
 
         // this should never happen...
         if(instance !== null)
-            throw new utils_errors/* IllegalOperationError */.js(`Can't have multiple instances of FPSCounter`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't have multiple instances of FPSCounter`);
 
         // start FPS counter
         this._boundUpdate();
@@ -10904,7 +11253,7 @@ class FPSCounter
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11082,7 +11431,7 @@ class SpeedyVector2
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11203,16 +11552,16 @@ class SpeedyPoint2
     }
 }
 // EXTERNAL MODULE: ./src/core/speedy-matrix-expr.js
-var speedy_matrix_expr = __webpack_require__(5137);
+var speedy_matrix_expr = __webpack_require__(4292);
 // EXTERNAL MODULE: ./src/core/speedy-matrix-wasm.js
-var speedy_matrix_wasm = __webpack_require__(4368);
+var speedy_matrix_wasm = __webpack_require__(4247);
 // EXTERNAL MODULE: ./src/core/speedy-matrix.js
-var speedy_matrix = __webpack_require__(8007);
+var speedy_matrix = __webpack_require__(3286);
 ;// CONCATENATED MODULE: ./src/core/speedy-matrix-factory.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11337,23 +11686,23 @@ class SpeedyMatrixFactory extends Function
         // validate shapes & mode
         if(mode == 'reduced') {
             if(Q.rows != m || Q.columns != n || R.rows != n || R.columns != n)
-                throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shape for reduced QR`);
+                throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shape for reduced QR`);
         }
         else if(mode == 'full') {
             if(Q.rows != m || Q.columns != m || R.rows != m || R.columns != n)
-                throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shape for full QR`);
+                throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shape for full QR`);
         }
         else
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid mode for QR: "${mode}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid mode for QR: "${mode}"`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const Qptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, Q);
-            const Rptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, R);
-            const Aptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, A);
+            const Qptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, Q);
+            const Rptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, R);
+            const Aptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, A);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, Aptr, A);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, Aptr, A);
 
             // run the WASM routine
             if(mode == 'reduced')
@@ -11362,13 +11711,13 @@ class SpeedyMatrixFactory extends Function
                 wasm.exports.Mat32_qr_full(Qptr, Rptr, Aptr);
 
             // copy output matrices from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, Qptr, Q);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, Rptr, R);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, Qptr, Q);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, Rptr, R);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, Aptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, Rptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, Qptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, Aptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, Rptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, Qptr);
 
             // done!
             return [Q, R];
@@ -11392,19 +11741,19 @@ class SpeedyMatrixFactory extends Function
 
         // validate shapes
         if(m < n || n == 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't solve an underdetermined system of equations`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't solve an underdetermined system of equations`);
         else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shapes`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shapes`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const Aptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, A);
-            const bptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, b);
-            const xptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, x);
+            const Aptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, A);
+            const bptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, b);
+            const xptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, x);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, Aptr, A);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, bptr, b);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, Aptr, A);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, bptr, b);
 
             // run the WASM routine
             switch(method) {
@@ -11413,16 +11762,16 @@ class SpeedyMatrixFactory extends Function
                     break;
 
                 default: 
-                    throw new utils_errors/* IllegalArgumentError */.mG(`Invalid method: "${method}"`);
+                    throw new utils_errors/* IllegalArgumentError */.qw(`Invalid method: "${method}"`);
             }
 
             // copy output matrix from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, xptr, x);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, xptr, x);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, xptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, bptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, Aptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, xptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, bptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, Aptr);
 
             // done!
             return solution;
@@ -11445,11 +11794,11 @@ class SpeedyMatrixFactory extends Function
 
         // validate shapes
         if(m != n)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't solve an over or underdetermined system of equations`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't solve an over or underdetermined system of equations`);
         else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shapes`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shapes`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // select method
             switch(method) {
                 case 'qr':
@@ -11459,7 +11808,7 @@ class SpeedyMatrixFactory extends Function
                     break;*/
 
                 default:
-                    throw new utils_errors/* IllegalArgumentError */.mG(`Invalid method: "${method}"`);
+                    throw new utils_errors/* IllegalArgumentError */.qw(`Invalid method: "${method}"`);
             }
         });
     }
@@ -11475,30 +11824,30 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || src.columns != 4 || dest.rows != 2 || dest.columns != 4)
-            throw new utils_errors/* IllegalArgumentError */.mG(`You need two 2x4 input matrices to compute a perspective transformation`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`You need two 2x4 input matrices to compute a perspective transformation`);
         else if(homography.rows != 3 || homography.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The output of perspective() is a 3x3 homography`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The output of perspective() is a 3x3 homography`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const homptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, homography);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
+            const homptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, homography);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
             wasm.exports.Mat32_homography_ndlt4(homptr, srcptr, destptr);
 
             // copy output matrix from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, homptr, homography);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, homptr, homography);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, homptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, homptr);
 
             // done!
             return homography;
@@ -11528,27 +11877,27 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || src.columns < 4 || dest.rows != 2 || dest.columns != src.columns)
-            throw new utils_errors/* IllegalArgumentError */.mG(`You need two 2 x n (n >= 4) input matrices to compute a homography`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`You need two 2 x n (n >= 4) input matrices to compute a homography`);
         else if(homography.rows != 3 || homography.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The output of findHomography() is a 3x3 homography`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The output of findHomography() is a 3x3 homography`);
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shape of the inliers mask`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shape of the inliers mask`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const homptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, homography);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
-            const maskptr = mask != null ? speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, mask) : 0;
+            const homptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, homography);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
+            const maskptr = mask != null ? speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, mask) : 0;
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
             switch(method) {
                 case 'pransac':
-                    utils/* Utils.assert */.c.assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
+                    utils/* Utils */.A.assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
                     wasm.exports.Mat32_pransac_homography(homptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
@@ -11558,20 +11907,20 @@ class SpeedyMatrixFactory extends Function
                     break;
 
                 default:
-                    throw new utils_errors/* IllegalArgumentError */.mG(`Illegal method for findHomography(): "${method}"`);
+                    throw new utils_errors/* IllegalArgumentError */.qw(`Illegal method for findHomography(): "${method}"`);
             }
 
             // copy output matrices from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, homptr, homography);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, homptr, homography);
             if(mask != null)
-                speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, maskptr, mask);
+                speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, maskptr, mask);
 
             // deallocate matrices
             if(mask != null)
-                speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, maskptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, homptr);
+                speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, maskptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, homptr);
 
             // done!
             return homography;
@@ -11589,30 +11938,30 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shapes`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shapes`);
         else if(transform.rows != 3 || transform.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The perspective transformation must be a 3x3 matrix`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The perspective transformation must be a 3x3 matrix`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, transform);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
+            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, transform);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, matptr, transform);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, matptr, transform);
 
             // run the WASM routine
             wasm.exports.Mat32_transform_perspective(destptr, srcptr, matptr);
 
             // copy output matrix from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, destptr, dest);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, matptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, matptr);
 
             // done!
             return dest;
@@ -11630,30 +11979,30 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || src.columns != 3 || dest.rows != 2 || dest.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`You need two 2x3 input matrices to compute an affine transform`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`You need two 2x3 input matrices to compute an affine transform`);
         else if(transform.rows != 2 || transform.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The output of affine() is a 2x3 matrix`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The output of affine() is a 2x3 matrix`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, transform);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
+            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, transform);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
             wasm.exports.Mat32_affine_direct3(matptr, srcptr, destptr);
 
             // copy output matrix from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, matptr, transform);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, matptr, transform);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, matptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, matptr);
 
             // done!
             return transform;
@@ -11683,27 +12032,27 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || src.columns < 3 || dest.rows != 2 || dest.columns != src.columns)
-            throw new utils_errors/* IllegalArgumentError */.mG(`You need two 2 x n (n >= 3) input matrices to compute an affine transform`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`You need two 2 x n (n >= 3) input matrices to compute an affine transform`);
         else if(transform.rows != 2 || transform.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The output of findAffineTransform() is a 2x3 matrix`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The output of findAffineTransform() is a 2x3 matrix`);
         else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shape of the inliers mask`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shape of the inliers mask`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, transform);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
-            const maskptr = mask != null ? speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, mask) : 0;
+            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, transform);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
+            const maskptr = mask != null ? speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, mask) : 0;
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, destptr, dest);
 
             // run the WASM routine
             switch(method) {
                 case 'pransac':
-                    utils/* Utils.assert */.c.assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
+                    utils/* Utils */.A.assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
                     wasm.exports.Mat32_pransac_affine(matptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
                     break;
 
@@ -11712,20 +12061,20 @@ class SpeedyMatrixFactory extends Function
                     break;
 
                 default:
-                    throw new utils_errors/* IllegalArgumentError */.mG(`Illegal method for findAffineTransform(): "${method}"`);
+                    throw new utils_errors/* IllegalArgumentError */.qw(`Illegal method for findAffineTransform(): "${method}"`);
             }
 
             // copy output matrices from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, matptr, transform);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, matptr, transform);
             if(mask != null)
-                speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, maskptr, mask);
+                speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, maskptr, mask);
 
             // deallocate matrices
             if(mask != null)
-                speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, maskptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, matptr);
+                speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, maskptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, matptr);
 
             // done!
             return transform;
@@ -11743,30 +12092,30 @@ class SpeedyMatrixFactory extends Function
     {
         // validate shapes
         if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid shapes`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid shapes`);
         else if(transform.rows != 2 || transform.columns != 3)
-            throw new utils_errors/* IllegalArgumentError */.mG(`The affine transformation must be a 2x3 matrix`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`The affine transformation must be a 2x3 matrix`);
 
-        return speedy_matrix_wasm/* SpeedyMatrixWASM.ready */.r.ready().then(({wasm, memory}) => {
+        return speedy_matrix_wasm/* SpeedyMatrixWASM */.U.ready().then(({wasm, memory}) => {
             // allocate matrices
-            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, transform);
-            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, src);
-            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM.allocateMat32 */.r.allocateMat32(wasm, memory, dest);
+            const matptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, transform);
+            const srcptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, src);
+            const destptr = speedy_matrix_wasm/* SpeedyMatrixWASM */.U.allocateMat32(wasm, memory, dest);
 
             // copy input matrices to WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, srcptr, src);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyToMat32 */.r.copyToMat32(wasm, memory, matptr, transform);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, srcptr, src);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyToMat32(wasm, memory, matptr, transform);
 
             // run the WASM routine
             wasm.exports.Mat32_transform_affine(destptr, srcptr, matptr);
 
             // copy output matrix from WASM memory
-            speedy_matrix_wasm/* SpeedyMatrixWASM.copyFromMat32 */.r.copyFromMat32(wasm, memory, destptr, dest);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.copyFromMat32(wasm, memory, destptr, dest);
 
             // deallocate matrices
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, destptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, srcptr);
-            speedy_matrix_wasm/* SpeedyMatrixWASM.deallocateMat32 */.r.deallocateMat32(wasm, memory, matptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, destptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, srcptr);
+            speedy_matrix_wasm/* SpeedyMatrixWASM */.U.deallocateMat32(wasm, memory, matptr);
 
             // done!
             return dest;
@@ -11778,7 +12127,7 @@ class SpeedyMatrixFactory extends Function
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11885,7 +12234,7 @@ class SpeedyPipelineMessage
      */
     inspect(gpu)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -11896,7 +12245,7 @@ class SpeedyPipelineMessage
      */
     set(...args)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -11961,7 +12310,7 @@ class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
         this._image = null;
 
         /** @type {ImageFormat} image format */
-        this._format = types/* ImageFormat.RGBA */.D3.RGBA;
+        this._format = types/* ImageFormat */.f5.RGBA;
     }
 
     /**
@@ -11970,7 +12319,7 @@ class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
      * @param {ImageFormat} [format] image format
      * @returns {SpeedyPipelineMessage} this message
      */
-    set(image, format = types/* ImageFormat.RGBA */.D3.RGBA)
+    set(image, format = types/* ImageFormat */.f5.RGBA)
     {
         // set parameters
         this._image = image;
@@ -11987,8 +12336,8 @@ class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
      */
     inspect(gpu)
     {
-        const formatName = Object.keys(types/* ImageFormat */.D3).find(
-            format => types/* ImageFormat */.D3[format] === this.format
+        const formatName = Object.keys(types/* ImageFormat */.f5).find(
+            format => types/* ImageFormat */.f5[format] === this.format
         );
 
         return {
@@ -12061,9 +12410,9 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
         this._encoderLength = encoderLength | 0;
 
         // validate
-        utils/* Utils.assert */.c.assert(this._descriptorSize >= 0 && this._extraSize >= 0);
-        utils/* Utils.assert */.c.assert(this._encoderLength === this._encodedKeypoints.width, 'Invalid encoderLength');
-        utils/* Utils.assert */.c.assert(this._encodedKeypoints.width === this._encodedKeypoints.height, 'Invalid encodedKeypoints texture');
+        utils/* Utils */.A.assert(this._descriptorSize >= 0 && this._extraSize >= 0);
+        utils/* Utils */.A.assert(this._encoderLength === this._encodedKeypoints.width, 'Invalid encoderLength');
+        utils/* Utils */.A.assert(this._encodedKeypoints.width === this._encodedKeypoints.height, 'Invalid encodedKeypoints texture');
 
         // done!
         return this;
@@ -12082,7 +12431,7 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
             extraSize: this.extraSize,
             encoderLength: this.encoderLength,
             encodedKeypointsSize: this.encodedKeypoints ? `${this.encodedKeypoints.width}x${this.encodedKeypoints.height}` : '0x0',
-            encodedKeypoints: this.encodedKeypoints ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.encodedKeypoints.inspect(gpu).buffer) : '',
+            encodedKeypoints: this.encodedKeypoints ? utils/* Utils */.A.formatBinaryData(this.encodedKeypoints.inspect(gpu).buffer) : '',
         };
     }
 
@@ -12163,7 +12512,7 @@ class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
         return {
             type: this.constructor.name,
             vectorsSize: this.vectors ? `${this.vectors.width}x${this.vectors.height}` : '0x0',
-            vectors: this.vectors ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.vectors.inspect(gpu).buffer) : ''
+            vectors: this.vectors ? utils/* Utils */.A.formatBinaryData(this.vectors.inspect(gpu).buffer) : ''
         };
     }
 
@@ -12262,7 +12611,7 @@ class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
         this._matchesPerKeypoint = matchesPerKeypoint | 0;
 
         // validate
-        utils/* Utils.assert */.c.assert(this._matchesPerKeypoint > 0);
+        utils/* Utils */.A.assert(this._matchesPerKeypoint > 0);
 
         // done!
         return this;
@@ -12279,7 +12628,7 @@ class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMessage
             type: this.constructor.name,
             matchesPerKeypoint: this.matchesPerKeypoint,
             encodedMatchesSize: this.encodedMatches ? `${this.encodedMatches.width}x${this.encodedMatches.height}` : '0x0',
-            encodedMatches: this.encodedMatches ? utils/* Utils.formatBinaryData */.c.formatBinaryData(this.encodedMatches.inspect(gpu).buffer) : ''
+            encodedMatches: this.encodedMatches ? utils/* Utils */.A.formatBinaryData(this.encodedMatches.inspect(gpu).buffer) : ''
         };
     }
 
@@ -12341,7 +12690,7 @@ function createMessage(type)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12371,7 +12720,7 @@ function createMessage(type)
  * A validation predicate that validates all messages
  * @type {SpeedyPipelineMessageConstraint}
  */
-const none = message => true;
+const always = message => true;
 
 /**
  * Specification (requirements) of a port of a node of a pipeline
@@ -12383,17 +12732,17 @@ class SpeedyPipelinePortSpec
      * @param {SpeedyPipelineMessageType} expectedMessageType expected message type
      * @param {SpeedyPipelineMessageConstraint} [messageConstraint] message validation function
      */
-    constructor(expectedMessageType, messageConstraint = none)
+    constructor(expectedMessageType, messageConstraint = always)
     {
         /** @type {SpeedyPipelineMessageType} expected message type */
         this._expectedMessageType = expectedMessageType;
 
         /** @type {SpeedyPipelineMessageConstraint} message validation function */
-        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : none;
+        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : always;
 
 
         // expect a valid type
-        utils/* Utils.assert */.c.assert(this._expectedMessageType != SpeedyPipelineMessageType.Nothing);
+        utils/* Utils */.A.assert(this._expectedMessageType != SpeedyPipelineMessageType.Nothing);
     }
 
     /**
@@ -12442,7 +12791,7 @@ class SpeedyPipelinePortSpec
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12506,7 +12855,7 @@ class SpeedyPipelinePort
 
 
         // check if we've got an acceptable port name
-        utils/* Utils.assert */.c.assert(ACCEPTABLE_PORT_NAME.test(this._name), `Port name "${this._name}" is not acceptable`);
+        utils/* Utils */.A.assert(ACCEPTABLE_PORT_NAME.test(this._name), `Port name "${this._name}" is not acceptable`);
     }
 
     /**
@@ -12534,7 +12883,7 @@ class SpeedyPipelinePort
      */
     connectTo(port)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -12544,7 +12893,7 @@ class SpeedyPipelinePort
      */
     isInputPort()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -12580,7 +12929,7 @@ class SpeedyPipelinePort
     read()
     {
         if(this._message.isEmpty())
-            throw new utils_errors/* IllegalOperationError */.js(`Can't read from port ${this.name}: nothing to read`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't read from port ${this.name}: nothing to read`);
 
         return this._message;
     }
@@ -12591,7 +12940,7 @@ class SpeedyPipelinePort
      */
     write(message)
     {
-        throw new utils_errors/* NotSupportedError */.B8(`Can't write ${message} to port ${this.name}: unsupported operation`);
+        throw new utils_errors/* NotSupportedError */.EM(`Can't write ${message} to port ${this.name}: unsupported operation`);
     }
 
     /**
@@ -12611,7 +12960,7 @@ class SpeedyPipelinePort
      */
     static get DEFAULT_NAME()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 }
 
@@ -12641,7 +12990,7 @@ class SpeedyPipelineOutputPort extends SpeedyPipelinePort
     connectTo(port)
     {
         if(!port.isInputPort())
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't connect output port ${this.name} to port ${port.name}: expected an input port`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't connect output port ${this.name} to port ${port.name}: expected an input port`);
 
         port.connectTo(this);
     }
@@ -12662,7 +13011,7 @@ class SpeedyPipelineOutputPort extends SpeedyPipelinePort
     write(message)
     {
         if(!this._spec.accepts(message))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't write ${message} to port ${this.name}. ${this._spec}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't write ${message} to port ${this.name}. ${this._spec}`);
 
         this._message = message;
     }
@@ -12724,9 +13073,9 @@ class SpeedyPipelineInputPort extends SpeedyPipelinePort
     connectTo(port)
     {
         if(!port.isOutputPort())
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't connect input port ${this.name} of "${this.node.fullName}" to input port ${port.name} of "${port.node.fullName}": expected an output port`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't connect input port ${this.name} of "${this.node.fullName}" to input port ${port.name} of "${port.node.fullName}": expected an output port`);
         else if(!this._spec.isCompatibleWith(port._spec))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't connect port ${this.name} of "${this.node.fullName}" to port ${port.name} of "${port.node.fullName}": incompatible types`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't connect port ${this.name} of "${this.node.fullName}" to port ${port.name} of "${port.node.fullName}": incompatible types`);
 
         this._incomingLink = port;
     }
@@ -12758,11 +13107,11 @@ class SpeedyPipelineInputPort extends SpeedyPipelinePort
         const name = nodeName.length > 0 ? `${this.name} of ${nodeName}` : this.name;
 
         if(this._incomingLink == null)
-            throw new utils_errors/* IllegalOperationError */.js(`No incoming link for input port ${name}`);
+            throw new utils_errors/* IllegalOperationError */.Er(`No incoming link for input port ${name}`);
 
         const message = this._incomingLink.read();
         if(!this._spec.accepts(message))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't receive ${message} at port ${name}: ${this._spec}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't receive ${message} at port ${name}: ${this._spec}`);
 
         return (this._message = message);
     }
@@ -12780,7 +13129,7 @@ class SpeedyPipelineInputPort extends SpeedyPipelinePort
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12840,8 +13189,8 @@ class SpeedyPipelinePortBuilder
      */
     expects(type)
     {
-        utils/* Utils.assert */.c.assert(this._type == SpeedyPipelineMessageType.Nothing);
-        utils/* Utils.assert */.c.assert(type != SpeedyPipelineMessageType.Nothing);
+        utils/* Utils */.A.assert(this._type == SpeedyPipelineMessageType.Nothing);
+        utils/* Utils */.A.assert(type != SpeedyPipelineMessageType.Nothing);
 
         this._type = type;
 
@@ -12855,9 +13204,9 @@ class SpeedyPipelinePortBuilder
      */
     satisfying(constraint)
     {
-        utils/* Utils.assert */.c.assert(this._type != SpeedyPipelineMessageType.Nothing, 'You must first declare what type of message this port expects');
-        utils/* Utils.assert */.c.assert(this._messageConstraint === undefined);
-        utils/* Utils.assert */.c.assert(typeof constraint === 'function');
+        utils/* Utils */.A.assert(this._type != SpeedyPipelineMessageType.Nothing, 'You must first declare what type of message this port expects');
+        utils/* Utils */.A.assert(this._messageConstraint === undefined);
+        utils/* Utils */.A.assert(typeof constraint === 'function');
 
         this._messageConstraint = constraint;
 
@@ -12899,7 +13248,7 @@ function OutputPort(portName = SpeedyPipelineOutputPort.DEFAULT_NAME)
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13002,9 +13351,9 @@ class SpeedyPipelineNode
 
         // validate
         if(this._name.length == 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid name "${this._name}" for node ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid name "${this._name}" for node ${this.fullName}`);
         else if(portBuilders.length == 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`No ports have been found in node ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`No ports have been found in node ${this.fullName}`);
     }
 
     /**
@@ -13035,7 +13384,7 @@ class SpeedyPipelineNode
         if(portName in this._inputPorts)
             return this._inputPorts[portName];
 
-        throw new utils_errors/* IllegalArgumentError */.mG(`Can't find input port ${portName} in node ${this.fullName}`);
+        throw new utils_errors/* IllegalArgumentError */.qw(`Can't find input port ${portName} in node ${this.fullName}`);
     }
 
     /**
@@ -13048,7 +13397,7 @@ class SpeedyPipelineNode
         if(portName in this._outputPorts)
             return this._outputPorts[portName];
 
-        throw new utils_errors/* IllegalArgumentError */.mG(`Can't find output port ${portName} in node ${this.fullName}`);
+        throw new utils_errors/* IllegalArgumentError */.qw(`Can't find output port ${portName} in node ${this.fullName}`);
     }
 
     /**
@@ -13086,21 +13435,21 @@ class SpeedyPipelineNode
     {
         // ensure that no output ports are empty
         for(const portName in this._outputPorts) {
-            utils/* Utils.assert */.c.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
+            utils/* Utils */.A.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
         }
 
         // diagnosticize the node / pipeline
-        if(settings/* Settings.logging */.Z.logging === 'diagnostic') {
-            utils/* Utils.log */.c.log(`%c ${this.fullName} `, 'font-size:12pt;font-weight:bold;color:white;background:blue');
+        if(settings/* Settings */.w.logging === 'diagnostic') {
+            utils/* Utils */.A.log(`%c ${this.fullName} `, 'font-size:12pt;font-weight:bold;color:white;background:blue');
 
             // Inspecting the data has performance implications.
             // It is for diagnostic purposes only, not meant to be done in production!
 
             for(const portName in this._inputPorts)
-                utils/* Utils.log */.c.log(`%c-> ${portName}:`, 'font-size:10pt;font-weight:bold', this._inputPorts[portName].inspect(gpu));
+                utils/* Utils */.A.log(`%c-> ${portName}:`, 'font-size:10pt;font-weight:bold', this._inputPorts[portName].inspect(gpu));
 
             for(const portName in this._outputPorts)
-                utils/* Utils.log */.c.log(`%c<- ${portName}:`, 'font-size:10pt;font-weight:bold', this._outputPorts[portName].inspect(gpu));
+                utils/* Utils */.A.log(`%c<- ${portName}:`, 'font-size:10pt;font-weight:bold', this._outputPorts[portName].inspect(gpu));
         }
     }
 
@@ -13112,7 +13461,7 @@ class SpeedyPipelineNode
      */
     _run(gpu)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -13237,7 +13586,7 @@ class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        utils/* Utils.assert */.c.assert(Object.keys(this._inputPorts).length == 0);
+        utils/* Utils */.A.assert(Object.keys(this._inputPorts).length == 0);
     }
 
     /**
@@ -13265,7 +13614,7 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        utils/* Utils.assert */.c.assert(Object.keys(this._outputPorts).length == 0);
+        utils/* Utils */.A.assert(Object.keys(this._outputPorts).length == 0);
     }
 
     /**
@@ -13275,7 +13624,7 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
      */
     export()
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
@@ -13291,7 +13640,7 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13369,7 +13718,7 @@ class SpeedyKeypointMatch
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13594,7 +13943,7 @@ class SpeedyMatchedKeypoint extends SpeedyKeypoint
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13680,13 +14029,13 @@ class SpeedyPipeline
     {
         // validate
         if(this._nodes.length > 0)
-            throw new utils_errors/* IllegalOperationError */.js(`The pipeline has already been initialized`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The pipeline has already been initialized`);
         else if(nodes.length == 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't initialize the pipeline. Please specify its nodes`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't initialize the pipeline. Please specify its nodes`);
 
         // create a GPU instance and increase the reference count
         if(0 == referenceCount++) {
-            utils/* Utils.assert */.c.assert(!gpu, 'Duplicate SpeedyGPU instance');
+            utils/* Utils */.A.assert(!gpu, 'Duplicate SpeedyGPU instance');
             gpu = new SpeedyGPU();
         }
 
@@ -13716,7 +14065,7 @@ class SpeedyPipeline
     release()
     {
         if(this._nodes.length == 0)
-            throw new utils_errors/* IllegalOperationError */.js(`The pipeline has already been released or has never been initialized`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The pipeline has already been released or has never been initialized`);
 
         // release nodes
         for(let i = this._sequence.length - 1; i >= 0; i--)
@@ -13738,12 +14087,12 @@ class SpeedyPipeline
      */
     run()
     {
-        utils/* Utils.assert */.c.assert(this._sequence.length > 0, `The pipeline has not been initialized or has been released`);
+        utils/* Utils */.A.assert(this._sequence.length > 0, `The pipeline has not been initialized or has been released`);
 
         // is the pipeline busy?
         if(this._busy) {
             // if so, we need to wait 'til it finishes
-            return new speedy_promise/* SpeedyPromise */.s((resolve, reject) => {
+            return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => {
                 setTimeout(() => this.run().then(resolve, reject), 0);
             });
         }
@@ -13760,14 +14109,14 @@ class SpeedyPipeline
         const template = SpeedyPipeline._createOutputTemplate(sinks);
 
         // diagnostic log
-        if(settings/* Settings.logging */.Z.logging === 'diagnostic')
-            utils/* Utils.log */.c.log('%c RUNNING PIPELINE ', 'background:red;color:white;font-size:28pt;font-weight:bold');
+        if(settings/* Settings */.w.logging === 'diagnostic')
+            utils/* Utils */.A.log('%c RUNNING PIPELINE ', 'background:red;color:white;font-size:28pt;font-weight:bold');
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence).then(() =>
 
             // export results
-            speedy_promise/* SpeedyPromise.all */.s.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
+            speedy_promise/* SpeedyPromise */.i.all(sinks.map(sink => sink.export().turbocharge())).then(results =>
 
                 // aggregate results by the names of the sinks
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
@@ -13784,10 +14133,10 @@ class SpeedyPipeline
             this._busy = false;
 
             // diagnostic log
-            if(settings/* Settings.logging */.Z.logging === 'diagnostic') {
-                utils/* Utils.log */.c.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold');
+            if(settings/* Settings */.w.logging === 'diagnostic') {
+                utils/* Utils */.A.log('%c PIPELINE OUTPUT \n', 'background:green;color:white;font-size:16pt;font-weight:bold');
                 Object.keys(template).forEach(entry => {
-                    utils/* Utils.log */.c.log('%c' + entry + ':', 'font-size:10pt;font-weight:bold', template[entry]);
+                    utils/* Utils */.A.log('%c' + entry + ':', 'font-size:10pt;font-weight:bold', template[entry]);
                 });
             }
 
@@ -13824,7 +14173,7 @@ class SpeedyPipeline
                 return runTask.then(() => SpeedyPipeline._runSequence(sequence, i+1, n));
         }
 
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve();
+        return speedy_promise/* SpeedyPromise */.i.resolve();
     }
 
     /**
@@ -13853,7 +14202,7 @@ class SpeedyPipeline
                     stack.push(...(outnodes.map(node => /** @type {StackNode} */ ([ node, false ]) )));
 
                     if(outnodes.some(node => trash.has(node) && !sorted.includes(node)))
-                        throw new utils_errors/* IllegalOperationError */.js(`Pipeline networks cannot have cycles!`);
+                        throw new utils_errors/* IllegalOperationError */.Er(`Pipeline networks cannot have cycles!`);
                 }
             }
             else
@@ -13884,7 +14233,7 @@ class SpeedyPipeline
                 const links = outlinks.get(from);
 
                 if(!links)
-                    throw new utils_errors/* IllegalOperationError */.js(`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
+                    throw new utils_errors/* IllegalOperationError */.Er(`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
 
                 if(!links.includes(to))
                     links.push(to);
@@ -13916,11 +14265,11 @@ class SpeedyPipeline
     static _validateSequence(sequence)
     {
         if(sequence.length == 0)
-            throw new utils_errors/* IllegalOperationError */.js(`Pipeline doesn't have nodes`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Pipeline doesn't have nodes`);
         else if(!sequence[0].isSource())
-            throw new utils_errors/* IllegalOperationError */.js(`Pipeline doesn't have a source`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Pipeline doesn't have a source`);
         else if(!sequence.find(node => node.isSink()))
-            throw new utils_errors/* IllegalOperationError */.js(`Pipeline doesn't have a sink`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Pipeline doesn't have a sink`);
     }
 }
 
@@ -13928,7 +14277,7 @@ class SpeedyPipeline
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13998,7 +14347,7 @@ class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
     set media(media)
     {
         if(media !== null && !(media instanceof SpeedyMedia))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Not a SpeedyMedia: ${media}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Not a SpeedyMedia: ${media}`);
 
         this._media = media;
     }
@@ -14011,7 +14360,7 @@ class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
     _run(gpu)
     {
         if(this._media == null)
-            throw new utils_errors/* IllegalOperationError */.js(`Did you forget to set the media of ${this.fullName}?`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Did you forget to set the media of ${this.fullName}?`);
 
         // use round-robin to mitigate WebGL's implicit synchronization
         // and maybe minimize texture upload times
@@ -14028,7 +14377,7 @@ class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14057,6 +14406,12 @@ class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 
 
 
+
+/** @typedef {"bitmap" | "data"} SpeedyPipelineNodeImageSinkExportedMediaType exported media type */
+
+/** @type {SpeedyPipelineNodeImageSinkExportedMediaType} default exported media type */
+const DEFAULT_MEDIA_TYPE = "bitmap";
+
 /**
  * Gets an image out of a pipeline
  */
@@ -14072,11 +14427,61 @@ class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
             InputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 
+        /** @type {SpeedyPipelineNodeImageSinkExportedMediaType} the media type that is exported from this node */
+        this._mediaType = DEFAULT_MEDIA_TYPE;
+
         /** @type {ImageBitmap} output bitmap */
         this._bitmap = null;
 
+        /** @type {ImageData} output pixel data */
+        this._data = null;
+
         /** @type {ImageFormat} output format */
-        this._format = types/* ImageFormat.RGBA */.D3.RGBA;
+        this._format = types/* ImageFormat */.f5.RGBA;
+
+        /** @type {SpeedyTextureReader} texture reader */
+        this._textureReader = new SpeedyTextureReader(1);
+    }
+
+    /**
+     * The media type that is exported from this node
+     * @returns {SpeedyPipelineNodeImageSinkExportedMediaType}
+     */
+    get mediaType()
+    {
+        return this._mediaType;
+    }
+
+    /**
+     * The media type that is exported from this node
+     * @param {SpeedyPipelineNodeImageSinkExportedMediaType} value
+     */
+    set mediaType(value)
+    {
+        if(value != 'bitmap' && value != 'data')
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid mediaType for ${this.fullName}: "${value}"`);
+
+        this._mediaType = value;
+    }
+
+    /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+        this._textureReader.init(gpu);
+    }
+
+    /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._textureReader.release(gpu);
+        super.release(gpu);
     }
 
     /**
@@ -14085,8 +14490,10 @@ class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
      */
     export()
     {
-        utils/* Utils.assert */.c.assert(this._bitmap != null);
-        return SpeedyMedia.load(this._bitmap, { format: this._format }, false);
+        const bitmapOrData = (this._mediaType != 'data') ? this._bitmap : this._data;
+        utils/* Utils */.A.assert(bitmapOrData != null);
+
+        return SpeedyMedia.load(bitmapOrData, { format: this._format }, false);
     }
 
     /**
@@ -14098,21 +14505,38 @@ class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
     {
         const { image, format } = /** @type {SpeedyPipelineMessageWithImage} */ ( this.input().read() );
 
-        return new speedy_promise/* SpeedyPromise */.s(resolve => {
-            const canvas = gpu.renderToCanvas(image);
-            createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap => {
-                this._bitmap = bitmap;
-                this._format = format;
-                resolve();
+        if(this._mediaType != 'data') {
+
+            /* Create an ImageBitmap (default) */
+            return new speedy_promise/* SpeedyPromise */.i(resolve => {
+                const canvas = gpu.renderToCanvas(image);
+                createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap => {
+                    this._bitmap = bitmap;
+                    this._format = format;
+                    this._data = null;
+                    resolve();
+                });
             });
-        });
+
+        }
+        else {
+
+            /* Create an ImageData */
+            return this._textureReader.readPixelsAsync(image, 0, 0, image.width, image.height, false).then(pixels => {
+                const dataArray = new Uint8ClampedArray(pixels.buffer);
+                this._data = new ImageData(dataArray, image.width, image.height);
+                this._format = format;
+                this._bitmap = null;
+            });
+
+        }
     }
 }
 ;// CONCATENATED MODULE: ./src/core/pipeline/nodes/images/multiplexer.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14179,7 +14603,7 @@ class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
     set port(port)
     {
         if(port < 0 || port >= INPUT_PORT.length)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid port: ${port}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid port: ${port}`);
 
         this._port = port | 0;
     }
@@ -14200,7 +14624,7 @@ class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14254,7 +14678,7 @@ class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
         this._initialized = false;
 
         /** @type {ImageFormat} previous image format */
-        this._previousFormat = types/* ImageFormat.RGBA */.D3.RGBA;
+        this._previousFormat = types/* ImageFormat */.f5.RGBA;
 
         /** @type {boolean} frozen buffer? */
         this._frozen = false;
@@ -14303,7 +14727,7 @@ class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
 
         // can't store pyramids
         if(image.hasMipmaps())
-            throw new utils_errors/* NotSupportedError */.B8(`${this.fullName} can't bufferize a pyramid`);
+            throw new utils_errors/* NotSupportedError */.EM(`${this.fullName} can't bufferize a pyramid`);
 
         // bufferize
         if(!this._frozen || !this._initialized) {
@@ -14331,7 +14755,7 @@ class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14453,7 +14877,7 @@ class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14579,7 +15003,7 @@ class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode
         const outputTexture = this._tex[0];
 
         if(format0 != format1)
-            throw new utils_errors/* NotSupportedError */.B8(`Can't mix images of different formats`);
+            throw new utils_errors/* NotSupportedError */.EM(`Can't mix images of different formats`);
 
         gpu.programs.transforms.additiveMix.outputs(width, height, outputTexture);
         gpu.programs.transforms.additiveMix(image0, image1, alpha, beta, gamma);
@@ -14591,7 +15015,7 @@ class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14638,7 +15062,7 @@ class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
         ]);
 
         /** @type {ImageFormat} stored image format */
-        this._format = types/* ImageFormat.RGBA */.D3.RGBA;
+        this._format = types/* ImageFormat */.f5.RGBA;
 
         /** @type {boolean} is this node initialized? */
         this._initialized = false;
@@ -14651,7 +15075,7 @@ class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
     get image()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._tex[0];
     }
@@ -14663,7 +15087,7 @@ class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
     get format()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._format;
     }
@@ -14677,7 +15101,7 @@ class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
         super.init(gpu);
 
         this._tex[0].resize(1, 1).clear(); // initial texture
-        this._format = types/* ImageFormat.RGBA */.D3.RGBA;
+        this._format = types/* ImageFormat */.f5.RGBA;
 
         this._initialized = true;
     }
@@ -14704,7 +15128,7 @@ class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
 
         // can't store pyramids
         if(image.hasMipmaps())
-            throw new utils_errors/* NotSupportedError */.B8(`${this.fullName} can't store a pyramid`);
+            throw new utils_errors/* NotSupportedError */.EM(`${this.fullName} can't store a pyramid`);
 
         // copy input
         this._format = format;
@@ -14750,7 +15174,7 @@ class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
     set source(node)
     {
         if(node !== null && !(node instanceof SpeedyPipelineNodeImagePortalSink))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Incompatible source for ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Incompatible source for ${this.fullName}`);
 
         this._source = node;
     }
@@ -14763,7 +15187,7 @@ class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
     _run(gpu)
     {
         if(this._source == null)
-            throw new utils_errors/* IllegalOperationError */.js(`${this.fullName} has no source`);
+            throw new utils_errors/* IllegalOperationError */.Er(`${this.fullName} has no source`);
 
         this.output().swrite(this._source.image, this._source.format);
     }
@@ -14773,7 +15197,7 @@ class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14803,7 +15227,7 @@ class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
 /**
  * Portal nodes
  */
-class SpeedyPipelineImagePortalFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineImagePortalFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Create an image portal source
@@ -14829,7 +15253,7 @@ class SpeedyPipelineImagePortalFactory extends speedy_namespace/* SpeedyNamespac
 /**
  * Image nodes
  */
-class SpeedyPipelineImageFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineImageFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Create an image source
@@ -14904,7 +15328,7 @@ class SpeedyPipelineImageFactory extends speedy_namespace/* SpeedyNamespace */.R
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14963,14 +15387,14 @@ class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
         filters.rgb2grey.outputs(width, height, outputTexture);
         filters.rgb2grey(image);
 
-        this.output().swrite(outputTexture, types/* ImageFormat.GREY */.D3.GREY);
+        this.output().swrite(outputTexture, types/* ImageFormat */.f5.GREY);
     }
 }
 ;// CONCATENATED MODULE: ./src/core/pipeline/nodes/filters/gaussian-blur.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15091,11 +15515,11 @@ class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
      */
     set kernelSize(kernelSize)
     {
-        utils/* Utils.assert */.c.assert(kernelSize instanceof SpeedySize);
+        utils/* Utils */.A.assert(kernelSize instanceof SpeedySize);
 
         const kw = kernelSize.width, kh = kernelSize.height;
         if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
-            throw new utils_errors/* NotSupportedError */.B8(`Unsupported kernel size: ${kw}x${kh}`);
+            throw new utils_errors/* NotSupportedError */.EM(`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
         this._updateKernel();
@@ -15116,8 +15540,8 @@ class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
      */
     set sigma(sigma)
     {
-        utils/* Utils.assert */.c.assert(sigma instanceof SpeedyVector2, `Sigma must be a SpeedyVector2`);
-        utils/* Utils.assert */.c.assert(sigma.x >= 0 && sigma.y >= 0);
+        utils/* Utils */.A.assert(sigma instanceof SpeedyVector2, `Sigma must be a SpeedyVector2`);
+        utils/* Utils */.A.assert(sigma.x >= 0 && sigma.y >= 0);
 
         this._sigma = sigma;
         this._updateKernel();
@@ -15159,19 +15583,19 @@ class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
         if(this._sigma.x == DEFAULT_SIGMA.x)
             this._kernel.x = DEFAULT_KERNEL[this._kernelSize.width];
         else
-            this._kernel.x = utils/* Utils.gaussianKernel */.c.gaussianKernel(this._sigma.x, this._kernelSize.width, true);
+            this._kernel.x = utils/* Utils */.A.gaussianKernel(this._sigma.x, this._kernelSize.width, true);
 
         if(this._sigma.y == DEFAULT_SIGMA.y)
             this._kernel.y = DEFAULT_KERNEL[this._kernelSize.height];
         else
-            this._kernel.y = utils/* Utils.gaussianKernel */.c.gaussianKernel(this._sigma.y, this._kernelSize.height, true);
+            this._kernel.y = utils/* Utils */.A.gaussianKernel(this._sigma.y, this._kernelSize.height, true);
     }
 }
 ;// CONCATENATED MODULE: ./src/core/pipeline/nodes/filters/simple-blur.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15280,11 +15704,11 @@ class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
      */
     set kernelSize(kernelSize)
     {
-        utils/* Utils.assert */.c.assert(kernelSize instanceof SpeedySize);
+        utils/* Utils */.A.assert(kernelSize instanceof SpeedySize);
 
         const kw = kernelSize.width, kh = kernelSize.height;
         if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
-            throw new utils_errors/* NotSupportedError */.B8(`Unsupported kernel size: ${kw}x${kh}`);
+            throw new utils_errors/* NotSupportedError */.EM(`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
         this._kernel.x = BOX_FILTER[this._kernelSize.width];
@@ -15322,7 +15746,7 @@ class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15372,7 +15796,7 @@ class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
         super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -15396,13 +15820,13 @@ class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
      */
     set kernelSize(kernelSize)
     {
-        utils/* Utils.assert */.c.assert(kernelSize instanceof SpeedySize);
+        utils/* Utils */.A.assert(kernelSize instanceof SpeedySize);
 
         const ksize = kernelSize.width;
         if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new utils_errors/* NotSupportedError */.B8(`Supported kernel sizes: 3x3, 5x5, 7x7`);
+            throw new utils_errors/* NotSupportedError */.EM(`Supported kernel sizes: 3x3, 5x5, 7x7`);
         else if(kernelSize.width != kernelSize.height)
-            throw new utils_errors/* NotSupportedError */.B8(`Use a square kernel`);
+            throw new utils_errors/* NotSupportedError */.EM(`Use a square kernel`);
 
         this._kernelSize = kernelSize;
     }
@@ -15431,7 +15855,7 @@ class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15504,9 +15928,9 @@ class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
     set kernel(kernel)
     {
         if(kernel.rows != kernel.columns)
-            throw new utils_errors/* NotSupportedError */.B8(`Use a square kernel`);
+            throw new utils_errors/* NotSupportedError */.EM(`Use a square kernel`);
         else if(!(kernel.rows == 3 || kernel.rows == 5 || kernel.rows == 7))
-            throw new utils_errors/* NotSupportedError */.B8(`Invalid kernel size. Supported sizes: 3x3, 5x5, 7x7`);
+            throw new utils_errors/* NotSupportedError */.EM(`Invalid kernel size. Supported sizes: 3x3, 5x5, 7x7`);
 
         this._kernel = kernel;
     }
@@ -15536,7 +15960,7 @@ class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15582,8 +16006,8 @@ class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.RGBA */.D3.RGBA ||
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.RGBA ||
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -15673,7 +16097,7 @@ class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         if(quality === 'high' || quality === 'medium' || quality === 'low')
             this._quality = quality;
         else
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid quality level for the Nightvision filter: "${quality}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid quality level for the Nightvision filter: "${quality}"`);
     }
 
     /**
@@ -15715,11 +16139,11 @@ class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         }
 
         // run nightvision
-        if(format === types/* ImageFormat.GREY */.D3.GREY) {
+        if(format === types/* ImageFormat */.f5.GREY) {
             filters.nightvisionGreyscale.outputs(width, height, outputTexture);
             filters.nightvisionGreyscale(image, illuminationMap, gain, offset, decay);
         }
-        else if(format === types/* ImageFormat.RGBA */.D3.RGBA) {
+        else if(format === types/* ImageFormat */.f5.RGBA) {
             filters.nightvision.outputs(width, height, outputTexture);
             filters.nightvision(image, illuminationMap, gain, offset, decay);
         }
@@ -15732,7 +16156,7 @@ class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15773,7 +16197,7 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         super(name, 4, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -15837,7 +16261,7 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         if(minValue > maxValue)
             minValue = maxValue = (minValue + maxValue) / 2;
 
-        const minmax = this._scanMinMax(gpu, image, types/* PixelComponent.GREEN */.hE.GREEN);
+        const minmax = this._scanMinMax(gpu, image, types/* PixelComponent */.kQ.GREEN);
         gpu.programs.filters.normalizeGreyscale.outputs(width, height, outputTexture);
         gpu.programs.filters.normalizeGreyscale(minmax, minValue, maxValue);
 
@@ -15858,12 +16282,12 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         const width = image.width, height = image.height;
         const numIterations = Math.ceil(Math.log2(Math.max(width, height))) | 0;
 
-        utils/* Utils.assert */.c.assert(types/* ColorComponentId */.rY[pixelComponent] !== undefined);
+        utils/* Utils */.A.assert(types/* ColorComponentId */.kg[pixelComponent] !== undefined);
 
         program.copyComponents.outputs(width, height, tex[2]);
         program.scanMinMax2D.outputs(width, height, tex[0], tex[1]);
         
-        let texture = program.copyComponents(image, image, types/* PixelComponent.ALL */.hE.ALL, types/* ColorComponentId */.rY[pixelComponent]);
+        let texture = program.copyComponents(image, image, types/* PixelComponent */.kQ.ALL, types/* ColorComponentId */.kg[pixelComponent]);
         for(let i = 0; i < numIterations; i++)
             texture = program.scanMinMax2D(texture, i);
 
@@ -15874,7 +16298,7 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15904,7 +16328,7 @@ class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
 /**
  * Image filters
  */
-class SpeedyPipelineFilterFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineFilterFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Convert image to greyscale
@@ -15980,7 +16404,7 @@ class SpeedyPipelineFilterFactory extends speedy_namespace/* SpeedyNamespace */.
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16048,7 +16472,7 @@ class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
     set transform(transform)
     {
         if(!(transform.rows == 3 && transform.columns == 3))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Not a 3x3 transformation matrix: ${transform}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Not a 3x3 transformation matrix: ${transform}`);
 
         this._transform = transform;
     }
@@ -16124,7 +16548,7 @@ class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16234,7 +16658,7 @@ class SpeedyPipelineNodeResize extends SpeedyPipelineNode
     set method(method)
     {
         if(method !== 'nearest' && method !== 'bilinear')
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid method method: "${method}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid method method: "${method}"`);
 
         this._method = method;
     }
@@ -16271,7 +16695,7 @@ class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16296,7 +16720,7 @@ class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 /**
  * Image transforms
  */
-class SpeedyPipelineTransformFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineTransformFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Resize image
@@ -16322,7 +16746,7 @@ class SpeedyPipelineTransformFactory extends speedy_namespace/* SpeedyNamespace 
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16688,7 +17112,7 @@ class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipelineNodeKey
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16764,7 +17188,7 @@ class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
     set keypoints(keypoints)
     {
         if(!Array.isArray(keypoints))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Not an array of keypoints`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Not an array of keypoints`);
 
         this._keypoints = keypoints;
     }
@@ -16831,7 +17255,7 @@ class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
     {
         const internalBuffer = new ArrayBuffer(SIZEOF_VEC4 * bufferSize);
 
-        utils/* Utils.assert */.c.assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
+        utils/* Utils */.A.assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
 
         return new Float32Array(internalBuffer);
     }
@@ -16868,7 +17292,7 @@ class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16932,7 +17356,7 @@ class SpeedyKeypointDescriptor
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17070,7 +17494,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
      */
     export()
     {
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._keypoints);
+        return speedy_promise/* SpeedyPromise */.i.resolve(this._keypoints);
     }
 
     /**
@@ -17152,13 +17576,13 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
 
         // validate
         if(descriptorSize % 4 != 0 || extraSize % 4 != 0)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid descriptorSize (${descriptorSize}) / extraSize (${extraSize})`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid descriptorSize (${descriptorSize}) / extraSize (${extraSize})`);
 
         // how many bytes should we read?
         const e2 = encoderWidth * encoderHeight * 4;
         const size = pixels.byteLength;
         if(size != e2)
-            utils/* Utils.warning */.c.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
+            utils/* Utils */.A.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
 
         // copy the data (we use shared buffers when receiving pixels[])
         if(descriptorSize + extraSize > 0)
@@ -17187,14 +17611,14 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
             if(extraSize > 0) {
                 extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
                 if(extraBytes.byteLength < extraSize) {
-                    utils/* Utils.warning */.c.warning(`KeypointSink: expected ${extraSize} extra bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${extraBytes.byteLength} instead`);
+                    utils/* Utils */.A.warning(`KeypointSink: expected ${extraSize} extra bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${extraBytes.byteLength} instead`);
                     continue; // something is off here; discard
                 }
             }
             if(descriptorSize > 0) {
                 descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
                 if(descriptorBytes.byteLength < descriptorSize) {
-                    utils/* Utils.warning */.c.warning(`KeypointSink: expected ${descriptorSize} descriptor bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${descriptorBytes.byteLength} instead`);
+                    utils/* Utils */.A.warning(`KeypointSink: expected ${descriptorSize} descriptor bytes when decoding the ${i/bytesPerKeypoint}-th keypoint, found ${descriptorBytes.byteLength} instead`);
                     continue; // something is off here; discard
                 }
             }
@@ -17210,7 +17634,7 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
             rotation = (2 * pixels[i+5] - 255) * piOver255;
 
             // decode score
-            score = utils/* Utils.decodeFloat16 */.c.decodeFloat16(w);
+            score = utils/* Utils */.A.decodeFloat16(w);
 
             // create keypoint
             keypoint = this._createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes);
@@ -17236,11 +17660,11 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
      */
     _createKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
     {
-        throw new utils_errors/* AbstractMethodError */.Mi();
+        throw new utils_errors/* AbstractMethodError */.aQ();
     }
 
     /**
-     * Allocate extra soace
+     * Allocate extra space
      * @param {SpeedyGPU} gpu
      * @param {SpeedyDrawableTexture} output output texture
      * @param {SpeedyTexture} inputEncodedKeypoints input with no extra space
@@ -17252,8 +17676,8 @@ class SpeedyPipelineNodeAbstractKeypointSink extends SpeedyPipelineSinkNode
      */
     _allocateExtra(gpu, output, inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize)
     {
-        utils/* Utils.assert */.c.assert(inputExtraSize === 0);
-        utils/* Utils.assert */.c.assert(outputDescriptorSize === inputDescriptorSize && outputExtraSize > 0 && outputExtraSize % 4 === 0);
+        utils/* Utils */.A.assert(inputExtraSize === 0);
+        utils/* Utils */.A.assert(outputDescriptorSize === inputDescriptorSize && outputExtraSize > 0 && outputExtraSize % 4 === 0);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
         const inputEncoderCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
@@ -17372,8 +17796,8 @@ class SpeedyPipelineNodeTrackedKeypointSink extends SpeedyPipelineNodeAbstractKe
         const descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
 
         // read flow vector
-        const fx = utils/* Utils.decodeFloat16 */.c.decodeFloat16((extraBytes[1] << 8) | extraBytes[0]);
-        const fy = utils/* Utils.decodeFloat16 */.c.decodeFloat16((extraBytes[3] << 8) | extraBytes[2]);
+        const fx = utils/* Utils */.A.decodeFloat16((extraBytes[1] << 8) | extraBytes[0]);
+        const fy = utils/* Utils */.A.decodeFloat16((extraBytes[3] << 8) | extraBytes[2]);
         const flow = new SpeedyVector2(fx, fy);
 
         // create keypoint
@@ -17466,7 +17890,7 @@ class SpeedyPipelineNodeMatchedKeypointSink extends SpeedyPipelineNodeAbstractKe
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17604,7 +18028,7 @@ class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17713,7 +18137,7 @@ class SpeedyPipelineNodeKeypointBorderClipper extends SpeedyPipelineNode
 
         // validate
         if(imageWidth == 0 || imageHeight == 0)
-            throw new utils_errors/* IllegalOperationError */.js(`BorderClipper: did you forget to set the image size?`);
+            throw new utils_errors/* IllegalOperationError */.Er(`BorderClipper: did you forget to set the image size?`);
 
         // find the capacity of the keypoint stream
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
@@ -17758,7 +18182,7 @@ class SpeedyPipelineNodeKeypointBorderClipper extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17894,7 +18318,7 @@ class SpeedyPipelineNodeKeypointBuffer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17957,7 +18381,7 @@ class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
 
         // ensure that the format of kps0 equals the format of kps1
         if(!(kps0.descriptorSize === kps1.descriptorSize && kps0.extraSize === kps0.extraSize))
-            throw new utils_errors/* IllegalOperationError */.js(`Can't merge two sets of keypoints that have different formats`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't merge two sets of keypoints that have different formats`);
 
         // find the capacity of kps0 + kps1
         const cap0 = SpeedyPipelineNodeKeypointDetector.encoderCapacity(kps0.descriptorSize, kps0.extraSize, kps0.encoderLength);
@@ -18008,7 +18432,7 @@ class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18135,7 +18559,7 @@ class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
     {
         const array = new Int32Array(bufsize);
         const p = array.subarray(0, n).fill(-1);
-        const q = utils/* Utils.shuffle */.c.shuffle(utils/* Utils.range */.c.range(n));
+        const q = utils/* Utils */.A.shuffle(utils/* Utils */.A.range(n));
 
         for(let i = 0, j = 0; i < n; i++) {
             if(p[i] < 0) {
@@ -18152,7 +18576,7 @@ class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18219,7 +18643,7 @@ class SpeedyPipelineNodeKeypointMultiplexer extends SpeedyPipelineNode
     set port(port)
     {
         if(port < 0 || port >= multiplexer_INPUT_PORT.length)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid port: ${port}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid port: ${port}`);
 
         this._port = port | 0;
     }
@@ -18240,7 +18664,7 @@ class SpeedyPipelineNodeKeypointMultiplexer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18305,7 +18729,7 @@ class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
     set transform(transform)
     {
         if(!(transform.rows == 3 && transform.columns == 3))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Not a 3x3 transformation matrix: ${transform}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Not a 3x3 transformation matrix: ${transform}`);
 
         this._transform = transform;
     }
@@ -18334,7 +18758,7 @@ class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18387,7 +18811,7 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNode
         super(name, 2, [
             InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
@@ -18420,7 +18844,7 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNode
     set method(name)
     {
         if(!Object.prototype.hasOwnProperty.call(METHOD2PROGRAM, name))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid method: "${name}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid method: "${name}"`);
 
         this._method = name;
     }
@@ -18499,7 +18923,7 @@ class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18547,7 +18971,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMultiscal
         super(name, 5, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -18591,7 +19015,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMultiscal
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
-            throw new utils_errors/* IllegalOperationError */.js(`Expected a pyramid in ${this.fullName}`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Expected a pyramid in ${this.fullName}`);
 
         // skip if the capacity is zero
         if(capacity == 0) {
@@ -18643,7 +19067,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMultiscal
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18695,7 +19119,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
         super(name, 6, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
@@ -18744,7 +19168,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
     {
         const d = windowSize.width;
         if(!((d == windowSize.height) && (d == 1 || d == 3 || d == 5 || d == 7)))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid window: ${windowSize}. Acceptable sizes: 1x1, 3x3, 5x5, 7x7`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid window: ${windowSize}. Acceptable sizes: 1x1, 3x3, 5x5, 7x7`);
 
         this._windowSize = windowSize;
     }
@@ -18769,7 +19193,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
-            throw new utils_errors/* IllegalOperationError */.js(`Expected a pyramid in ${this.fullName}`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Expected a pyramid in ${this.fullName}`);
 
         // skip if the capacity is zero
         if(capacity == 0) {
@@ -18786,7 +19210,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
         let corners = tex[1].clear();
         let numPasses = Math.max(1, Math.min(levels, (globals.PYRAMID_MAX_LEVELS / lodStep) | 0));
         for(let lod = lodStep * (numPasses - 1); numPasses-- > 0; lod -= lodStep) {
-            const gaussian = utils/* Utils.gaussianKernel */.c.gaussianKernel(intFactor * (1 + lod), windowSize);
+            const gaussian = utils/* Utils */.A.gaussianKernel(intFactor * (1 + lod), windowSize);
             const derivatives = gpu.programs.utils.sobelDerivatives(image, lod);
             corners = harris(corners, image, derivatives, lod, lodStep, gaussian);
             corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
@@ -18839,7 +19263,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultisc
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18894,8 +19318,8 @@ class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
      */
     _allocateDescriptors(gpu, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize, inputEncodedKeypoints)
     {
-        utils/* Utils.assert */.c.assert(inputDescriptorSize >= 0 && inputExtraSize >= 0);
-        utils/* Utils.assert */.c.assert(outputDescriptorSize >= 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
+        utils/* Utils */.A.assert(inputDescriptorSize >= 0 && inputExtraSize >= 0);
+        utils/* Utils */.A.assert(outputDescriptorSize >= 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
         const inputEncoderCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
@@ -18912,7 +19336,7 @@ class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18958,7 +19382,7 @@ class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeKeypoint
         super(name, 3, [
             InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
@@ -19005,7 +19429,7 @@ class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeKeypoint
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19070,11 +19494,11 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         super(name, 3, [
             InputPort('previousImage').expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             InputPort('nextImage').expects(SpeedyPipelineMessageType.Image).satisfying(
                 ( /** @type {SpeedyPipelineMessageWithImage} */ msg ) =>
-                    msg.format === types/* ImageFormat.GREY */.D3.GREY
+                    msg.format === types/* ImageFormat */.f5.GREY
             ),
             InputPort('previousKeypoints').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
@@ -19113,11 +19537,11 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
     set windowSize(windowSize)
     {
         if(windowSize.width != windowSize.height) {
-            throw new utils_errors/* NotSupportedError */.B8(`LK: window ${this._windowSize.toString()} is not square!`);
+            throw new utils_errors/* NotSupportedError */.EM(`LK: window ${this._windowSize.toString()} is not square!`);
         }
         else if(!Object.prototype.hasOwnProperty.call(LK_PROGRAM, windowSize.width)) {
             const SUPPORTED_WINDOWS = Object.keys(LK_PROGRAM).sort((a,b) => a-b).map(k => k+'x'+k).join(', ');
-            throw new utils_errors/* NotSupportedError */.B8(`LK: window of size ${this._windowSize.toString()} is not supported! Supported sizes: ${SUPPORTED_WINDOWS}`);
+            throw new utils_errors/* NotSupportedError */.EM(`LK: window of size ${this._windowSize.toString()} is not supported! Supported sizes: ${SUPPORTED_WINDOWS}`);
         }
 
         this._windowSize = windowSize;
@@ -19138,7 +19562,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     set levels(levels)
     {
-        utils/* Utils.assert */.c.assert(levels >= 1 && levels <= globals.PYRAMID_MAX_LEVELS);
+        utils/* Utils */.A.assert(levels >= 1 && levels <= globals.PYRAMID_MAX_LEVELS);
         this._levels = levels | 0;
     }
 
@@ -19157,7 +19581,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     set discardThreshold(value)
     {
-        utils/* Utils.assert */.c.assert(value >= 0);
+        utils/* Utils */.A.assert(value >= 0);
         this._discardThreshold = +value;
     }
 
@@ -19176,7 +19600,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     set numberOfIterations(value)
     {
-        utils/* Utils.assert */.c.assert(value >= 1);
+        utils/* Utils */.A.assert(value >= 1);
         this._numberOfIterations = value | 0;
     }
 
@@ -19195,7 +19619,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     set epsilon(value)
     {
-        utils/* Utils.assert */.c.assert(value >= 0);
+        utils/* Utils */.A.assert(value >= 0);
         this._epsilon = +value;
     }
 
@@ -19221,9 +19645,9 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
-            throw new utils_errors/* IllegalOperationError */.js(`LK: a pyramid is required if levels > 1`);
+            throw new utils_errors/* IllegalOperationError */.Er(`LK: a pyramid is required if levels > 1`);
         else if(previousImage.width !== nextImage.width || previousImage.height !== nextImage.height)
-            throw new utils_errors/* IllegalOperationError */.js(`LK: can't use input images of different size`);
+            throw new utils_errors/* IllegalOperationError */.Er(`LK: can't use input images of different size`);
 
         // select the appropriate program
         const lk = keypoints[LK_PROGRAM[wsize]];
@@ -19251,7 +19675,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19330,7 +19754,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
     set keypoints(keypoints)
     {
         if(!Array.isArray(keypoints) || keypoints.find(keypoint => !(keypoint instanceof SpeedyKeypoint)))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Static LSH tables: an invalid set of keypoints has been provided`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Static LSH tables: an invalid set of keypoints has been provided`);
 
         if(this._keypoints !== keypoints) {
             this._keypoints = keypoints; // update internal pointer
@@ -19355,7 +19779,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
     set numberOfTables(n)
     {
         if(!LSH_ACCEPTABLE_NUMBER_OF_TABLES.includes(n))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid number of tables: ${n}. Acceptable values: ${LSH_ACCEPTABLE_NUMBER_OF_TABLES.join(', ')}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid number of tables: ${n}. Acceptable values: ${LSH_ACCEPTABLE_NUMBER_OF_TABLES.join(', ')}`);
 
         if(n !== this._numberOfTables) {
             this._numberOfTables = n | 0;
@@ -19379,7 +19803,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
     set hashSize(h)
     {
         if(!LSH_ACCEPTABLE_HASH_SIZES.includes(h))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid hash size: ${h}. Acceptable values: ${LSH_ACCEPTABLE_HASH_SIZES.join(', ')}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid hash size: ${h}. Acceptable values: ${LSH_ACCEPTABLE_HASH_SIZES.join(', ')}`);
 
         if(h !== this._hashSize) {
             this._hashSize = h | 0;
@@ -19416,7 +19840,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
         const hashSize = this._hashSize;
 
         if(keypoints.find(keypoint => keypoint.descriptor == null))
-            throw new utils_errors/* IllegalOperationError */.js(`Static LSH tables: can't train the model with no keypoint descriptors!`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Static LSH tables: can't train the model with no keypoint descriptors!`);
 
         const descriptors = keypoints.map(keypoint => keypoint.descriptor.data);
         const lshTables = this._tex[0];
@@ -19429,7 +19853,7 @@ class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19545,7 +19969,7 @@ class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
     set quality(quality)
     {
         if(!Object.prototype.hasOwnProperty.call(NUMBER_OF_BIT_SWAPS, quality))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Invalid quality level: "${quality}"`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Invalid quality level: "${quality}"`);
 
         this._quality = quality;
     }
@@ -19580,11 +20004,11 @@ class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 
         // validate parameters
         if(descriptorSize !== lsh.descriptorSize)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Can't match different types of descriptors in ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Can't match different types of descriptors in ${this.fullName}`);
 
-        utils/* Utils.assert */.c.assert(LSH_KNN[descriptorSize] != undefined);
-        utils/* Utils.assert */.c.assert(LSH_KNN[descriptorSize][hashSize] != undefined);
-        utils/* Utils.assert */.c.assert(LSH_KNN[descriptorSize][hashSize][level] != undefined);
+        utils/* Utils */.A.assert(LSH_KNN[descriptorSize] != undefined);
+        utils/* Utils */.A.assert(LSH_KNN[descriptorSize][hashSize] != undefined);
+        utils/* Utils */.A.assert(LSH_KNN[descriptorSize][hashSize][level] != undefined);
 
         // configure the output texture
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
@@ -19640,7 +20064,7 @@ class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19740,9 +20164,9 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipelineNode
 
         // validate parameters
         if(descriptorSize !== database.descriptorSize)
-            throw new utils_errors/* IllegalArgumentError */.mG(`Incompatible descriptors in ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Incompatible descriptors in ${this.fullName}`);
         else if(!Object.prototype.hasOwnProperty.call(PROGRAM_NAME, descriptorSize))
-            throw new utils_errors/* NotSupportedError */.B8(`Unsupported descriptor size (${descriptorSize}) in ${this.fullName}`);
+            throw new utils_errors/* NotSupportedError */.EM(`Unsupported descriptor size (${descriptorSize}) in ${this.fullName}`);
 
         // prepare the brute force matching
         const bfMatcher = keypoints[PROGRAM_NAME[descriptorSize]];
@@ -19794,7 +20218,7 @@ class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19882,7 +20306,7 @@ class SpeedyPipelineNodeKeypointDistanceFilter extends SpeedyPipelineNode
 
         // validate shapes
         if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
-            throw new utils_errors/* IllegalOperationError */.js(`The distance filter requires two compatible shapes of keypoint streams`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The distance filter requires two compatible shapes of keypoint streams`);
 
         // calculate the shape of the output
         const outputTexture = this._tex[0];
@@ -19903,7 +20327,7 @@ class SpeedyPipelineNodeKeypointDistanceFilter extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20003,11 +20427,11 @@ class SpeedyPipelineNodeKeypointHammingDistanceFilter extends SpeedyPipelineNode
 
         // validate shapes
         if(set0.descriptorSize != set1.descriptorSize || set0.extraSize != set1.extraSize)
-            throw new utils_errors/* IllegalOperationError */.js(`The Hamming distance filter requires two compatible shapes of keypoint streams`);
+            throw new utils_errors/* IllegalOperationError */.Er(`The Hamming distance filter requires two compatible shapes of keypoint streams`);
 
         // validate descriptor size
         if(!Object.prototype.hasOwnProperty.call(hamming_distance_filter_PROGRAM_NAME, set0.descriptorSize))
-            throw new utils_errors/* NotSupportedError */.B8(`Hamming distance filter - invalid descriptor size: ${set0.descriptorSize}`);
+            throw new utils_errors/* NotSupportedError */.EM(`Hamming distance filter - invalid descriptor size: ${set0.descriptorSize}`);
 
         // calculate the shape of the output
         const outputTexture = this._tex[0];
@@ -20029,7 +20453,7 @@ class SpeedyPipelineNodeKeypointHammingDistanceFilter extends SpeedyPipelineNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20095,7 +20519,7 @@ class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode
     get encodedKeypoints()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._tex[0];
     }
@@ -20107,7 +20531,7 @@ class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode
     get descriptorSize()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._descriptorSize;
     }
@@ -20119,7 +20543,7 @@ class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode
     get extraSize()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._extraSize;
     }
@@ -20131,7 +20555,7 @@ class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode
     get encoderLength()
     {
         if(!this._initialized)
-            throw new utils_errors/* IllegalOperationError */.js(`Portal error: ${this.fullName} holds no data`);
+            throw new utils_errors/* IllegalOperationError */.Er(`Portal error: ${this.fullName} holds no data`);
 
         return this._encoderLength;
     }
@@ -20218,7 +20642,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
     set source(node)
     {
         if(node !== null && !(node instanceof SpeedyPipelineNodeKeypointPortalSink))
-            throw new utils_errors/* IllegalArgumentError */.mG(`Incompatible source for ${this.fullName}`);
+            throw new utils_errors/* IllegalArgumentError */.qw(`Incompatible source for ${this.fullName}`);
 
         this._source = node;
     }
@@ -20231,7 +20655,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
     _run(gpu)
     {
         if(this._source == null)
-            throw new utils_errors/* IllegalOperationError */.js(`${this.fullName} has no source`);
+            throw new utils_errors/* IllegalOperationError */.Er(`${this.fullName} has no source`);
 
         this.output().swrite(this._source.encodedKeypoints, this._source.descriptorSize, this._source.extraSize, this._source.encoderLength);
     }
@@ -20241,7 +20665,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20284,7 +20708,7 @@ class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
 /**
  * Keypoint detectors
  */
-class SpeedyPipelineKeypointDetectorFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointDetectorFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * FAST corner detector
@@ -20310,7 +20734,7 @@ class SpeedyPipelineKeypointDetectorFactory extends speedy_namespace/* SpeedyNam
 /**
  * Keypoint descriptors
  */
-class SpeedyPipelineKeypointDescriptorFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointDescriptorFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * ORB descriptors
@@ -20326,7 +20750,7 @@ class SpeedyPipelineKeypointDescriptorFactory extends speedy_namespace/* SpeedyN
 /**
  * Keypoint trackers
  */
-class SpeedyPipelineKeypointTrackerFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointTrackerFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * LK optical-flow
@@ -20342,7 +20766,7 @@ class SpeedyPipelineKeypointTrackerFactory extends speedy_namespace/* SpeedyName
 /**
  * Keypoint matchers
  */
-class SpeedyPipelineKeypointMatcherFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointMatcherFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Static LSH tables
@@ -20378,7 +20802,7 @@ class SpeedyPipelineKeypointMatcherFactory extends speedy_namespace/* SpeedyName
 /**
  * Portal nodes
  */
-class SpeedyPipelineKeypointPortalFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointPortalFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Create an image portal source
@@ -20404,7 +20828,7 @@ class SpeedyPipelineKeypointPortalFactory extends speedy_namespace/* SpeedyNames
 /**
  * Keypoint-related nodes
  */
-class SpeedyPipelineKeypointFactory extends speedy_namespace/* SpeedyNamespace */.R
+class SpeedyPipelineKeypointFactory extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
      * Keypoint detectors
@@ -20596,7 +21020,7 @@ class SpeedyPipelineKeypointFactory extends speedy_namespace/* SpeedyNamespace *
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20700,7 +21124,7 @@ class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
      */
     export()
     {
-        return speedy_promise/* SpeedyPromise.resolve */.s.resolve(this._vectors);
+        return speedy_promise/* SpeedyPromise */.i.resolve(this._vectors);
     }
 
     /**
@@ -20776,8 +21200,8 @@ class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
                 continue;
 
             // decode floats
-            x = utils/* Utils.decodeFloat16 */.c.decodeFloat16(lo);
-            y = utils/* Utils.decodeFloat16 */.c.decodeFloat16(hi);
+            x = utils/* Utils */.A.decodeFloat16(lo);
+            y = utils/* Utils */.A.decodeFloat16(hi);
 
             // register vector
             vectors.push(new SpeedyVector2(x, y));
@@ -20791,7 +21215,7 @@ class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20855,7 +21279,7 @@ class SpeedyPipelineVector2Factory extends Function
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2023 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20940,7 +21364,7 @@ class Speedy
             },
         });
 
-        return utils/* Utils.requestCameraStream */.c.requestCameraStream(constraints).then(
+        return utils/* Utils */.A.requestCameraStream(constraints).then(
             video => SpeedyMedia.load(video)
         );
     }
@@ -20954,7 +21378,7 @@ class Speedy
         return (
             (typeof WebAssembly !== 'undefined') &&
             (typeof WebGL2RenderingContext !== 'undefined') &&
-            (speedy_gl/* SpeedyGL.instance.gl */.$.instance.gl != null)
+            (speedy_gl/* SpeedyGL */.c.instance.gl != null)
         );
     }
 
@@ -21004,7 +21428,7 @@ class Speedy
      */
     static get Promise()
     {
-        return speedy_promise/* SpeedyPromise */.s;
+        return speedy_promise/* SpeedyPromise */.i;
     }
 
     /**
@@ -21061,7 +21485,7 @@ class Speedy
         if(false)
             {}
         else
-            return "0.9.1-wip";
+            return "0.9.1";
     }
 
     /**
@@ -21079,7 +21503,7 @@ class Speedy
      */
     static get Settings()
     {
-        return settings/* Settings */.Z;
+        return settings/* Settings */.w;
     }
 }
 
@@ -21087,7 +21511,7 @@ class Speedy
 Object.freeze(Speedy);
 
 // Display a notice
-utils/* Utils.log */.c.log(
+utils/* Utils */.A.log(
     `Speedy Vision version ${Speedy.version}. ` +
     `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
     "https://github.com/alemart/speedy-vision"
@@ -21095,7 +21519,7 @@ utils/* Utils.log */.c.log(
 
 // Big-endian machine? Currently untested.
 if(!globals.LITTLE_ENDIAN)
-    utils/* Utils.warning */.c.warning('Running on a big-endian machine');
+    utils/* Utils */.A.warning('Running on a big-endian machine');
 
 })();
 
