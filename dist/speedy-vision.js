@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-06-28T15:13:44.513Z
+ * Date: 2024-06-30T13:59:34.405Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -11142,7 +11142,7 @@ class SpeedyMedia
     }
 }
 
-;// CONCATENATED MODULE: ./src/utils/fps-counter.js
+;// CONCATENATED MODULE: ./src/core/speedy-platform.js
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11160,95 +11160,39 @@ class SpeedyMedia
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fps-counter.js
- * A FPS counter
+ * speedy-platform.js
+ * Utilities to query information about the graphics driver
  */
 
 
 
-/** @const {number} update interval in milliseconds */
-const UPDATE_INTERVAL = 500;
-
-/** @type {FPSCounter|null} Singleton */
-let instance = null;
 
 /**
- * FPS counter
+ * Utilities to query information about the graphics driver. This information
+ * may or may not be available, depending on the privacy settings of the web
+ * browser. In addition, it may be more or less accurate in different browsers.
  */
-class FPSCounter
+class SpeedyPlatform extends speedy_namespace/* SpeedyNamespace */.Q
 {
     /**
-     * Creates a new FPSCounter
-     * @private
+     * Renderer string of the graphics driver
+     * @returns {string}
      */
-    constructor()
+    static get renderer()
     {
-        /** @type {number} current FPS rate */
-        this._fps = 60;
-
-        /** @type {number} frame counter */
-        this._frames = 0;
-
-        /** @type {number} update interval in milliseconds */
-        this._updateInterval = UPDATE_INTERVAL;
-
-        /** @type {number} time of the last update */
-        this._lastUpdate = performance.now();
-
-        /** @type {function(): void} bound update function */
-        this._boundUpdate = this._update.bind(this);
-
-
-
-        // this should never happen...
-        if(instance !== null)
-            throw new utils_errors/* IllegalOperationError */.Er(`Can't have multiple instances of FPSCounter`);
-
-        // start FPS counter
-        this._boundUpdate();
+        return speedy_gl/* SpeedyGL */.c.instance.renderer;
     }
 
     /**
-     * Gets an instance of the FPS counter.
-     * We use lazy loading, i.e., we will not
-     * create a FPS counter unless we need to!
-     * @returns {FPSCounter}
+     * Vendor string of the graphics driver
+     * @returns {string}
      */
-    static get instance()
+    static get vendor()
     {
-        if(instance === null)
-            instance = new FPSCounter();
-
-        return instance;
-    }
-
-    /**
-     * Get the FPS rate
-     * @returns {number} frames per second
-     */
-    get fps()
-    {
-        return this._fps;
-    }
-
-    /**
-     * Updates the FPS counter
-     */
-    _update()
-    {
-        const now = performance.now();
-        const deltaTime = now - this._lastUpdate;
-
-        if(deltaTime >= this._updateInterval) {
-            this._fps = Math.round(this._frames / (deltaTime * 0.001));
-            this._frames = 0;
-            this._lastUpdate = now;
-        }
-
-        this._frames++;
-        requestAnimationFrame(this._boundUpdate);
+        return speedy_gl/* SpeedyGL */.c.instance.vendor;
     }
 }
+
 ;// CONCATENATED MODULE: ./src/core/speedy-vector.js
 /*
  * speedy-vision.js
@@ -21275,6 +21219,113 @@ class SpeedyPipelineVector2Factory extends Function
     }
 }
 
+;// CONCATENATED MODULE: ./src/utils/fps-counter.js
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * fps-counter.js
+ * A FPS counter
+ */
+
+
+
+/** @const {number} update interval in milliseconds */
+const UPDATE_INTERVAL = 500;
+
+/** @type {FPSCounter|null} Singleton */
+let instance = null;
+
+/**
+ * FPS counter
+ */
+class FPSCounter
+{
+    /**
+     * Creates a new FPSCounter
+     * @private
+     */
+    constructor()
+    {
+        /** @type {number} current FPS rate */
+        this._fps = 60;
+
+        /** @type {number} frame counter */
+        this._frames = 0;
+
+        /** @type {number} update interval in milliseconds */
+        this._updateInterval = UPDATE_INTERVAL;
+
+        /** @type {number} time of the last update */
+        this._lastUpdate = performance.now();
+
+        /** @type {function(): void} bound update function */
+        this._boundUpdate = this._update.bind(this);
+
+
+
+        // this should never happen...
+        if(instance !== null)
+            throw new utils_errors/* IllegalOperationError */.Er(`Can't have multiple instances of FPSCounter`);
+
+        // start FPS counter
+        this._boundUpdate();
+    }
+
+    /**
+     * Gets an instance of the FPS counter.
+     * We use lazy loading, i.e., we will not
+     * create a FPS counter unless we need to!
+     * @returns {FPSCounter}
+     */
+    static get instance()
+    {
+        if(instance === null)
+            instance = new FPSCounter();
+
+        return instance;
+    }
+
+    /**
+     * Get the FPS rate
+     * @returns {number} frames per second
+     */
+    get fps()
+    {
+        return this._fps;
+    }
+
+    /**
+     * Updates the FPS counter
+     */
+    _update()
+    {
+        const now = performance.now();
+        const deltaTime = now - this._lastUpdate;
+
+        if(deltaTime >= this._updateInterval) {
+            this._fps = Math.round(this._frames / (deltaTime * 0.001));
+            this._frames = 0;
+            this._lastUpdate = now;
+        }
+
+        this._frames++;
+        requestAnimationFrame(this._boundUpdate);
+    }
+}
 ;// CONCATENATED MODULE: ./src/main.js
 /*
  * speedy-vision.js
@@ -21296,6 +21347,7 @@ class SpeedyPipelineVector2Factory extends Function
  * main.js
  * The entry point of the library
  */
+
 
 
 
@@ -21338,40 +21390,20 @@ const vector2Factory = new SpeedyPipelineVector2Factory();
 class Speedy
 {
     /**
-     * Loads a SpeedyMedia object based on the provided source element
-     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
-     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
-     * @returns {SpeedyPromise<SpeedyMedia>}
+     * The version of the library
+     * @returns {string}
      */
-    static load(sourceElement, options = {})
+    static get version()
     {
-        return SpeedyMedia.load(sourceElement, options);
-    }
-
-    /**
-     * Loads a camera stream
-     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
-     * @param {number} [height] height of the stream
-     * @returns {SpeedyPromise<SpeedyMedia>}
-     */
-    static camera(widthOrConstraints = 640, height = 360)
-    {
-        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
-            audio: false,
-            video: {
-                width: widthOrConstraints | 0,
-                height: height | 0,
-            },
-        });
-
-        return utils/* Utils */.A.requestCameraStream(constraints).then(
-            video => SpeedyMedia.load(video)
-        );
+        if(false)
+            {}
+        else
+            return "0.9.1";
     }
 
     /**
      * Checks if Speedy can be executed in this machine & browser
-     * @returns {boolean} true if Speedy can be executed in this machine & browser
+     * @returns {boolean}
      */
     static isSupported()
     {
@@ -21380,6 +21412,15 @@ class Speedy
             (typeof WebGL2RenderingContext !== 'undefined') &&
             (speedy_gl/* SpeedyGL */.c.instance.gl != null)
         );
+    }
+
+    /**
+     * Global settings
+     * @returns {typeof Settings}
+     */
+    static get Settings()
+    {
+        return settings/* Settings */.w;
     }
 
     /**
@@ -21477,15 +21518,44 @@ class Speedy
     }
 
     /**
-     * The version of the library
-     * @returns {string} The version of the library
+     * Loads a SpeedyMedia object based on the provided source element
+     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
+     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static get version()
+    static load(sourceElement, options = {})
     {
-        if(false)
-            {}
-        else
-            return "0.9.1";
+        return SpeedyMedia.load(sourceElement, options);
+    }
+
+    /**
+     * Loads a camera stream
+     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
+     * @param {number} [height] height of the stream
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+    static camera(widthOrConstraints = 640, height = 360)
+    {
+        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
+            audio: false,
+            video: {
+                width: widthOrConstraints | 0,
+                height: height | 0,
+            },
+        });
+
+        return utils/* Utils */.A.requestCameraStream(constraints).then(
+            video => SpeedyMedia.load(video)
+        );
+    }
+
+    /**
+     * Utilities to query information about the graphics driver
+     * @returns {typeof SpeedyPlatform}
+     */
+    static get Platform()
+    {
+        return SpeedyPlatform;
     }
 
     /**
@@ -21495,15 +21565,6 @@ class Speedy
     static get fps()
     {
         return FPSCounter.instance.fps;
-    }
-
-    /**
-     * Global settings
-     * @returns {typeof Settings}
-     */
-    static get Settings()
-    {
-        return settings/* Settings */.w;
     }
 }
 
