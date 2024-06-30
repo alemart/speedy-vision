@@ -76,6 +76,21 @@ function renderStatus(arr = null, label = 'Keypoints')
         status.innerText = `FPS: ${Speedy.fps}`;
 }
 
+(function() {
+    const script = document.createElement('script');
+
+    script.addEventListener('error', function(e) {
+        console.log(`Can't load analytics`, e);
+    });
+
+    script.type = 'text/javascript';
+    script.async = true;
+    script.dataset.goatcounter = 'https://speedy-vision.goatcounter.com/count';
+    script.src = 'https://gc.zgo.at/count.js';
+
+    document.head.appendChild(script);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(location.search);
 
