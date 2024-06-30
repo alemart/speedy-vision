@@ -348,7 +348,7 @@ class FileShaderDeclaration extends ShaderDeclaration
         // we override this method to include the filepath. The motivation
         // is to easily identify the file when debugging compiling errors.
         return this._addHeader(
-            '// File: ' + (this._vsFilepath != '' ? this._vsFilepath : 'default vertex shader of ' + this._fsFilepath),
+            '// File: ' + (this._vsFilepath != '' ? this._vsFilepath : '(default-vs) ' + this._fsFilepath),
             super.vertexSource
         );
     }

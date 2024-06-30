@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-06-30T18:36:31.742Z
+ * Date: 2024-06-30T18:53:14.493Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -2759,7 +2759,7 @@ class FileShaderDeclaration extends ShaderDeclaration
         // we override this method to include the filepath. The motivation
         // is to easily identify the file when debugging compiling errors.
         return this._addHeader(
-            '// File: ' + this._vsFilepath,
+            '// File: ' + (this._vsFilepath != '' ? this._vsFilepath : '(default-vs) ' + this._fsFilepath),
             super.vertexSource
         );
     }
