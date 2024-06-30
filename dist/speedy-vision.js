@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-06-30T13:59:34.405Z
+ * Date: 2024-06-30T18:36:31.742Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -2433,6 +2433,7 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
 
 
 
+
 const DEFAULT_ATTRIBUTES = Object.freeze({
     position: 'a_position',
     texCoord: 'a_texCoord'
@@ -2733,6 +2734,54 @@ class FileShaderDeclaration extends ShaderDeclaration
 
         /** @type {string} filepath of the vertex shader */
         this._vsFilepath = String(vsFilepath);
+    }
+
+    /**
+     * Return the preprocessed GLSL source code of the fragment shader
+     * @returns {string}
+     */
+    get fragmentSource()
+    {
+        // we override this method to include the filepath. The motivation
+        // is to easily identify the file when debugging compiling errors.
+        return this._addHeader(
+            '// File: ' + this._fsFilepath,
+            super.fragmentSource
+        );
+    }
+
+    /**
+     * Return the preprocessed GLSL source code of the vertex shader
+     * @returns {string}
+     */
+    get vertexSource()
+    {
+        // we override this method to include the filepath. The motivation
+        // is to easily identify the file when debugging compiling errors.
+        return this._addHeader(
+            '// File: ' + this._vsFilepath,
+            super.vertexSource
+        );
+    }
+
+    /**
+     * Add a header to a GLSL code
+     * @param {string} header code to be added
+     * @param {string} src pre-processed GLSL code
+     * @returns {string} src with an added header
+     */
+    _addHeader(header, src)
+    {
+        utils/* Utils */.A.assert(header.startsWith('//') && !header.includes('\n'));
+
+        const j = src.indexOf('\n');
+        const versionDirective = src.substr(0, j);
+        const body = src.substr(j);
+
+        utils/* Utils */.A.assert(versionDirective.startsWith('#version '));
+
+        const head = versionDirective + '\n' + header;
+        return head + body;
     }
 }
 
