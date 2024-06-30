@@ -22,7 +22,7 @@
 import { SpeedyGL } from './gpu/speedy-gl';
 import { SpeedyMedia } from './core/speedy-media';
 import { Settings } from './core/settings';
-import { FPSCounter } from './utils/fps-counter';
+import { SpeedyPlatform } from './core/speedy-platform';
 import { SpeedyVector2 } from './core/speedy-vector';
 import { SpeedyPoint2 } from './core/speedy-point';
 import { SpeedySize } from './core/speedy-size';
@@ -35,6 +35,7 @@ import { SpeedyPipelineTransformFactory } from './core/pipeline/factories/transf
 import { SpeedyPipelineKeypointFactory } from './core/pipeline/factories/keypoint-factory';
 import { SpeedyPipelineVector2Factory } from './core/pipeline/factories/vector2-factory';
 import { Utils } from './utils/utils';
+import { FPSCounter } from './utils/fps-counter';
 import { LITTLE_ENDIAN } from './utils/globals';
 
 /* eslint-disable no-undef */
@@ -60,40 +61,20 @@ const vector2Factory = new SpeedyPipelineVector2Factory();
 export default class Speedy
 {
     /**
-     * Loads a SpeedyMedia object based on the provided source element
-     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
-     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
-     * @returns {SpeedyPromise<SpeedyMedia>}
+     * The version of the library
+     * @returns {string}
      */
-    static load(sourceElement, options = {})
+    static get version()
     {
-        return SpeedyMedia.load(sourceElement, options);
-    }
-
-    /**
-     * Loads a camera stream
-     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
-     * @param {number} [height] height of the stream
-     * @returns {SpeedyPromise<SpeedyMedia>}
-     */
-    static camera(widthOrConstraints = 640, height = 360)
-    {
-        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
-            audio: false,
-            video: {
-                width: widthOrConstraints | 0,
-                height: height | 0,
-            },
-        });
-
-        return Utils.requestCameraStream(constraints).then(
-            video => SpeedyMedia.load(video)
-        );
+        if(__SPEEDY_DEVELOPMENT_MODE__)
+            return __SPEEDY_VERSION__ + '-dev';
+        else
+            return __SPEEDY_VERSION__;
     }
 
     /**
      * Checks if Speedy can be executed in this machine & browser
-     * @returns {boolean} true if Speedy can be executed in this machine & browser
+     * @returns {boolean}
      */
     static isSupported()
     {
@@ -102,6 +83,15 @@ export default class Speedy
             (typeof WebGL2RenderingContext !== 'undefined') &&
             (SpeedyGL.instance.gl != null)
         );
+    }
+
+    /**
+     * Global settings
+     * @returns {typeof Settings}
+     */
+    static get Settings()
+    {
+        return Settings;
     }
 
     /**
@@ -199,15 +189,44 @@ export default class Speedy
     }
 
     /**
-     * The version of the library
-     * @returns {string} The version of the library
+     * Loads a SpeedyMedia object based on the provided source element
+     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
+     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static get version()
+    static load(sourceElement, options = {})
     {
-        if(__SPEEDY_DEVELOPMENT_MODE__)
-            return __SPEEDY_VERSION__ + '-dev';
-        else
-            return __SPEEDY_VERSION__;
+        return SpeedyMedia.load(sourceElement, options);
+    }
+
+    /**
+     * Loads a camera stream
+     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
+     * @param {number} [height] height of the stream
+     * @returns {SpeedyPromise<SpeedyMedia>}
+     */
+    static camera(widthOrConstraints = 640, height = 360)
+    {
+        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
+            audio: false,
+            video: {
+                width: widthOrConstraints | 0,
+                height: height | 0,
+            },
+        });
+
+        return Utils.requestCameraStream(constraints).then(
+            video => SpeedyMedia.load(video)
+        );
+    }
+
+    /**
+     * Utilities to query information about the graphics driver
+     * @returns {typeof SpeedyPlatform}
+     */
+    static get Platform()
+    {
+        return SpeedyPlatform;
     }
 
     /**
@@ -217,15 +236,6 @@ export default class Speedy
     static get fps()
     {
         return FPSCounter.instance.fps;
-    }
-
-    /**
-     * Global settings
-     * @returns {typeof Settings}
-     */
-    static get Settings()
-    {
-        return Settings;
     }
 }
 

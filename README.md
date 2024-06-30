@@ -94,6 +94,7 @@ There are plenty of [demos](#demos) available!
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
+    * [Platform](#platform)
 * [Unit tests](https://alemart.github.io/speedy-vision/tests/index.html)
 
 ## Demos
@@ -2887,17 +2888,19 @@ promise.then(() => {
 
 #### Settings
 
+Global settings.
+
 ##### Speedy.Settings.powerPreference
 
 `Speedy.Settings.powerPreference: "default" | "low-power" | "high-performance"`
 
-**Experimental**. The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices).
+*Experimental*. The desired power preference for the WebGL context. This option should be set before creating any pipelines. The browser uses this setting as a hint to balance rendering performance and battery life (especially on mobile devices).
 
 ##### Speedy.Settings.gpuPollingMode
 
 `Speedy.Settings.gpuPollingMode: "raf" | "asap"`
 
-**Experimental**. GPU polling mode. `"asap"` has slightly better performance than `"raf"`, at the cost of higher CPU usage.
+*Experimental*. GPU polling mode. `"asap"` has slightly better performance than `"raf"`, at the cost of higher CPU usage.
 
 ##### Speedy.Settings.logging
 
@@ -2915,6 +2918,8 @@ Speedy prints messages to the browser console according to the logging mode. The
 
 
 #### Utilities
+
+Extra utilities.
 
 ##### Speedy.version
 
@@ -2950,3 +2955,22 @@ Returns a boolean telling whether or not Speedy is supported in the client envir
 if(!Speedy.isSupported())
     alert('This application is not supported in this browser. Please use a different browser.');
 ```
+
+
+
+
+#### Platform
+
+Utilities to query information about the graphics driver. This information may or may not be available, depending on the privacy settings of the web browser. In addition, it may be more or less accurate in different browsers.
+
+##### Speedy.Platform.renderer
+
+`Speedy.Platform.renderer: string, read-only`
+
+Renderer string of the graphics driver.
+
+##### Speedy.Platform.vendor
+
+`Speedy.Platform.vendor: string, read-only`
+
+Vendor string of the graphics driver.
