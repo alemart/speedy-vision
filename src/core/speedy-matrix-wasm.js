@@ -63,10 +63,13 @@ const _memory = (mem => ({
         float32: new Float32Array(mem.buffer),
         float64: new Float64Array(mem.buffer),
     },
-}))(new WebAssembly.Memory({
-    initial: 16, // 1 MB
-    maximum: 256
-}));
+}))(
+    (typeof WebAssembly === 'undefined') ? new Uint8Array(1024) : // use a filler
+    new WebAssembly.Memory({
+        initial: 16, // 1 MB
+        maximum: 256
+    })
+);
 
 /**
  * WebAssembly utilities
@@ -79,6 +82,15 @@ export class SpeedyMatrixWASM
      */
     static ready()
     {
+        // Check if WebAssembly is supported
+        if(typeof WebAssembly === 'undefined')
+            return SpeedyPromise.reject(new NotSupportedError('This application requires WebAssembly. Please update your system.'));
+
+        // Endianness check
+        if(!LITTLE_ENDIAN)
+            return SpeedyPromise.reject(new NotSupportedError(`Can't run WebAssembly code: not in a little-endian machine!`));
+
+        // Get the WASM instance
         return new SpeedyPromise((resolve, reject) => {
             SpeedyMatrixWASM._ready(resolve, reject);
         });
@@ -334,9 +346,9 @@ class CStringUtils
 (function loadWASM(memory) {
     const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));
 
-    // Endianness check
-    if(!LITTLE_ENDIAN)
-        throw new NotSupportedError(`Can't run WebAssembly code: not in a little-endian machine!`);
+    // Skip if WebAssembly is unsupported
+    if(typeof WebAssembly === 'undefined')
+        return;
 
     // Load the WASM binary
     SpeedyPromise.resolve(WASM_BINARY)
