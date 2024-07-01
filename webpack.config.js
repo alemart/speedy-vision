@@ -8,6 +8,7 @@ module.exports = (env, argv) => ({
     mode: argv.mode == 'development' ? 'development' : 'production',
     devtool: argv.mode == 'development' ? 'source-map' : undefined,
 
+    target: ['web', 'es6'],
     output: {
         filename: !env.minimize ? 'speedy-vision.js' : 'speedy-vision.min.js',
         path: path.resolve(__dirname, 'dist'),
@@ -55,6 +56,21 @@ module.exports = (env, argv) => ({
             test: /\.wasm.txt$/i,
             use: [{
                 loader: path.resolve('webpack-wasm-loader.js'),
+            }],
+        },{
+            test: /\.js$/i,
+            exclude: /node_modules/,
+            use: [{
+                loader: 'babel-loader',
+                options: {
+                    assumptions: {
+                        setSpreadProperties: true,
+                    },
+                    plugins: [
+                        ['@babel/plugin-transform-object-rest-spread', { useBuiltIns: true }],
+                        ['@babel/plugin-transform-named-capturing-groups-regex', { runtime: true }],
+                    ],
+                },
             }],
         }],
     },
