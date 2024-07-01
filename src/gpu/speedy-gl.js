@@ -171,7 +171,7 @@ export class SpeedyGL extends Observable
 
         // does the browser support WebGL2?
         if(typeof WebGL2RenderingContext === 'undefined')
-            throw new NotSupportedError(`This application requires WebGL2. Please use a different browser.`);
+            throw new NotSupportedError(`This application requires WebGL2. Please update your system.`);
 
          const gl = canvas.getContext('webgl2', {
             premultipliedAlpha: false,
