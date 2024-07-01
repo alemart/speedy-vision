@@ -27,7 +27,12 @@
     "linear algebra",
     "keypoint",
     "opencv",
-    "gpgpu"
+    "gpgpu",
+    "gpu",
+    "glsl",
+    "webgl",
+    "webgl2",
+    "wasm"
   ],
   "devDependencies": {
     "@babel/plugin-transform-named-capturing-groups-regex": "^7.24.7",
