@@ -1,5 +1,19 @@
 # Release notes
 
+## 0.9.1 - July 2nd, 2024
+
+* Introduced the diagnostic mode for inspecting data traveling through the pipelines
+* Added a LSH feature matching demo
+* Video media sources: improved support for autoplay
+* Added mp4 versions of demo videos and set them as playsinline for WebKit (alanross)
+* Added media sources: OffscreenCanvas (Phillip-Thomas), ImageData (kalwalt)
+* Added support for exporting an ImageData from a pipeline for direct pixel access
+* Introduced Speedy.Platform to retrieve platform-specific information
+* Added support for setting platform-specific preprocessor flags in annotated GLSL code
+* Fixed potential issues of valid GLSL code in various graphics drivers
+* Implemented lazy loading of shader declarations
+* Bugfixes, improved error messages and general improvements to the code
+
 ## 0.9.0 - May 4th, 2022
 
 * Introduced feature matching
