@@ -71,8 +71,7 @@
         <video id="video"
             poster="../assets/loading.jpg"
             width="640" height="360"
-            preload="auto"
-            loop muted hidden playsinline
+            loop muted autoplay playsinline hidden
             title="Free to use video by Free Videos, https://www.pexels.com/pt-br/foto/853889/">
                 <source src="../assets/people.webm" type="video/webm" />
                 <source src="../assets/people.mp4" type="video/mp4" />
@@ -90,7 +89,6 @@ window.onload = async function()
     // load the video
     const video = document.getElementById('video');
     const media = await Speedy.load(video);
-    video.play();
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();

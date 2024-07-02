@@ -71,8 +71,7 @@
         <video id="video"
             poster="../assets/loading.jpg"
             width="640" height="360"
-            preload="auto"
-            loop muted hidden playsinline
+            loop muted autoplay playsinline hidden
             title="Free video by Ricardo Esquivel (pexels.com)">
                 <source src="../assets/corridor.webm" type="video/webm" />
                 <source src="../assets/corridor.mp4" type="video/mp4" />
@@ -105,7 +104,6 @@ window.onload = async function()
     // load the video
     const video = document.getElementById('video');
     const media = await Speedy.load(video);
-    video.play();
 
     // create the pipelines
     function createPipelineWith(detector)

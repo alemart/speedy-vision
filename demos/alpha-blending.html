@@ -44,7 +44,6 @@
         </div>
         <video id="video"
             poster="../assets/loading.jpg"
-            preload="auto"
             loop muted autoplay playsinline hidden
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
                 <source src="../assets/flying-eagle.webm" type="video/webm" />
@@ -64,7 +63,6 @@ window.onload = async function()
         await Speedy.load(video),
         await Speedy.load(image),
     ];
-    video.play();
 
     // Dimensions of the display canvas
     const width = Math.max(media[0].width, media[1].width);

@@ -380,19 +380,53 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
             this.release();
 
         if(video.readyState >= 4) { // already loaded?
-            return new SpeedyPromise(resolve => {
+            return this._handleAutoplay(video).then(() => {
                 this._data = video;
-                resolve(this);
+                return this;
             });
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
             setTimeout(() => video.load());
             return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
-                this._data = video;
-                return this;
+                return this._handleAutoplay(video).then(() => {
+                    this._data = video;
+                    return this;
+                });
             });
         }
+    }
+
+    /**
+     * Handle browser quirks concerning autoplay
+     * @param {HTMLVideoElement} video
+     * @returns {SpeedyPromise<void>} gets rejected if we can't autoplay
+     */
+    _handleAutoplay(video)
+    {
+        // Autoplay guide: https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide
+        // Chrome policy: https://developer.chrome.com/blog/autoplay/
+        // WebKit policy: https://webkit.org/blog/7734/auto-play-policy-changes-for-macos/
+
+        // videos marked as autoplay may not play if not visible on-screen
+        // videos marked as autoplay should be muted
+        if(video.autoplay /*&& video.muted*/) {
+            return new SpeedyPromise((resolve, reject) => {
+                const promise = video.play();
+
+                // handle older browsers
+                if(promise === undefined) {
+                    resolve();
+                    return;
+                }
+
+                // wrap promise
+                promise.then(resolve, reject);
+            });
+        }
+
+        // nothing to do
+        return SpeedyPromise.resolve();
     }
 
     /**

@@ -59,7 +59,7 @@
         <video id="video"
             poster="../assets/loading.jpg"
             width="480" height="270"
-            hidden muted loop autoplay playsinline oncanplay="this.muted=true;this.play()"
+            loop muted autoplay playsinline hidden
             title="Free video by Vimeo-Free-Videos from https://pixabay.com/pt/videos/estrada-condu%C3%A7%C3%A3o-auto-estrada-1101/">
                 <source src="../assets/roadrunner.webm" type="video/webm" />
                 <source src="../assets/roadrunner.mp4" type="video/mp4" />
@@ -76,7 +76,6 @@ window.onload = async function()
     // load the video
     const video = document.getElementById('video');
     const media = await Speedy.load(video);
-    video.play();
 
     // create the pipelines
     function createPipelineWith(detector)
