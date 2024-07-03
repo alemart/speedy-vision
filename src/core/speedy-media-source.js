@@ -379,6 +379,8 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
+        setTimeout(() => video.load()); // tweak for slow connections
+
         return SpeedyVideoMediaSource._waitUntilPlayable(video).then(() => {
             return SpeedyVideoMediaSource._handleAutoplay(video).then(() => {
                 this._data = video;
