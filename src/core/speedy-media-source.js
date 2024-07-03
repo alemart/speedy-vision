@@ -379,7 +379,8 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
         if(this.isLoaded())
             this.release();
 
-        setTimeout(() => video.load()); // tweak for slow connections
+        Utils.log('Loading a video...');
+        video.load();
 
         return SpeedyVideoMediaSource._waitUntilPlayable(video).then(() => {
             return SpeedyVideoMediaSource._handleAutoplay(video).then(() => {
@@ -438,7 +439,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
      */
     static _waitUntilPlayable(video)
     {
-        const TIMEOUT = 15000, INTERVAL = 500;
+        const TIMEOUT = 30000, INTERVAL = 500;
 
         if(video.readyState >= 3)
             return SpeedyPromise.resolve(video);
