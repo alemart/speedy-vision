@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-07-03T00:44:51.739Z
+ * Date: 2024-07-03T01:32:00.614Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9067,6 +9067,8 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource {
    */
   _load(video) {
     if (this.isLoaded()) this.release();
+    setTimeout(() => video.load()); // tweak for slow connections
+
     return SpeedyVideoMediaSource._waitUntilPlayable(video).then(() => {
       return SpeedyVideoMediaSource._handleAutoplay(video).then(() => {
         this._data = video;
