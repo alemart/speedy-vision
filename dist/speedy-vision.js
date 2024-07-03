@@ -5,7 +5,7 @@
  * https://github.com/alemart/speedy-vision
  *
  * @license Apache-2.0
- * Date: 2024-07-02T20:26:01.993Z
+ * Date: 2024-07-03T00:44:51.739Z
  */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9067,22 +9067,21 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource {
    */
   _load(video) {
     if (this.isLoaded()) this.release();
-    if (video.readyState >= 4) {
-      // already loaded?
-      return this._handleAutoplay(video).then(() => {
+    return SpeedyVideoMediaSource._waitUntilPlayable(video).then(() => {
+      return SpeedyVideoMediaSource._handleAutoplay(video).then(() => {
         this._data = video;
         return this;
       });
-    } else {
-      // waitUntil('canplay'); // use readyState >= 3
-      setTimeout(() => video.load());
-      return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
-        return this._handleAutoplay(video).then(() => {
-          this._data = video;
-          return this;
-        });
-      });
-    }
+    });
+  }
+
+  /**
+   * Load the underlying media
+   * @param {HTMLVideoElement} video
+   * @returns {SpeedyPromise<SpeedyMediaSource>}
+   */
+  static load(video) {
+    return new SpeedyVideoMediaSource(PRIVATE_TOKEN)._load(video);
   }
 
   /**
@@ -9090,7 +9089,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource {
    * @param {HTMLVideoElement} video
    * @returns {SpeedyPromise<void>} gets rejected if we can't autoplay
    */
-  _handleAutoplay(video) {
+  static _handleAutoplay(video) {
     // Autoplay guide: https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide
     // Chrome policy: https://developer.chrome.com/blog/autoplay/
     // WebKit policy: https://webkit.org/blog/7734/auto-play-policy-changes-for-macos/
@@ -9117,12 +9116,27 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource {
   }
 
   /**
-   * Load the underlying media
+   * Wait for the input video to be playable
    * @param {HTMLVideoElement} video
-   * @returns {SpeedyPromise<SpeedyMediaSource>}
+   * @returns {SpeedyPromise<HTMLVideoElement>} resolves to the input video when it can be played
    */
-  static load(video) {
-    return new SpeedyVideoMediaSource(PRIVATE_TOKEN)._load(video);
+  static _waitUntilPlayable(video) {
+    const TIMEOUT = 15000,
+      INTERVAL = 500;
+    if (video.readyState >= 3) return speedy_promise/* SpeedyPromise */.i.resolve(video);
+    return new speedy_promise/* SpeedyPromise */.i((resolve, reject) => {
+      let ms = 0,
+        t = setInterval(() => {
+          //if(video.readyState >= 4) { // canplaythrough (may timeout on slow connections)
+          if (video.readyState >= 3) {
+            clearInterval(t);
+            resolve(video);
+          } else if ((ms += INTERVAL) >= TIMEOUT) {
+            clearInterval(t);
+            reject(new utils_errors/* TimeoutError */.MU('The video took too long to load'));
+          }
+        }, INTERVAL);
+    });
   }
 }
 
