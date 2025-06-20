@@ -1,5 +1,5 @@
 /**
- * GPU-accelerated Computer Vision for JavaScript
+ * GPU-accelerated Computer Vision library for JavaScript
  */
 export default class Speedy {
     /**

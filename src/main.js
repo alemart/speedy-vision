@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2024 Alexandre Martins <alemartf(at)gmail.com>
+ * GPU-accelerated Computer Vision library for JavaScript
+ * Copyright 2020-2025 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ const vector2Factory = new SpeedyPipelineVector2Factory();
 
 
 /**
- * GPU-accelerated Computer Vision for JavaScript
+ * GPU-accelerated Computer Vision library for JavaScript
  */
 export default class Speedy
 {
@@ -244,8 +244,8 @@ Object.freeze(Speedy);
 
 // Display a notice
 Utils.log(
-    `Speedy Vision version ${Speedy.version}. ` +
-    `GPU-accelerated Computer Vision for JavaScript by Alexandre Martins. ` +
+    `speedy-vision version ${Speedy.version}. ` +
+    `GPU-accelerated Computer Vision library for JavaScript by Alexandre Martins. ` +
     __SPEEDY_WEBSITE__
 );
 

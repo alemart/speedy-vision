@@ -23,7 +23,7 @@ module.exports = (env, argv) => ({
     plugins: [
         new webpack.BannerPlugin({
             banner: (({ version, homepage, description, year, author, license, date }) => [
-                `Speedy Vision version ${version}`,
+                `speedy-vision version ${version}`,
                 `${description}`,
                 `Copyright ${year} ${author}`,
                 `${homepage}`,

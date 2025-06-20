@@ -1,8 +1,8 @@
 # How to contribute
 
-Thank you for your interest in contributing to Speedy Vision! 👍
+Thank you for your interest in contributing to speedy-vision! 👍
 
-In order to contribute to Speedy Vision, you must certify that you have the right to submit your contribution according to the [Developer Certificate of Origin (DCO)](https://developercertificate.org). Each commit must include a `Signed-off-by` line at the end of the commit message, as in the template below:
+In order to contribute to the project, you must certify that you have the right to submit your contribution according to the [Developer Certificate of Origin (DCO)](https://developercertificate.org). Each commit must include a `Signed-off-by` line at the end of the commit message, as in the template below:
 
 ```
 Signed-off-by: Your Name <your.email@addr.es>
