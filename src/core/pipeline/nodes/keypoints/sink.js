@@ -22,7 +22,7 @@
 import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
 import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWith2DVectors, SpeedyPipelineMessageWithKeypointMatches } from '../../pipeline-message';
-import { InputPort, OutputPort } from '../../pipeline-portbuilder';
+import { InputPort, OutputPort, SpeedyPipelinePortBuilder } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../gpu/speedy-texture';

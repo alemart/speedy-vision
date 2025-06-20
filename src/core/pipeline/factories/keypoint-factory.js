@@ -334,7 +334,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     /**
      * Distance filter
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDistanceFilter}
+     * @returns {SpeedyPipelineNodeKeypointDistanceFilter}
      */
     static DistanceFilter(name = undefined)
     {
@@ -344,7 +344,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     /**
      * Hamming distance filter
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeHammingDistanceFilter}
+     * @returns {SpeedyPipelineNodeKeypointHammingDistanceFilter}
      */
     static HammingDistanceFilter(name = undefined)
     {
