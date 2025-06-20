@@ -4,4 +4,4 @@
  */
 export class SpeedyProgramGroupTransforms extends SpeedyProgramGroup {
 }
-import { SpeedyProgramGroup } from "../speedy-program-group";
+import { SpeedyProgramGroup } from '../speedy-program-group';

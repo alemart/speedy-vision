@@ -52,9 +52,9 @@ export class SpeedyProgramCenter {
      */
     release(): null;
 }
-import { SpeedyGPU } from "./speedy-gpu";
-import { SpeedyProgramGroupFilters } from "./programs/filters";
-import { SpeedyProgramGroupTransforms } from "./programs/transforms";
-import { SpeedyProgramGroupPyramids } from "./programs/pyramids";
-import { SpeedyProgramGroupKeypoints } from "./programs/keypoints";
-import { SpeedyProgramGroupUtils } from "./programs/utils";
+import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyProgramGroupFilters } from './programs/filters';
+import { SpeedyProgramGroupTransforms } from './programs/transforms';
+import { SpeedyProgramGroupPyramids } from './programs/pyramids';
+import { SpeedyProgramGroupKeypoints } from './programs/keypoints';
+import { SpeedyProgramGroupUtils } from './programs/utils';

@@ -62,7 +62,7 @@ export class SpeedyMatrixWASM {
      */
     static _ready(resolve: (arg0: SpeedyMatrixWASMHandle) => void, reject: (arg0: Error) => void, counter?: number | undefined): void;
 }
-export type SpeedyMatrix = import('./speedy-matrix').SpeedyMatrix;
+export type SpeedyMatrix = import("./speedy-matrix").SpeedyMatrix;
 /**
  * a union-like helper for accessing a WebAssembly.Memory object
  */
@@ -81,4 +81,4 @@ export type SpeedyMatrixWASMHandle = {
     memory: SpeedyMatrixWASMMemory;
     module: WebAssembly.Module;
 };
-import { SpeedyPromise } from "./speedy-promise";
+import { SpeedyPromise } from './speedy-promise';

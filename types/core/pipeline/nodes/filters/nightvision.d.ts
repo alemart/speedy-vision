@@ -22,7 +22,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
      * Gain, a value typically in [0,1]: larger number => higher contrast
      * @param {number} gain
      */
-    set gain(arg: number);
+    set gain(gain: number);
     /**
      * Gain, a value typically in [0,1]: larger number => higher contrast
      * @returns {number}
@@ -32,7 +32,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
      * Offset, a value typically in [0,1] that controls the brightness
      * @param {number} offset
      */
-    set offset(arg: number);
+    set offset(offset: number);
     /**
      * Offset, a value typically in [0,1] that controls the brightness
      * @returns {number}
@@ -42,7 +42,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
      * Gain decay, a value in [0,1] that controls how the gain decays from the center of the image
      * @param {number} decay
      */
-    set decay(arg: number);
+    set decay(decay: number);
     /**
      * Gain decay, a value in [0,1] that controls how the gain decays from the center of the image
      * @returns {number}
@@ -52,7 +52,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
      * Quality level of the filter
      * @param {NightvisionQualityLevel} quality
      */
-    set quality(arg: NightvisionQualityLevel);
+    set quality(quality: NightvisionQualityLevel);
     /**
      * Quality level of the filter
      * @returns {NightvisionQualityLevel}
@@ -60,4 +60,4 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode {
     get quality(): NightvisionQualityLevel;
 }
 export type NightvisionQualityLevel = "high" | "medium" | "low";
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

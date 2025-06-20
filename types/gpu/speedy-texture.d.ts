@@ -199,5 +199,5 @@ export class SpeedyDrawableTexture extends SpeedyTexture {
      */
     inspect32(gpu: SpeedyGPU, textureReader?: SpeedyTextureReader | undefined): Uint32Array;
 }
-import { SpeedyGPU } from "./speedy-gpu";
-import { SpeedyTextureReader } from "./speedy-texture-reader";
+import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyTextureReader } from './speedy-texture-reader';

@@ -13,12 +13,12 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode {
      * Size of the kernel
      * @param {SpeedySize} kernelSize
      */
-    set kernelSize(arg: SpeedySize);
+    set kernelSize(kernelSize: SpeedySize);
     /**
      * Size of the kernel
      * @returns {SpeedySize}
      */
     get kernelSize(): SpeedySize;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedySize } from "../../../speedy-size";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedySize } from '../../../speedy-size';

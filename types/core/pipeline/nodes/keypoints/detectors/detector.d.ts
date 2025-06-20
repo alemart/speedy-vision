@@ -36,7 +36,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode {
      * tight bound for this, download times will be faster.
      * @param {number} capacity
      */
-    set capacity(arg: number);
+    set capacity(capacity: number);
     /**
      * We can encode up to this many keypoints. If you find a
      * tight bound for this, download times will be faster.
@@ -88,7 +88,7 @@ export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipeline
      * Number of pyramid levels
      * @param {number} levels
      */
-    set levels(arg: number);
+    set levels(levels: number);
     /**
      * Number of pyramid levels
      * @returns {number}
@@ -98,14 +98,14 @@ export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipeline
      * Scale factor between two pyramid levels
      * @param {number} scaleFactor should be greater than 1
      */
-    set scaleFactor(arg: number);
+    set scaleFactor(scaleFactor: number);
     /**
      * Scale factor between two pyramid levels
      * @returns {number}
      */
     get scaleFactor(): number;
 }
-import { SpeedyPipelineNode } from "../../../pipeline-node";
-import { SpeedyDrawableTexture } from "../../../../../gpu/speedy-texture";
-import { SpeedyGPU } from "../../../../../gpu/speedy-gpu";
-import { SpeedyTexture } from "../../../../../gpu/speedy-texture";
+import { SpeedyPipelineNode } from '../../../pipeline-node';
+import { SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
+import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../../../gpu/speedy-texture';

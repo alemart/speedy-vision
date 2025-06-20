@@ -115,4 +115,4 @@ export class Utils {
      */
     static platformString(): string;
 }
-import { SpeedyPromise } from "../core/speedy-promise";
+import { SpeedyPromise } from '../core/speedy-promise';

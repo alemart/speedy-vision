@@ -61,12 +61,12 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace {
      */
     static get Portal(): typeof SpeedyPipelineImagePortalFactory;
 }
-import { SpeedyNamespace } from "../../speedy-namespace";
-import { SpeedyPipelineNodeImagePortalSource } from "../nodes/images/portal";
-import { SpeedyPipelineNodeImagePortalSink } from "../nodes/images/portal";
-import { SpeedyPipelineNodeImageSource } from "../nodes/images/source";
-import { SpeedyPipelineNodeImageSink } from "../nodes/images/sink";
-import { SpeedyPipelineNodeImageMultiplexer } from "../nodes/images/multiplexer";
-import { SpeedyPipelineNodeImageBuffer } from "../nodes/images/buffer";
-import { SpeedyPipelineNodeImagePyramid } from "../nodes/images/pyramid";
-import { SpeedyPipelineNodeImageMixer } from "../nodes/images/mixer";
+import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeImagePortalSource } from '../nodes/images/portal';
+import { SpeedyPipelineNodeImagePortalSink } from '../nodes/images/portal';
+import { SpeedyPipelineNodeImageSource } from '../nodes/images/source';
+import { SpeedyPipelineNodeImageSink } from '../nodes/images/sink';
+import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/images/multiplexer';
+import { SpeedyPipelineNodeImageBuffer } from '../nodes/images/buffer';
+import { SpeedyPipelineNodeImagePyramid } from '../nodes/images/pyramid';
+import { SpeedyPipelineNodeImageMixer } from '../nodes/images/mixer';

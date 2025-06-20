@@ -21,7 +21,7 @@ export class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode 
      * "Training" keypoints
      * @param {SpeedyKeypoint[]} keypoints
      */
-    set keypoints(arg: SpeedyKeypoint[]);
+    set keypoints(keypoints: SpeedyKeypoint[]);
     /**
      * "Training" keypoints
      * @returns {SpeedyKeypoint[]}
@@ -31,7 +31,7 @@ export class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode 
      * Number of tables in the LSH data structure
      * @param {number} n
      */
-    set numberOfTables(arg: number);
+    set numberOfTables(n: number);
     /**
      * Number of tables in the LSH data structure
      * @returns {number}
@@ -41,7 +41,7 @@ export class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode 
      * Number of bits of a hash
      * @param {number} h
      */
-    set hashSize(arg: number);
+    set hashSize(h: number);
     /**
      * Number of bits of a hash
      * @returns {number}
@@ -53,6 +53,6 @@ export class SpeedyPipelineNodeStaticLSHTables extends SpeedyPipelineSourceNode 
      */
     _train(): SpeedyLSH;
 }
-import { SpeedyPipelineSourceNode } from "../../../pipeline-node";
-import { SpeedyKeypoint } from "../../../../speedy-keypoint";
-import { SpeedyLSH } from "../../../../../gpu/speedy-lsh";
+import { SpeedyPipelineSourceNode } from '../../../pipeline-node';
+import { SpeedyKeypoint } from '../../../../speedy-keypoint';
+import { SpeedyLSH } from '../../../../../gpu/speedy-lsh';

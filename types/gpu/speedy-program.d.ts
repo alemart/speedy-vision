@@ -156,7 +156,7 @@ export type SpeedyProgramOptions = {
     pingpong?: boolean | undefined;
 };
 export type SpeedyProgramUniformValue = number | number[] | boolean | boolean[] | SpeedyTexture;
-import { ShaderDeclaration } from "./shader-declaration";
+import { ShaderDeclaration } from './shader-declaration';
 /**
  * Configure and store the VAO and the VBOs
  * @param {WebGL2RenderingContext} gl
@@ -255,7 +255,7 @@ declare class UBOHelper {
      */
     release(): null;
 }
-import { SpeedyDrawableTexture } from "./speedy-texture";
+import { SpeedyDrawableTexture } from './speedy-texture';
 /**
  * Helper class for storing data in GLSL uniform variables
  * @param {string} type
@@ -290,5 +290,5 @@ declare class UniformVariable {
      */
     setValue(gl: WebGL2RenderingContext, value: SpeedyProgramUniformValue, texNo?: number | undefined): number;
 }
-import { SpeedyTexture } from "./speedy-texture";
+import { SpeedyTexture } from './speedy-texture';
 export {};

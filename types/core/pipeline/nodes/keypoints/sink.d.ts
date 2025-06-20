@@ -31,7 +31,7 @@ export class SpeedyPipelineNodeMatchedKeypointSink extends SpeedyPipelineNodeAbs
      */
     constructor(name?: string | undefined);
 }
-import { SpeedyKeypoint } from "../../../speedy-keypoint";
+import { SpeedyKeypoint } from '../../../speedy-keypoint';
 /**
  * Gets keypoints out of the pipeline
  * @template {SpeedyKeypoint} T
@@ -59,7 +59,7 @@ declare class SpeedyPipelineNodeAbstractKeypointSink<T extends SpeedyKeypoint> e
      * Accelerate GPU-CPU transfers
      * @param {boolean} value
      */
-    set turbo(arg: boolean);
+    set turbo(value: boolean);
     /**
      * Accelerate GPU-CPU transfers
      * @returns {boolean}
@@ -69,7 +69,7 @@ declare class SpeedyPipelineNodeAbstractKeypointSink<T extends SpeedyKeypoint> e
      * Should discarded keypoints be exported as null or dropped altogether?
      * @param {boolean} value
      */
-    set includeDiscarded(arg: boolean);
+    set includeDiscarded(value: boolean);
     /**
      * Should discarded keypoints be exported as null or dropped altogether?
      * @returns {boolean}
@@ -125,12 +125,13 @@ declare class SpeedyPipelineNodeAbstractKeypointSink<T extends SpeedyKeypoint> e
      */
     _allocateExtra(gpu: SpeedyGPU, output: SpeedyDrawableTexture, inputEncodedKeypoints: SpeedyTexture, inputDescriptorSize: number, inputExtraSize: number, outputDescriptorSize: number, outputExtraSize: number): SpeedyDrawableTexture;
 }
-import { SpeedyTrackedKeypoint } from "../../../speedy-keypoint";
-import { SpeedyMatchedKeypoint } from "../../../speedy-keypoint";
-import { SpeedyPipelineSinkNode } from "../../pipeline-node";
-import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
-import { SpeedyPromise } from "../../../speedy-promise";
-import { SpeedyGPU } from "../../../../gpu/speedy-gpu";
-import { SpeedyDrawableTexture } from "../../../../gpu/speedy-texture";
-import { SpeedyTexture } from "../../../../gpu/speedy-texture";
+import { SpeedyTrackedKeypoint } from '../../../speedy-keypoint';
+import { SpeedyMatchedKeypoint } from '../../../speedy-keypoint';
+import { SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
+import { SpeedyPromise } from '../../../speedy-promise';
+import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
+import { SpeedyDrawableTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyPipelinePortBuilder } from '../../pipeline-portbuilder';
 export {};

@@ -99,6 +99,6 @@ export class SpeedyTextureReader {
      */
     _deallocatePBOs(gpu: SpeedyGPU): void;
 }
-import { SpeedyPromise } from "../core/speedy-promise";
-import { SpeedyGPU } from "./speedy-gpu";
-import { SpeedyDrawableTexture } from "./speedy-texture";
+import { SpeedyPromise } from '../core/speedy-promise';
+import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyDrawableTexture } from './speedy-texture';

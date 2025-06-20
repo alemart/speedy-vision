@@ -17,7 +17,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
      * Subpixel refinement method
      * @param {SubpixelRefinementMethod} name
      */
-    set method(arg: SubpixelRefinementMethod);
+    set method(name: SubpixelRefinementMethod);
     /**
      * Subpixel refinement method
      * @returns {SubpixelRefinementMethod}
@@ -27,7 +27,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
      * Max. iterations for the upsampling methods
      * @param {number} value
      */
-    set maxIterations(arg: number);
+    set maxIterations(value: number);
     /**
      * Max. iterations for the upsampling methods
      * @returns {number}
@@ -37,7 +37,7 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
      * Convergence threshold for the upsampling methods
      * @param {number} value
      */
-    set epsilon(arg: number);
+    set epsilon(value: number);
     /**
      * Convergence threshold for the upsampling methods
      * @returns {number}
@@ -45,4 +45,4 @@ export class SpeedyPipelineNodeKeypointSubpixelRefiner extends SpeedyPipelineNod
     get epsilon(): number;
 }
 export type SubpixelRefinementMethod = "quadratic1d" | "taylor2d" | "bicubic-upsample" | "bilinear-upsample";
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

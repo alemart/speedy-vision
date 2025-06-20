@@ -20,12 +20,12 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode {
      * A frozen buffer discards the input, effectively increasing the buffering time
      * @param {boolean} value
      */
-    set frozen(arg: boolean);
+    set frozen(value: boolean);
     /**
      * A frozen buffer discards the input, effectively increasing the buffering time
      * @returns {boolean}
      */
     get frozen(): boolean;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { ImageFormat } from "../../../../utils/types";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { ImageFormat } from '../../../../utils/types';

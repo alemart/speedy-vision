@@ -15,7 +15,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode {
      * Minimum intensity in the output image, a value in [0,255]
      * @param {number} minValue
      */
-    set minValue(arg: number);
+    set minValue(minValue: number);
     /**
      * Minimum intensity in the output image, a value in [0,255]
      * @returns {number}
@@ -25,7 +25,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode {
      * Maximum intensity in the output image, a value in [0,255]
      * @param {number} maxValue
      */
-    set maxValue(arg: number);
+    set maxValue(maxValue: number);
     /**
      * Maximum intensity in the output image, a value in [0,255]
      * @returns {number}
@@ -40,8 +40,8 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode {
      */
     _scanMinMax(gpu: SpeedyGPU, image: SpeedyTexture, pixelComponent: PixelComponent): SpeedyDrawableTexture;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedyGPU } from "../../../../gpu/speedy-gpu";
-import { SpeedyTexture } from "../../../../gpu/speedy-texture";
-import { PixelComponent } from "../../../../utils/types";
-import { SpeedyDrawableTexture } from "../../../../gpu/speedy-texture";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { PixelComponent } from '../../../../utils/types';
+import { SpeedyDrawableTexture } from '../../../../gpu/speedy-texture';

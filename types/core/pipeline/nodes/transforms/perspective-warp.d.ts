@@ -13,7 +13,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode {
      * Perspective transform, a 3x3 homography matrix
      * @param {SpeedyMatrix} transform
      */
-    set transform(arg: SpeedyMatrix);
+    set transform(transform: SpeedyMatrix);
     /**
      * Perspective transform, a 3x3 homography matrix
      * @returns {SpeedyMatrix}
@@ -27,5 +27,5 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode {
      */
     _inverse3(mat: number[], eps?: number | undefined): number[];
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedyMatrix } from "../../../speedy-matrix";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedyMatrix } from '../../../speedy-matrix';

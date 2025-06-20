@@ -235,7 +235,7 @@ export class SpeedyPipelineMessageWithKeypointMatches extends SpeedyPipelineMess
 export type SpeedyPipelineMessageDiagnosticData = {
     [x: string]: string | number;
 };
-import { SpeedyGPU } from "../../gpu/speedy-gpu";
-import { SpeedyDrawableTexture } from "../../gpu/speedy-texture";
-import { ImageFormat } from "../../utils/types";
-import { SpeedyLSH } from "../../gpu/speedy-lsh";
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
+import { ImageFormat } from '../../utils/types';
+import { SpeedyLSH } from '../../gpu/speedy-lsh';

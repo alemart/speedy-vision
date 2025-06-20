@@ -36,7 +36,7 @@ export class SpeedyKeypoint {
      * The x-position of this keypoint
      * @param {number} value
      */
-    set x(arg: number);
+    set x(value: number);
     /**
      * The x-position of this keypoint
      * @returns {number}
@@ -46,7 +46,7 @@ export class SpeedyKeypoint {
      * The y-position of this keypoint
      * @param {number} value
      */
-    set y(arg: number);
+    set y(value: number);
     /**
      * The y-position of this keypoint
      * @returns {number}
@@ -124,7 +124,7 @@ export class SpeedyMatchedKeypoint extends SpeedyKeypoint {
      */
     get matches(): SpeedyKeypointMatch[];
 }
-import { SpeedyPoint2 } from "./speedy-point";
-import { SpeedyKeypointDescriptor } from "./speedy-keypoint-descriptor";
-import { SpeedyVector2 } from "./speedy-vector";
-import { SpeedyKeypointMatch } from "./speedy-keypoint-match";
+import { SpeedyPoint2 } from './speedy-point';
+import { SpeedyKeypointDescriptor } from './speedy-keypoint-descriptor';
+import { SpeedyVector2 } from './speedy-vector';
+import { SpeedyKeypointMatch } from './speedy-keypoint-match';

@@ -18,7 +18,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode {
      * Size of the output image, in pixels (use 0 to use scale)
      * @param {SpeedySize} size
      */
-    set size(arg: SpeedySize);
+    set size(size: SpeedySize);
     /**
      * Size of the output image, in pixels (use 0 to use scale)
      * @returns {SpeedySize}
@@ -28,7 +28,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode {
      * Size of the output image relative to the size of the input image
      * @param {SpeedyVector2} scale
      */
-    set scale(arg: SpeedyVector2);
+    set scale(scale: SpeedyVector2);
     /**
      * Size of the output image relative to the size of the input image
      * @returns {SpeedyVector2}
@@ -38,7 +38,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode {
      * Interpolation method
      * @param {SpeedyPipelineNodeResizeMethod} method
      */
-    set method(arg: SpeedyPipelineNodeResizeMethod);
+    set method(method: SpeedyPipelineNodeResizeMethod);
     /**
      * Interpolation method
      * @returns {SpeedyPipelineNodeResizeMethod}
@@ -46,6 +46,6 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode {
     get method(): SpeedyPipelineNodeResizeMethod;
 }
 export type SpeedyPipelineNodeResizeMethod = "bilinear" | "nearest";
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedySize } from "../../../speedy-size";
-import { SpeedyVector2 } from "../../../speedy-vector";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedySize } from '../../../speedy-size';
+import { SpeedyVector2 } from '../../../speedy-vector';

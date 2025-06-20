@@ -128,8 +128,8 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort {
 /**
  * Diagnostic data
  */
-export type SpeedyPipelinePortDiagnosticData = import('./pipeline-message.js').SpeedyPipelineMessageDiagnosticData;
-import { SpeedyPipelinePortSpec } from "./pipeline-portspec";
-import { SpeedyPipelineNode } from "./pipeline-node";
-import { SpeedyPipelineMessage } from "./pipeline-message";
-import { SpeedyGPU } from "../../gpu/speedy-gpu";
+export type SpeedyPipelinePortDiagnosticData = import("./pipeline-message.js").SpeedyPipelineMessageDiagnosticData;
+import { SpeedyPipelinePortSpec } from './pipeline-portspec';
+import { SpeedyPipelineNode } from './pipeline-node';
+import { SpeedyPipelineMessage } from './pipeline-message';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';

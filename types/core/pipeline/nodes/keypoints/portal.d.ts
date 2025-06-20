@@ -52,13 +52,13 @@ export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSource
      * Data source
      * @param {SpeedyPipelineNodeKeypointPortalSink|null} node
      */
-    set source(arg: SpeedyPipelineNodeKeypointPortalSink | null);
+    set source(node: SpeedyPipelineNodeKeypointPortalSink | null);
     /**
      * Data source
      * @returns {SpeedyPipelineNodeKeypointPortalSink|null}
      */
     get source(): SpeedyPipelineNodeKeypointPortalSink | null;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedyTexture } from "../../../../gpu/speedy-texture";
-import { SpeedyPipelineSourceNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyPipelineSourceNode } from '../../pipeline-node';

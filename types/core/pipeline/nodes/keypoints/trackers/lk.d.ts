@@ -21,7 +21,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Window size (use odd numbers)
      * @param {SpeedySize} windowSize must be a square window
      */
-    set windowSize(arg: SpeedySize);
+    set windowSize(windowSize: SpeedySize);
     /**
      * Window size (use odd numbers)
      * @returns {SpeedySize}
@@ -31,7 +31,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Number of pyramid levels to use
      * @param {number} levels
      */
-    set levels(arg: number);
+    set levels(levels: number);
     /**
      * Number of pyramid levels to use
      * @returns {number}
@@ -41,7 +41,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Set the discard threshold, used to discard "bad" keypoints
      * @param {number} value typically 10^(-4) - increase to discard more
      */
-    set discardThreshold(arg: number);
+    set discardThreshold(value: number);
     /**
      * Get the discard threshold, used to discard "bad" keypoints
      * @returns {number}
@@ -51,7 +51,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Set the maximum number of iterations of the pyramidal LK algorithm
      * @param {number} value
      */
-    set numberOfIterations(arg: number);
+    set numberOfIterations(value: number);
     /**
      * Get the maximum number of iterations of the pyramidal LK algorithm
      * @returns {number}
@@ -61,12 +61,12 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode {
      * Get the accuracy threshold, used to stop LK iterations
      * @param {number} value typically 0.01
      */
-    set epsilon(arg: number);
+    set epsilon(value: number);
     /**
      * Get the accuracy threshold, used to stop LK iterations
      * @returns {number}
      */
     get epsilon(): number;
 }
-import { SpeedyPipelineNode } from "../../../pipeline-node";
-import { SpeedySize } from "../../../../speedy-size";
+import { SpeedyPipelineNode } from '../../../pipeline-node';
+import { SpeedySize } from '../../../../speedy-size';

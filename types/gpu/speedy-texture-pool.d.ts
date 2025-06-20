@@ -65,6 +65,6 @@ declare class TextureBucket {
     /** @type {boolean} whether the texture is available or not */
     free: boolean;
 }
-import { SpeedyGPU } from "./speedy-gpu";
-import { SpeedyDrawableTexture } from "./speedy-texture";
+import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyDrawableTexture } from './speedy-texture';
 export {};

@@ -16,7 +16,7 @@ export class SpeedySize {
      * Width
      * @param {number} value
      */
-    set width(arg: number);
+    set width(value: number);
     /**
      * Width
      * @returns {number}
@@ -26,7 +26,7 @@ export class SpeedySize {
      * Height
      * @param {number} value
      */
-    set height(arg: number);
+    set height(value: number);
     /**
      * Height
      * @returns {number}

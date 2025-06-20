@@ -18,11 +18,11 @@ export class SpeedyPipelineNodeKeypointHammingDistanceFilter extends SpeedyPipel
      * Distance threshold, an integer
      * @param {number} value
      */
-    set threshold(arg: number);
+    set threshold(value: number);
     /**
      * Distance threshold, an integer
      * @returns {number}
      */
     get threshold(): number;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

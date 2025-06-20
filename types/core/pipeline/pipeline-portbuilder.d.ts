@@ -50,7 +50,7 @@ export class SpeedyPipelinePortBuilder {
      */
     build(node: SpeedyPipelineNode): SpeedyPipelinePort;
 }
-export type SpeedyPipelineMessageConstraint = import('./pipeline-portspec').SpeedyPipelineMessageConstraint;
-import { SpeedyPipelinePort } from "./pipeline-port";
-import { SpeedyPipelineMessageType } from "./pipeline-message";
-import { SpeedyPipelineNode } from "./pipeline-node";
+export type SpeedyPipelineMessageConstraint = import("./pipeline-portspec").SpeedyPipelineMessageConstraint;
+import { SpeedyPipelinePort } from './pipeline-port';
+import { SpeedyPipelineMessageType } from './pipeline-message';
+import { SpeedyPipelineNode } from './pipeline-node';

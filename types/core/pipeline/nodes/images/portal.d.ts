@@ -38,14 +38,14 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
      * Data source
      * @param {SpeedyPipelineNodeImagePortalSink|null} node
      */
-    set source(arg: SpeedyPipelineNodeImagePortalSink | null);
+    set source(node: SpeedyPipelineNodeImagePortalSink | null);
     /**
      * Data source
      * @returns {SpeedyPipelineNodeImagePortalSink|null}
      */
     get source(): SpeedyPipelineNodeImagePortalSink | null;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { ImageFormat } from "../../../../utils/types";
-import { SpeedyTexture } from "../../../../gpu/speedy-texture";
-import { SpeedyPipelineSourceNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { ImageFormat } from '../../../../utils/types';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyPipelineSourceNode } from '../../pipeline-node';

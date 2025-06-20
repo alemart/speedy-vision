@@ -27,7 +27,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode {
      * Accelerate GPU-CPU transfers
      * @param {boolean} value
      */
-    set turbo(arg: boolean);
+    set turbo(value: boolean);
     /**
      * Accelerate GPU-CPU transfers
      * @returns {boolean}
@@ -39,7 +39,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode {
      */
     export(): SpeedyPromise<SpeedyVector2[]>;
 }
-import { SpeedyPipelineSinkNode } from "../../pipeline-node";
-import { SpeedyVector2 } from "../../../speedy-vector";
-import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
-import { SpeedyPromise } from "../../../speedy-promise";
+import { SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { SpeedyVector2 } from '../../../speedy-vector';
+import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
+import { SpeedyPromise } from '../../../speedy-promise';

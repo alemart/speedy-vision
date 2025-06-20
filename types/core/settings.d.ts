@@ -6,7 +6,7 @@ export class Settings extends SpeedyNamespace {
      * Power preference of the WebGL context
      * @param {PowerPreference} value
      */
-    static set powerPreference(arg: import("../gpu/speedy-gl").PowerPreference);
+    static set powerPreference(value: import("../gpu/speedy-gl").PowerPreference);
     /**
      * Power preference of the WebGL context
      * @returns {PowerPreference}
@@ -16,7 +16,7 @@ export class Settings extends SpeedyNamespace {
      * GPU polling mode
      * @param {GPUPollingMode} value
      */
-    static set gpuPollingMode(arg: GPUPollingMode);
+    static set gpuPollingMode(value: GPUPollingMode);
     /**
      * GPU polling mode
      * @returns {GPUPollingMode}
@@ -26,14 +26,14 @@ export class Settings extends SpeedyNamespace {
      * Logging mode
      * @param {LoggingMode} mode
      */
-    static set logging(arg: LoggingMode);
+    static set logging(mode: LoggingMode);
     /**
      * Logging mode
      * @returns {LoggingMode}
      */
     static get logging(): LoggingMode;
 }
-export type PowerPreference = import('../gpu/speedy-gl').PowerPreference;
+export type PowerPreference = import("../gpu/speedy-gl").PowerPreference;
 export type GPUPollingMode = "raf" | "asap";
 export type LoggingMode = "default" | "none" | "diagnostic";
-import { SpeedyNamespace } from "./speedy-namespace";
+import { SpeedyNamespace } from './speedy-namespace';

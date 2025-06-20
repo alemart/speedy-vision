@@ -16,7 +16,7 @@ export class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode {
      */
     _allocateDescriptors(gpu: SpeedyGPU, inputDescriptorSize: number, inputExtraSize: number, outputDescriptorSize: number, outputExtraSize: number, inputEncodedKeypoints: SpeedyTexture): SpeedyDrawableTexture;
 }
-import { SpeedyPipelineNode } from "../../../pipeline-node";
-import { SpeedyGPU } from "../../../../../gpu/speedy-gpu";
-import { SpeedyTexture } from "../../../../../gpu/speedy-texture";
-import { SpeedyDrawableTexture } from "../../../../../gpu/speedy-texture";
+import { SpeedyPipelineNode } from '../../../pipeline-node';
+import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
+import { SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';

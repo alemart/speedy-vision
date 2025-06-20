@@ -119,19 +119,19 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace {
     /**
      * Distance filter
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeDistanceFilter}
+     * @returns {SpeedyPipelineNodeKeypointDistanceFilter}
      */
-    static DistanceFilter(name?: string | undefined): SpeedyPipelineNodeDistanceFilter;
+    static DistanceFilter(name?: string | undefined): SpeedyPipelineNodeKeypointDistanceFilter;
     /**
      * Hamming distance filter
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeHammingDistanceFilter}
+     * @returns {SpeedyPipelineNodeKeypointHammingDistanceFilter}
      */
-    static HammingDistanceFilter(name?: string | undefined): SpeedyPipelineNodeHammingDistanceFilter;
+    static HammingDistanceFilter(name?: string | undefined): SpeedyPipelineNodeKeypointHammingDistanceFilter;
 }
-import { SpeedyNamespace } from "../../speedy-namespace";
-import { SpeedyPipelineNodeKeypointPortalSource } from "../nodes/keypoints/portal";
-import { SpeedyPipelineNodeKeypointPortalSink } from "../nodes/keypoints/portal";
+import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeKeypointPortalSource } from '../nodes/keypoints/portal';
+import { SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 /**
  * Keypoint detectors
  */
@@ -194,23 +194,25 @@ declare class SpeedyPipelineKeypointMatcherFactory extends SpeedyNamespace {
      */
     static BFKNN(name?: string | undefined): SpeedyPipelineNodeBruteForceKNNKeypointMatcher;
 }
-import { SpeedyPipelineNodeKeypointSource } from "../nodes/keypoints/source";
-import { SpeedyPipelineNodeKeypointSink } from "../nodes/keypoints/sink";
-import { SpeedyPipelineNodeTrackedKeypointSink } from "../nodes/keypoints/sink";
-import { SpeedyPipelineNodeMatchedKeypointSink } from "../nodes/keypoints/sink";
-import { SpeedyPipelineNodeKeypointClipper } from "../nodes/keypoints/clipper";
-import { SpeedyPipelineNodeKeypointBorderClipper } from "../nodes/keypoints/border-clipper";
-import { SpeedyPipelineNodeKeypointBuffer } from "../nodes/keypoints/buffer";
-import { SpeedyPipelineNodeKeypointMixer } from "../nodes/keypoints/mixer";
-import { SpeedyPipelineNodeKeypointShuffler } from "../nodes/keypoints/shuffler";
-import { SpeedyPipelineNodeKeypointMultiplexer } from "../nodes/keypoints/multiplexer";
-import { SpeedyPipelineNodeKeypointTransformer } from "../nodes/keypoints/transformer";
-import { SpeedyPipelineNodeKeypointSubpixelRefiner } from "../nodes/keypoints/subpixel";
-import { SpeedyPipelineNodeFASTKeypointDetector } from "../nodes/keypoints/detectors/fast";
-import { SpeedyPipelineNodeHarrisKeypointDetector } from "../nodes/keypoints/detectors/harris";
-import { SpeedyPipelineNodeORBKeypointDescriptor } from "../nodes/keypoints/descriptors/orb";
-import { SpeedyPipelineNodeLKKeypointTracker } from "../nodes/keypoints/trackers/lk";
-import { SpeedyPipelineNodeStaticLSHTables } from "../nodes/keypoints/matchers/lsh-static-tables";
-import { SpeedyPipelineNodeLSHKNNKeypointMatcher } from "../nodes/keypoints/matchers/lsh-knn";
-import { SpeedyPipelineNodeBruteForceKNNKeypointMatcher } from "../nodes/keypoints/matchers/bf-knn";
+import { SpeedyPipelineNodeKeypointSource } from '../nodes/keypoints/source';
+import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeTrackedKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeMatchedKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
+import { SpeedyPipelineNodeKeypointBorderClipper } from '../nodes/keypoints/border-clipper';
+import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
+import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
+import { SpeedyPipelineNodeKeypointShuffler } from '../nodes/keypoints/shuffler';
+import { SpeedyPipelineNodeKeypointMultiplexer } from '../nodes/keypoints/multiplexer';
+import { SpeedyPipelineNodeKeypointTransformer } from '../nodes/keypoints/transformer';
+import { SpeedyPipelineNodeKeypointSubpixelRefiner } from '../nodes/keypoints/subpixel';
+import { SpeedyPipelineNodeKeypointDistanceFilter } from '../nodes/keypoints/distance-filter';
+import { SpeedyPipelineNodeKeypointHammingDistanceFilter } from '../nodes/keypoints/hamming-distance-filter';
+import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
+import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
+import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
+import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
+import { SpeedyPipelineNodeStaticLSHTables } from '../nodes/keypoints/matchers/lsh-static-tables';
+import { SpeedyPipelineNodeLSHKNNKeypointMatcher } from '../nodes/keypoints/matchers/lsh-knn';
+import { SpeedyPipelineNodeBruteForceKNNKeypointMatcher } from '../nodes/keypoints/matchers/bf-knn';
 export {};

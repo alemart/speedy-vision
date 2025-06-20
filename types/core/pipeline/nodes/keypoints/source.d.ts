@@ -32,7 +32,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode {
      * Keypoints to be uploaded
      * @param {SpeedyKeypoint[]} keypoints
      */
-    set keypoints(arg: SpeedyKeypoint[]);
+    set keypoints(keypoints: SpeedyKeypoint[]);
     /**
      * Keypoints to be uploaded
      * @returns {SpeedyKeypoint[]}
@@ -43,7 +43,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode {
      * This should be a tight bound for better performance.
      * @param {number} capacity
      */
-    set capacity(arg: number);
+    set capacity(capacity: number);
     /**
      * The maximum number of keypoints we'll accept.
      * This should be a tight bound for better performance.
@@ -51,5 +51,5 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode {
      */
     get capacity(): number;
 }
-import { SpeedyPipelineSourceNode } from "../../pipeline-node";
-import { SpeedyKeypoint } from "../../../speedy-keypoint";
+import { SpeedyPipelineSourceNode } from '../../pipeline-node';
+import { SpeedyKeypoint } from '../../../speedy-keypoint';

@@ -22,4 +22,4 @@ export class SpeedyPipelineVector2Factory extends Function {
      */
     Sink(name?: string | undefined): SpeedyPipelineNodeVector2Sink;
 }
-import { SpeedyPipelineNodeVector2Sink } from "../nodes/vector2/sink";
+import { SpeedyPipelineNodeVector2Sink } from '../nodes/vector2/sink';

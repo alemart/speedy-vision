@@ -15,4 +15,4 @@ export class SpeedyPlatform extends SpeedyNamespace {
      */
     static get vendor(): string;
 }
-import { SpeedyNamespace } from "./speedy-namespace";
+import { SpeedyNamespace } from './speedy-namespace';

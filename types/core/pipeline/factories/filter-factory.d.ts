@@ -45,11 +45,11 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace {
      */
     static Normalize(name?: string | undefined): SpeedyPipelineNodeNormalize;
 }
-import { SpeedyNamespace } from "../../speedy-namespace";
-import { SpeedyPipelineNodeGreyscale } from "../nodes/filters/greyscale";
-import { SpeedyPipelineNodeGaussianBlur } from "../nodes/filters/gaussian-blur";
-import { SpeedyPipelineNodeSimpleBlur } from "../nodes/filters/simple-blur";
-import { SpeedyPipelineNodeMedianBlur } from "../nodes/filters/median-blur";
-import { SpeedyPipelineNodeConvolution } from "../nodes/filters/convolution";
-import { SpeedyPipelineNodeNightvision } from "../nodes/filters/nightvision";
-import { SpeedyPipelineNodeNormalize } from "../nodes/filters/normalize";
+import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeGreyscale } from '../nodes/filters/greyscale';
+import { SpeedyPipelineNodeGaussianBlur } from '../nodes/filters/gaussian-blur';
+import { SpeedyPipelineNodeSimpleBlur } from '../nodes/filters/simple-blur';
+import { SpeedyPipelineNodeMedianBlur } from '../nodes/filters/median-blur';
+import { SpeedyPipelineNodeConvolution } from '../nodes/filters/convolution';
+import { SpeedyPipelineNodeNightvision } from '../nodes/filters/nightvision';
+import { SpeedyPipelineNodeNormalize } from '../nodes/filters/normalize';

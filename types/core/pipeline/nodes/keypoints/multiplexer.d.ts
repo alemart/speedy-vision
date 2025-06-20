@@ -13,11 +13,11 @@ export class SpeedyPipelineNodeKeypointMultiplexer extends SpeedyPipelineNode {
      * The number of the port that should be linked to the output
      * @param {number} port
      */
-    set port(arg: number);
+    set port(port: number);
     /**
      * The number of the port that should be linked to the output
      * @returns {number}
      */
     get port(): number;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

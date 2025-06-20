@@ -21,7 +21,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode {
      * The media type that is exported from this node
      * @param {SpeedyPipelineNodeImageSinkExportedMediaType} value
      */
-    set mediaType(arg: SpeedyPipelineNodeImageSinkExportedMediaType);
+    set mediaType(value: SpeedyPipelineNodeImageSinkExportedMediaType);
     /**
      * The media type that is exported from this node
      * @returns {SpeedyPipelineNodeImageSinkExportedMediaType}
@@ -37,8 +37,8 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode {
  * exported media type
  */
 export type SpeedyPipelineNodeImageSinkExportedMediaType = "bitmap" | "data";
-import { SpeedyPipelineSinkNode } from "../../pipeline-node";
-import { ImageFormat } from "../../../../utils/types";
-import { SpeedyTextureReader } from "../../../../gpu/speedy-texture-reader";
-import { SpeedyPromise } from "../../../speedy-promise";
-import { SpeedyMedia } from "../../../speedy-media";
+import { SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { ImageFormat } from '../../../../utils/types';
+import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
+import { SpeedyPromise } from '../../../speedy-promise';
+import { SpeedyMedia } from '../../../speedy-media';

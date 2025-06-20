@@ -16,7 +16,7 @@ export class SpeedyPoint2 {
      * x-coordinate
      * @param {number} value
      */
-    set x(arg: number);
+    set x(value: number);
     /**
      * x-coordinate
      * @returns {number}
@@ -26,7 +26,7 @@ export class SpeedyPoint2 {
      * y-coordinate
      * @param {number} value
      */
-    set y(arg: number);
+    set y(value: number);
     /**
      * y-coordinate
      * @returns {number}
@@ -56,4 +56,4 @@ export class SpeedyPoint2 {
      */
     equals(p: SpeedyPoint2): boolean;
 }
-import { SpeedyVector2 } from "./speedy-vector";
+import { SpeedyVector2 } from './speedy-vector';

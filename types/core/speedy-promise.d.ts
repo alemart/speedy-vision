@@ -11,14 +11,14 @@ export class SpeedyPromise<T> {
      * @param {U} [value]
      * @returns {SpeedyPromise<U>}
      */
-    static resolve<U_2>(value?: U_2 | undefined): SpeedyPromise<U_2>;
+    static resolve<U>(value?: U | undefined): SpeedyPromise<U>;
     /**
      * Creates a rejected SpeedyPromise
      * @template U
      * @param {Error} reason
      * @returns {SpeedyPromise<U>}
      */
-    static reject<U_3>(reason: Error): SpeedyPromise<U_3>;
+    static reject<U>(reason: Error): SpeedyPromise<U>;
     /**
      * Returns a SpeedyPromise that resolves to an array
      * containing the results of the input promises/values,
@@ -31,7 +31,7 @@ export class SpeedyPromise<T> {
      *
      * FIXME iterables need not be all <U>
      */
-    static all<U_4>(iterable: Iterable<U_4> | Iterable<SpeedyPromise<U_4>> | Iterable<Promise<U_4>>): SpeedyPromise<U_4[]>;
+    static all<U>(iterable: Iterable<U> | Iterable<SpeedyPromise<U>> | Iterable<Promise<U>>): SpeedyPromise<U[]>;
     /**
      * Returns a promise that gets fulfilled or rejected as soon
      * as the first promise in the iterable gets fulfilled or
@@ -40,7 +40,7 @@ export class SpeedyPromise<T> {
      * @param {Iterable<U>|Iterable<SpeedyPromise<U>>|Iterable<Promise<U>>} iterable e.g., a SpeedyPromise[], a thenable[]
      * @returns {SpeedyPromise<U>}
      */
-    static race<U_5>(iterable: Iterable<U_5> | Iterable<SpeedyPromise<U_5>> | Iterable<Promise<U_5>>): SpeedyPromise<U_5>;
+    static race<U>(iterable: Iterable<U> | Iterable<SpeedyPromise<U>> | Iterable<Promise<U>>): SpeedyPromise<U>;
     /**
      * Static no-operation
      */
@@ -55,7 +55,7 @@ export class SpeedyPromise<T> {
     _onFulfillment: any;
     _onRejection: any;
     _children: number;
-    0: SpeedyPromise<T>;
+    0: this;
     _parent: any;
     _flags: number;
     /**
@@ -85,14 +85,14 @@ export class SpeedyPromise<T> {
      * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<U>}
      */
-    then<U, V>(onFulfillment: ((arg0: T) => U | PromiseLike<U> | SpeedyPromise<U>) | null | undefined, onRejection?: ((arg0: Error) => V | PromiseLike<V> | SpeedyPromise<V>) | null | undefined): SpeedyPromise<U>;
+    then<U, V>(onFulfillment: null | undefined | ((arg0: T) => U | PromiseLike<U> | SpeedyPromise<U>), onRejection?: null | undefined | ((arg0: Error) => V | PromiseLike<V> | SpeedyPromise<V>)): SpeedyPromise<U>;
     /**
      * Setup rejection handler
      * @template U, V=never
      * @param {null|undefined|(function(Error): V|PromiseLike<V>|SpeedyPromise<V>)} [onRejection] called when the SpeedyPromise is rejected
      * @returns {SpeedyPromise<V>}
      */
-    catch<U_1, V_1>(onRejection?: ((arg0: Error) => V_1 | PromiseLike<V_1> | SpeedyPromise<V_1>) | null | undefined): SpeedyPromise<V_1>;
+    catch<U, V>(onRejection?: null | undefined | ((arg0: Error) => V | PromiseLike<V> | SpeedyPromise<V>)): SpeedyPromise<V>;
     /**
      * Execute a callback when the promise is settled
      * (i.e., fulfilled or rejected)

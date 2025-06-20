@@ -15,7 +15,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      * Minimum corner quality in [0,1]
      * @param {number} quality
      */
-    set quality(arg: number);
+    set quality(quality: number);
     /**
      * Minimum corner quality in [0,1] - this is a fraction of
      * the largest min. eigenvalue of the autocorrelation matrix
@@ -27,12 +27,12 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      * Neighborhood size
      * @param {SpeedySize} windowSize
      */
-    set windowSize(arg: SpeedySize);
+    set windowSize(windowSize: SpeedySize);
     /**
      * Neighborhood size
      * @returns {SpeedySize}
      */
     get windowSize(): SpeedySize;
 }
-import { SpeedyPipelineNodeMultiscaleKeypointDetector } from "./detector";
-import { SpeedySize } from "../../../../speedy-size";
+import { SpeedyPipelineNodeMultiscaleKeypointDetector } from './detector';
+import { SpeedySize } from '../../../../speedy-size';

@@ -15,12 +15,12 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode {
      * Source media
      * @param {SpeedyMedia|null} media
      */
-    set media(arg: SpeedyMedia | null);
+    set media(media: SpeedyMedia | null);
     /**
      * Source media
      * @returns {SpeedyMedia|null}
      */
     get media(): SpeedyMedia | null;
 }
-import { SpeedyPipelineSourceNode } from "../../pipeline-node";
-import { SpeedyMedia } from "../../../speedy-media";
+import { SpeedyPipelineSourceNode } from '../../pipeline-node';
+import { SpeedyMedia } from '../../../speedy-media';

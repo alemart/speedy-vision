@@ -13,7 +13,7 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode {
      * Maximum number of keypoints (optional)
      * @param {number} value
      */
-    set maxKeypoints(arg: number);
+    set maxKeypoints(value: number);
     /**
      * Maximum number of keypoints (optional)
      * @returns {number}
@@ -27,4 +27,4 @@ export class SpeedyPipelineNodeKeypointShuffler extends SpeedyPipelineNode {
      */
     _generatePermutation(n: number, bufsize?: number | undefined): Int32Array;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

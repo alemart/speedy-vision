@@ -14,11 +14,11 @@ export class SpeedyPipelineNodeBruteForceKNNKeypointMatcher extends SpeedyPipeli
      * Number of matches per keypoint
      * @param {number} value
      */
-    set k(arg: number);
+    set k(value: number);
     /**
      * Number of matches per keypoint
      * @returns {number}
      */
     get k(): number;
 }
-import { SpeedyPipelineNode } from "../../../pipeline-node";
+import { SpeedyPipelineNode } from '../../../pipeline-node';

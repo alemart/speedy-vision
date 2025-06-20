@@ -15,7 +15,7 @@ export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode 
      * How many neighbors do you want?
      * @param {number} k number of neighbors
      */
-    set k(arg: number);
+    set k(k: number);
     /**
      * How many neighbors do you want?
      * @returns {number}
@@ -25,7 +25,7 @@ export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode 
      * Quality of the matching
      * @param {LSHKNNQualityLevel} quality
      */
-    set quality(arg: LSHKNNQualityLevel);
+    set quality(quality: LSHKNNQualityLevel);
     /**
      * Quality of the matching
      * @returns {LSHKNNQualityLevel}
@@ -35,5 +35,5 @@ export class SpeedyPipelineNodeLSHKNNKeypointMatcher extends SpeedyPipelineNode 
 /**
  * quality of the approximate matching
  */
-export type LSHKNNQualityLevel = 'fastest' | 'default' | 'demanding';
-import { SpeedyPipelineNode } from "../../../pipeline-node";
+export type LSHKNNQualityLevel = "fastest" | "default" | "demanding";
+import { SpeedyPipelineNode } from '../../../pipeline-node';

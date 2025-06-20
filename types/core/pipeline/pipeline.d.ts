@@ -76,6 +76,6 @@ export class SpeedyPipeline {
 export type SpeedyPipelineOutput = {
     [x: string]: any;
 };
-import { SpeedyPipelineNode } from "./pipeline-node";
-import { SpeedyPromise } from "../speedy-promise";
-import { SpeedyGPU } from "../../gpu/speedy-gpu";
+import { SpeedyPipelineNode } from './pipeline-node';
+import { SpeedyPromise } from '../speedy-promise';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';

@@ -8,4 +8,4 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode {
      */
     constructor(name?: string | undefined);
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

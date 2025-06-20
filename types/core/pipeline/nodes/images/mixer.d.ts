@@ -17,7 +17,7 @@ export class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode {
      * Alpha coefficient (applied to image0)
      * @param {number} value
      */
-    set alpha(arg: number);
+    set alpha(value: number);
     /**
      * Alpha coefficient (applied to image0)
      * @returns {number}
@@ -27,7 +27,7 @@ export class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode {
      * Beta coefficient (applied to image1)
      * @param {number} value
      */
-    set beta(arg: number);
+    set beta(value: number);
     /**
      * Beta coefficient (applied to image1)
      * @returns {number}
@@ -37,11 +37,11 @@ export class SpeedyPipelineNodeImageMixer extends SpeedyPipelineNode {
      * Gamma coefficient (brightness control)
      * @param {number} value
      */
-    set gamma(arg: number);
+    set gamma(value: number);
     /**
      * Gamma coefficient (brightness control)
      * @returns {number}
      */
     get gamma(): number;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

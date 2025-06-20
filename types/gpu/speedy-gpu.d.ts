@@ -63,10 +63,10 @@ export class SpeedyGPU extends Observable {
      */
     _reset(): void;
 }
-import { Observable } from "../utils/observable";
-import { SpeedyGL } from "./speedy-gl";
-import { SpeedyProgramCenter } from "./speedy-program-center";
-import { SpeedyTexturePool } from "./speedy-texture-pool";
-import { SpeedyTexture } from "./speedy-texture";
-import { SpeedyMediaSource } from "../core/speedy-media-source";
-import { SpeedyPromise } from "../core/speedy-promise";
+import { Observable } from '../utils/observable';
+import { SpeedyGL } from './speedy-gl';
+import { SpeedyProgramCenter } from './speedy-program-center';
+import { SpeedyTexturePool } from './speedy-texture-pool';
+import { SpeedyTexture } from './speedy-texture';
+import { SpeedyMediaSource } from '../core/speedy-media-source';
+import { SpeedyPromise } from '../core/speedy-promise';

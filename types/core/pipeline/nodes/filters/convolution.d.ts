@@ -13,12 +13,12 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode {
      * Convolution kernel
      * @param {SpeedyMatrix} kernel
      */
-    set kernel(arg: SpeedyMatrix);
+    set kernel(kernel: SpeedyMatrix);
     /**
      * Convolution kernel
      * @returns {SpeedyMatrix}
      */
     get kernel(): SpeedyMatrix;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedyMatrix } from "../../../speedy-matrix";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedyMatrix } from '../../../speedy-matrix';

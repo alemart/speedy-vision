@@ -13,11 +13,11 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode {
      * The maximum number of keypoints in the output
      * @param {number} size
      */
-    set size(arg: number);
+    set size(size: number);
     /**
      * The maximum number of keypoints in the output
      * @returns {number}
      */
     get size(): number;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

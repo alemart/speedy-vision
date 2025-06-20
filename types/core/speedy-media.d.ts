@@ -77,14 +77,14 @@ export class SpeedyMedia {
      */
     toBitmap(): SpeedyPromise<ImageBitmap>;
 }
-export type SpeedyMediaSourceNativeElement = import('./speedy-media-source').SpeedyMediaSourceNativeElement;
+export type SpeedyMediaSourceNativeElement = import("./speedy-media-source").SpeedyMediaSourceNativeElement;
 export type SpeedyMediaOptions = {
     /**
      * default is RGBA
      */
     format?: Symbol | undefined;
 };
-import { SpeedyMediaSource } from "./speedy-media-source";
-import { ImageFormat } from "../utils/types";
-import { SpeedySize } from "./speedy-size";
-import { SpeedyPromise } from "./speedy-promise";
+import { SpeedyMediaSource } from './speedy-media-source';
+import { ImageFormat } from '../utils/types';
+import { SpeedySize } from './speedy-size';
+import { SpeedyPromise } from './speedy-promise';

@@ -15,7 +15,7 @@ export class SpeedyPipelineNodeKeypointBorderClipper extends SpeedyPipelineNode 
      * Image size, in pixels
      * @param {SpeedySize} imageSize
      */
-    set imageSize(arg: SpeedySize);
+    set imageSize(imageSize: SpeedySize);
     /**
      * Image size, in pixels
      * @returns {SpeedySize}
@@ -25,13 +25,13 @@ export class SpeedyPipelineNodeKeypointBorderClipper extends SpeedyPipelineNode 
      * Border size, in pixels
      * @param {SpeedyVector2} borderSize
      */
-    set borderSize(arg: SpeedyVector2);
+    set borderSize(borderSize: SpeedyVector2);
     /**
      * Border size, in pixels
      * @returns {SpeedyVector2}
      */
     get borderSize(): SpeedyVector2;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedySize } from "../../../speedy-size";
-import { SpeedyVector2 } from "../../../speedy-vector";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedySize } from '../../../speedy-size';
+import { SpeedyVector2 } from '../../../speedy-vector';

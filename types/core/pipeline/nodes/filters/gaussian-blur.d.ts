@@ -22,7 +22,7 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode {
      * Size of the kernel
      * @param {SpeedySize} kernelSize
      */
-    set kernelSize(arg: SpeedySize);
+    set kernelSize(kernelSize: SpeedySize);
     /**
      * Size of the kernel
      * @returns {SpeedySize}
@@ -32,7 +32,7 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode {
      * Sigma of the Gaussian kernel
      * @param {SpeedyVector2} sigma
      */
-    set sigma(arg: SpeedyVector2);
+    set sigma(sigma: SpeedyVector2);
     /**
      * Sigma of the Gaussian kernel
      * @returns {SpeedyVector2}
@@ -48,6 +48,6 @@ export type SeparableConvolutionKernel = {
     x: number[];
     y: number[];
 };
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedySize } from "../../../speedy-size";
-import { SpeedyVector2 } from "../../../speedy-vector";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedySize } from '../../../speedy-size';
+import { SpeedyVector2 } from '../../../speedy-vector';

@@ -130,22 +130,9 @@ export type InputPortDictionary = {
 export type OutputPortDictionary = {
     [x: string]: SpeedyPipelineOutputPort;
 };
-import { SpeedyDrawableTexture } from "../../gpu/speedy-texture";
-/**
- * Map an array of input ports to an InputPortDictionary whose keys are their names
- * @param {SpeedyPipelineInputPort[]} ports
- * @returns {InputPortDictionary}
- */
-declare function InputPortDictionary(ports: SpeedyPipelineInputPort[]): InputPortDictionary;
-/**
- * Map an array of output ports to an OutputPortDictionary whose keys are their names
- * @param {SpeedyPipelineOutputPort[]} ports
- * @returns {OutputPortDictionary}
- */
-declare function OutputPortDictionary(ports: SpeedyPipelineOutputPort[]): OutputPortDictionary;
-import { SpeedyPipelineInputPort } from "./pipeline-port";
-import { SpeedyPipelineOutputPort } from "./pipeline-port";
-import { SpeedyGPU } from "../../gpu/speedy-gpu";
-import { SpeedyPromise } from "../speedy-promise";
-import { SpeedyPipelinePortBuilder } from "./pipeline-portbuilder";
-export {};
+import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
+import { SpeedyPipelineInputPort } from './pipeline-port';
+import { SpeedyPipelineOutputPort } from './pipeline-port';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyPromise } from '../speedy-promise';
+import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';

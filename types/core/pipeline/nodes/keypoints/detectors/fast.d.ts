@@ -13,11 +13,11 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
      * FAST threshold in [0,255]
      * @param {number} threshold
      */
-    set threshold(arg: number);
+    set threshold(threshold: number);
     /**
      * FAST threshold in [0,255]
      * @returns {number}
      */
     get threshold(): number;
 }
-import { SpeedyPipelineNodeMultiscaleKeypointDetector } from "./detector";
+import { SpeedyPipelineNodeMultiscaleKeypointDetector } from './detector';

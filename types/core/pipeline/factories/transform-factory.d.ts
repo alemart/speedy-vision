@@ -15,6 +15,6 @@ export class SpeedyPipelineTransformFactory extends SpeedyNamespace {
      */
     static PerspectiveWarp(name?: string | undefined): SpeedyPipelineNodePerspectiveWarp;
 }
-import { SpeedyNamespace } from "../../speedy-namespace";
-import { SpeedyPipelineNodeResize } from "../nodes/transforms/resize";
-import { SpeedyPipelineNodePerspectiveWarp } from "../nodes/transforms/perspective-warp";
+import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeResize } from '../nodes/transforms/resize';
+import { SpeedyPipelineNodePerspectiveWarp } from '../nodes/transforms/perspective-warp';

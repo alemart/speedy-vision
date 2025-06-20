@@ -42,12 +42,12 @@ export class SpeedyProgramGroup {
      */
     _createProgram(shaderdecl: ShaderDeclaration, options?: import("./speedy-program").SpeedyProgramOptions | undefined): SpeedyProgram;
 }
-export type SpeedyProgramOptions = import('./speedy-program').SpeedyProgramOptions;
+export type SpeedyProgramOptions = import("./speedy-program").SpeedyProgramOptions;
 export type SpeedyProgramHelpers = {
     usesPingpongRendering: () => SpeedyProgramOptions;
     rendersToCanvas: () => SpeedyProgramOptions;
 };
-import { SpeedyGPU } from "./speedy-gpu";
-import { SpeedyProgram } from "./speedy-program";
-import { ShaderDeclarationBuilder } from "./shader-declaration";
-import { ShaderDeclaration } from "./shader-declaration";
+import { SpeedyGPU } from './speedy-gpu';
+import { SpeedyProgram } from './speedy-program';
+import { ShaderDeclarationBuilder } from './shader-declaration';
+import { ShaderDeclaration } from './shader-declaration';

@@ -20,7 +20,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode {
      * Size of the kernel
      * @param {SpeedySize} kernelSize
      */
-    set kernelSize(arg: SpeedySize);
+    set kernelSize(kernelSize: SpeedySize);
     /**
      * Size of the kernel
      * @returns {SpeedySize}
@@ -31,5 +31,5 @@ export type SeparableConvolutionKernel = {
     x: number[];
     y: number[];
 };
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedySize } from "../../../speedy-size";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedySize } from '../../../speedy-size';

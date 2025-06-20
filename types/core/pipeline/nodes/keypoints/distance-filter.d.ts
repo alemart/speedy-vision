@@ -18,11 +18,11 @@ export class SpeedyPipelineNodeKeypointDistanceFilter extends SpeedyPipelineNode
      * Maximum accepted distance
      * @param {number} value
      */
-    set threshold(arg: number);
+    set threshold(value: number);
     /**
      * Maximum accepted distance
      * @returns {number}
      */
     get threshold(): number;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
+import { SpeedyPipelineNode } from '../../pipeline-node';

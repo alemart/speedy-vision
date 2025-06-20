@@ -161,5 +161,5 @@ export class SpeedyMatrixFactory extends Function {
      */
     applyAffineTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>;
 }
-import { SpeedyMatrix } from "./speedy-matrix";
-import { SpeedyPromise } from "./speedy-promise";
+import { SpeedyMatrix } from './speedy-matrix';
+import { SpeedyPromise } from './speedy-promise';

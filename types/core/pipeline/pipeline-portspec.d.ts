@@ -39,5 +39,5 @@ export class SpeedyPipelinePortSpec {
  * A message constraint is a message validation predicate
  */
 export type SpeedyPipelineMessageConstraint = (arg0: SpeedyPipelineMessage) => boolean;
-import { SpeedyPipelineMessageType } from "./pipeline-message";
-import { SpeedyPipelineMessage } from "./pipeline-message";
+import { SpeedyPipelineMessageType } from './pipeline-message';
+import { SpeedyPipelineMessage } from './pipeline-message';

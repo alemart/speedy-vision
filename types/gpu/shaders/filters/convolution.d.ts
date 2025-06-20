@@ -19,4 +19,4 @@ export function convX(kernel: number[], normalizationConstant?: number | undefin
  * @returns {ShaderDeclarationBuilder}
  */
 export function convY(kernel: number[], normalizationConstant?: number | undefined): ShaderDeclarationBuilder;
-import { ShaderDeclarationBuilder } from "../../shader-declaration";
+import { ShaderDeclarationBuilder } from '../../shader-declaration';

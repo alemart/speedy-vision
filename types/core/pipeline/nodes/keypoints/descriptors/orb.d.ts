@@ -8,4 +8,4 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
      */
     constructor(name?: string | undefined);
 }
-import { SpeedyPipelineNodeKeypointDescriptor } from "./descriptor";
+import { SpeedyPipelineNodeKeypointDescriptor } from './descriptor';

@@ -154,5 +154,5 @@ export type BitSequencesIndexedByDescriptorSize = {
 export type LSHSequences = {
     [x: number]: BitSequencesIndexedByDescriptorSize;
 };
-import { SpeedyTexture } from "./speedy-texture";
-import { SpeedyDrawableTexture } from "./speedy-texture";
+import { SpeedyTexture } from './speedy-texture';
+import { SpeedyDrawableTexture } from './speedy-texture';

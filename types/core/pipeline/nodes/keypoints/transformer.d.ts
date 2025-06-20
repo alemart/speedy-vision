@@ -13,12 +13,12 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode {
      * Transformation matrix. Must be 3x3
      * @param {SpeedyMatrix} transform
      */
-    set transform(arg: SpeedyMatrix);
+    set transform(transform: SpeedyMatrix);
     /**
      * Transformation matrix
      * @returns {SpeedyMatrix}
      */
     get transform(): SpeedyMatrix;
 }
-import { SpeedyPipelineNode } from "../../pipeline-node";
-import { SpeedyMatrix } from "../../../speedy-matrix";
+import { SpeedyPipelineNode } from '../../pipeline-node';
+import { SpeedyMatrix } from '../../../speedy-matrix';

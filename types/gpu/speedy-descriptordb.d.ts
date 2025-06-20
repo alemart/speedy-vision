@@ -11,5 +11,5 @@ export class SpeedyDescriptorDB extends SpeedyNamespace {
      */
     static create(texture: SpeedyTexture, descriptors: Uint8Array[], descriptorSize: number): SpeedyTexture;
 }
-import { SpeedyNamespace } from "../core/speedy-namespace";
-import { SpeedyTexture } from "./speedy-texture";
+import { SpeedyNamespace } from '../core/speedy-namespace';
+import { SpeedyTexture } from './speedy-texture';
