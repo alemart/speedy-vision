@@ -1,16 +1,14 @@
-# Speedy Vision
+# speedy-vision
 
 [![GitHub](https://img.shields.io/github/license/alemart/speedy-vision)](LICENSE) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/alemart/speedy-vision)](https://github.com/alemart/speedy-vision/releases) [![GitHub Repo stars](https://img.shields.io/github/stars/alemart/speedy-vision?logo=github)](https://github.com/alemart/speedy-vision/stargazers) [![GitHub Sponsors](https://img.shields.io/github/sponsors/alemart?logo=github)](https://github.com/sponsors/alemart)
 
-Build real-time stuff with **Speedy Vision**, a GPU-accelerated Computer Vision library for JavaScript.
+Build real-time stuff with **speedy-vision**, a GPU-accelerated Computer Vision library for JavaScript.
 
 [<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision/demos/best-features.html "Click to open a demo")
 
-**Speedy Vision** is developed independently by [Alexandre Martins](https://github.com/alemart) and released under the [Apache-2.0 license](LICENSE).
+**speedy-vision** is developed independently by [Alexandre Martins](https://github.com/alemart) and released under the [Apache-2.0 license](LICENSE).
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J41O00K)
-
-For web-based Augmented Reality, [check out my other project](https://github.com/alemart/martins-js).
 
 ## Features
 
@@ -133,7 +131,7 @@ Try the demos and take a look at their source code:
 
 ### Browser
 
-[Download the latest release of Speedy Vision](https://github.com/alemart/speedy-vision/releases) and include it in the `<head>` section of your HTML page:
+[Download the latest release of speedy-vision](https://github.com/alemart/speedy-vision/releases) and include it in the `<head>` section of your HTML page:
 
 ```html
 <script src="dist/speedy-vision.min.js"></script>
